@@ -1,0 +1,219 @@
+TRACEABILITY RUMUS EDAS
+Paper -> Implementasi Kode
+
+Dokumen ini dibuat untuk membuktikan bahwa rumus-rumus EDAS pada paper benar-benar
+terpakai di implementasi kode, termasuk lokasi file dan cuplikan kodenya.
+
+====================================================================
+A. RUMUS BOBOT KRITERIA (dari preferensi kuesioner)
+====================================================================
+Rumus di paper:
+wj = Sj / sum(Sj)
+
+Makna:
+- S_j = skor preferensi parameter ke-j (hasil agregasi jawaban kuesioner)
+- w_j = bobot kriteria ke-j
+
+Implementasi kode:
+- File: backend/src/preferences.py
+- Fungsi: build_preferences_from_questionnaire(...)
+
+Cuplikan kode:
+weights = {
+    parameter: score / total_score
+    for parameter, score in parameter_scores.items()
+}
+
+Catatan:
+- Ini identik dengan normalisasi bobot di paper.
+
+====================================================================
+B. PENENTUAN JENIS KRITERIA (benefit/cost/netral)
+====================================================================
+Aturan di paper:
+- skor > 3  -> benefit
+- skor < 3  -> cost
+- skor = 3  -> netral (moderate, tidak dibalik ekstrem)
+
+Implementasi kode:
+- File: backend/src/preferences.py
+- Fungsi: _classify_criterion(...)
+
+Cuplikan kode:
+def _classify_criterion(parameter_score: float) -> str:
+    if parameter_score > 3.0:
+        return "benefit"
+    if parameter_score < 3.0:
+        return "cost"
+    return "neutral"
+
+Catatan:
+- Kriteria "neutral" diperlakukan tanpa pembalikan arah (diproses seperti benefit)
+  agar tetap moderat, sesuai narasi paper.
+
+====================================================================
+C. RUMUS AV (Average Solution)
+====================================================================
+Rumus di paper:
+AV_j = (1/m) * sum_i(x_ij)
+
+Implementasi kode:
+- File: backend/src/edas.py
+- Fungsi: run_edas(...)
+
+Cuplikan kode:
+average_solution = matrix.mean(axis=0)
+
+Catatan:
+- mean(axis=0) menghitung rata-rata per kolom kriteria = AV_j.
+
+====================================================================
+D. RUMUS PDA/NDA UNTUK BENEFIT DAN COST
+====================================================================
+Rumus di paper:
+Untuk benefit:
+PDA_ij = max(0, x_ij - AV_j) / AV_j
+NDA_ij = max(0, AV_j - x_ij) / AV_j
+
+Untuk cost:
+PDA_ij = max(0, AV_j - x_ij) / AV_j
+NDA_ij = max(0, x_ij - AV_j) / AV_j
+
+Implementasi kode:
+- File: backend/src/edas.py
+- Fungsi: run_edas(...)
+
+Cuplikan kode:
+if criterion_type == "cost":
+    pda_column = (av - values).clip(lower=0)
+    nda_column = (values - av).clip(lower=0)
+else:
+    pda_column = (values - av).clip(lower=0)
+    nda_column = (av - values).clip(lower=0)
+
+if av == 0:
+    pda[criterion] = 0.0
+    nda[criterion] = 0.0
+else:
+    pda[criterion] = pda_column / av
+    nda[criterion] = nda_column / av
+
+Catatan:
+- clip(lower=0) setara dengan operasi max(0, ...).
+- Penanganan av == 0 adalah safeguard numerik (agar tidak division by zero).
+
+====================================================================
+E. RUMUS SP DAN SN (penjumlahan berbobot)
+====================================================================
+Rumus di paper:
+SP_i = sum_j (w_j * PDA_ij)
+SN_i = sum_j (w_j * NDA_ij)
+
+Implementasi kode:
+- File: backend/src/edas.py
+- Fungsi: run_edas(...)
+
+Cuplikan kode:
+weighted_pda = pda.mul(weights_series, axis=1)
+weighted_nda = nda.mul(weights_series, axis=1)
+
+sp = weighted_pda.sum(axis=1)
+sn = weighted_nda.sum(axis=1)
+
+Catatan:
+- multiply per kolom dengan bobot lalu sum per baris = SP_i dan SN_i.
+
+====================================================================
+F. RUMUS NSP DAN NSN (normalisasi)
+====================================================================
+Rumus di paper:
+NSP_i = SP_i / max(SP_i)
+NSN_i = 1 - (SN_i / max(SN_i))
+
+Implementasi kode:
+- File: backend/src/edas.py
+- Fungsi: run_edas(...)
+
+Cuplikan kode:
+max_sp = float(sp.max())
+max_sn = float(sn.max())
+
+if max_sp == 0:
+    nsp = pd.Series(0.0, index=sp.index)
+else:
+    nsp = sp / max_sp
+
+if max_sn == 0:
+    nsn = pd.Series(1.0, index=sn.index)
+else:
+    nsn = 1 - (sn / max_sn)
+
+Catatan:
+- Bentuk normalisasi sama dengan paper.
+- Kondisi max=0 adalah safeguard numerik.
+
+====================================================================
+G. RUMUS APPRAISAL SCORE (AS)
+====================================================================
+Rumus di paper:
+AS_i = (NSP_i + NSN_i) / 2
+
+Implementasi kode:
+- File: backend/src/edas.py
+- Fungsi: run_edas(...)
+
+Cuplikan kode:
+appraisal_score = 0.5 * (nsp + nsn)
+
+Catatan:
+- 0.5 * (...) identik dengan dibagi 2.
+
+====================================================================
+H. PEMERINGKATAN ALTERNATIF
+====================================================================
+Aturan di paper:
+- Semakin besar AS_i -> semakin tinggi peringkat.
+
+Implementasi kode:
+- File: backend/src/edas.py
+- Fungsi: run_edas(...)
+
+Cuplikan kode:
+ranking = appraisal_score.rank(ascending=False, method="min").astype(int)
+
+Catatan:
+- ascending=False berarti score terbesar mendapat rank 1.
+
+====================================================================
+I. ALUR EKSEKUSI RUMUS DI PROGRAM
+====================================================================
+Lokasi pemanggilan pipeline:
+- File: backend/src/main.py
+
+Cuplikan kode:
+preprocess_result = preprocess_for_edas(df)
+preference_result = build_preferences_from_questionnaire(demo_answers)
+edas_result = run_edas(
+    decision_matrix=decision_matrix,
+    weights=preference_result.weights,
+    criteria_types=preference_result.criteria_types,
+)
+
+Makna:
+1) data dibersihkan dan dibentuk menjadi matriks keputusan,
+2) bobot + jenis kriteria dibentuk dari kuesioner,
+3) seluruh rumus EDAS dijalankan dalam run_edas(...).
+
+====================================================================
+J. STATUS KEPATUHAN IMPLEMENTASI TERHADAP PAPER
+====================================================================
+Kesimpulan:
+- Rumus inti EDAS pada paper (AV, PDA/NDA, SP/SN, NSP/NSN, AS, ranking)
+  sudah terpakai langsung di kode.
+- Bobot preferensi dan jenis kriteria juga sudah terimplementasi sesuai konsep paper.
+- Ada safeguard numerik (pembagi nol) yang tidak mengubah konsep, hanya menjaga
+  kestabilan komputasi pada kasus tepi.
+
+Kalimat singkat untuk jawab dosen:
+"Iya, rumus di paper terpakai. Setiap rumus punya mapping langsung di backend/src/edas.py,
+sementara bobot kriteria dari kuesioner ada di backend/src/preferences.py."
