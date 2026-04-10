@@ -1,0 +1,68 @@
+.field {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.star {
+  position: absolute;
+  left: calc(var(--bx) * 1%);
+  top: calc(var(--by) * 1%);
+  width: calc(var(--size) * 1px);
+  height: calc(var(--size) * 1px);
+  border-radius: 999px;
+  background: radial-gradient(circle at 35% 30%, #fffbe0 0%, #ffe170 52%, #f7b500 100%);
+  box-shadow:
+    0 0 7px rgba(255, 228, 112, 0.78),
+    0 0 14px rgba(255, 199, 79, 0.55);
+  opacity: 0.3;
+  transform: translate(
+    calc((var(--tx) - var(--bx)) * 1% * var(--follow)),
+    calc((var(--ty) - var(--by)) * 1% * var(--follow))
+  );
+  transition: transform 30ms linear;
+  animation: twinkleOpacity calc(var(--twinkle-duration) * 1s) ease-in-out infinite;
+  animation-delay: calc(var(--twinkle-delay) * 1s);
+}
+
+.star::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  animation: twinkleScale calc(var(--twinkle-duration) * 1s) ease-in-out infinite;
+  animation-delay: calc(var(--twinkle-delay) * 1s);
+}
+
+:global([data-theme="dark"]) .star {
+  background: radial-gradient(circle at 35% 30%, #fffef3 0%, #fff3a5 48%, #ffd36a 100%);
+}
+
+:global([data-theme="light"]) .star {
+  background: var(--button-bg);
+  box-shadow:
+    0 0 7px rgba(29, 18, 49, 0.72),
+    0 0 14px rgba(29, 18, 49, 0.48);
+}
+
+@keyframes twinkleOpacity {
+  0%,
+  100% {
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 0.95;
+  }
+}
+
+@keyframes twinkleScale {
+  0%,
+  100% {
+    transform: scale(0.9);
+  }
+  50% {
+    transform: scale(1.24);
+  }
+}

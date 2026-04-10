@@ -1,0 +1,217 @@
+.page {
+  min-height: 100svh;
+  display: flex;
+  justify-content: center;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+
+  --text-primary: #f9fbff;
+  --text-secondary: #dbe5ff;
+  --surface: rgba(23, 31, 72, 0.8);
+  --surface-border: rgba(255, 216, 92, 0.48);
+  --chip-bg: rgba(255, 217, 82, 0.2);
+  --chip-active: rgba(255, 159, 63, 0.33);
+  --button-bg: linear-gradient(140deg, #ffd952, #ff9f3f);
+  --button-text: #1d1231;
+
+  background:
+    radial-gradient(circle at 12% 14%, rgba(255, 233, 137, 0.16), transparent 30%),
+    radial-gradient(circle at 82% 20%, rgba(120, 217, 255, 0.18), transparent 31%),
+    radial-gradient(circle at 72% 82%, rgba(255, 122, 149, 0.14), transparent 35%),
+    linear-gradient(180deg, #1e1343 0%, #241d5f 50%, #1d2a75 100%);
+}
+
+.page[data-theme="light"] {
+  --text-primary: #2a1d43;
+  --text-secondary: #51396e;
+  --surface: rgba(255, 235, 167, 0.76);
+  --surface-border: rgba(237, 128, 58, 0.45);
+  --chip-bg: rgba(255, 176, 66, 0.17);
+  --chip-active: rgba(255, 123, 76, 0.28);
+  --button-bg: #1d1231;
+  --button-text: #ffd952;
+
+  background:
+    radial-gradient(circle at 9% 15%, rgba(255, 111, 97, 0.22), transparent 30%),
+    radial-gradient(circle at 83% 18%, rgba(106, 149, 255, 0.25), transparent 34%),
+    radial-gradient(circle at 84% 82%, rgba(248, 185, 63, 0.22), transparent 33%),
+    linear-gradient(180deg, #ffd86f 0%, #ffc97a 42%, #ffb28b 100%);
+}
+
+.layout {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 980px;
+  margin: 0 auto;
+  display: grid;
+  gap: 14px;
+}
+
+.topBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.backLink {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.themeToggle {
+  border: 3px solid var(--surface-border);
+  background: var(--surface);
+  color: var(--text-primary);
+  border-radius: 999px;
+  padding: 10px 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.contextCard,
+.formCard {
+  border-radius: 22px;
+  border: 3px solid var(--surface-border);
+  background: var(--surface);
+  box-shadow: 0 14px 24px rgba(18, 23, 54, 0.25);
+  backdrop-filter: blur(8px);
+  padding: 20px;
+}
+
+.contextCard h1 {
+  margin: 0 0 8px;
+  color: var(--text-primary);
+  font-size: clamp(1.4rem, 2.2vw, 1.9rem);
+}
+
+.contextCard p {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  text-align: justify;
+}
+
+.descriptionText {
+  margin: 0 0 12px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  text-align: justify;
+}
+
+.progressBarWrap {
+  margin: 0 0 14px;
+  height: 14px;
+  border-radius: 999px;
+  border: 2px solid var(--surface-border);
+  background: rgba(255, 255, 255, 0.2);
+  overflow: hidden;
+}
+
+.progressBarFill {
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, #22d3a3, #facc15, #f43f75);
+  transition: width 220ms ease;
+}
+
+.questionList {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 12px;
+}
+
+.questionItem {
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+.questionItem p {
+  margin: 0 0 8px;
+  text-align: justify;
+}
+
+.choiceRow {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.choiceChip {
+  border: 2px solid var(--surface-border);
+  background: var(--chip-bg);
+  border-radius: 999px;
+  color: var(--text-primary);
+  padding: 6px 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  width: 100%;
+}
+
+.choiceChip:has(input:checked) {
+  background: var(--chip-active);
+}
+
+.choiceChip input {
+  accent-color: #ff9948;
+}
+
+.actionRow {
+  margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.saveButton {
+  border: none;
+  border-radius: 12px;
+  padding: 11px 16px;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--button-text);
+  background: var(--button-bg);
+}
+
+.saveButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.ghostButton {
+  border: 2px solid var(--surface-border);
+  border-radius: 12px;
+  padding: 11px 16px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.savedBadge {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+@media (max-width: 680px) {
+  .page {
+    padding: 16px;
+  }
+
+  .topBar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .choiceRow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

@@ -1,0 +1,28 @@
+.heroCard {
+  background: var(--surface);
+  border: 2px solid var(--surface-border);
+  border-radius: 26px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 14px 26px rgba(18, 23, 54, 0.3);
+  padding: 28px;
+}
+
+.heroCard h1 {
+  margin: 0 0 10px;
+  color: var(--text-primary);
+  font-size: clamp(2rem, 3.2vw, 2.9rem);
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+}
+
+.heroCard p {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.65;
+}
+
+@media (max-width: 600px) {
+  .heroCard {
+    padding: 18px;
+  }
+}
