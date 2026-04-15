@@ -132,7 +132,14 @@ async function spotifySearchTrackUri(track: ExportTrack, accessToken: string): P
   return uri ?? null;
 }
 
-async function spotifyAddTracks(playlistId: string, uris: string[], accessToken: string): Promise<void> {
+async function spotifyAddTracks(
+  playlistId: string,
+  uris: string[],
+  accessToken: string,
+): Promise<{ addedUris: string[]; failedUris: string[] }> {
+  const addedUris: string[] = [];
+  const failedUris: string[] = [];
+
   for (let index = 0; index < uris.length; index += 100) {
     const chunk = uris.slice(index, index + 100);
     const response = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks`, {
@@ -145,10 +152,35 @@ async function spotifyAddTracks(playlistId: string, uris: string[], accessToken:
     });
 
     if (!response.ok) {
-      const detail = await getResponseTextSafe(response);
-      throw new Error(`spotify_add_tracks_failed:${response.status}:${detail}`);
+      if (response.status !== 403 || chunk.length === 1) {
+        const detail = await getResponseTextSafe(response);
+        throw new Error(`spotify_add_tracks_failed:${response.status}:${detail}`);
+      }
+
+      for (const uri of chunk) {
+        const singleResponse = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ uris: [uri] }),
+        });
+
+        if (singleResponse.ok) {
+          addedUris.push(uri);
+        } else {
+          failedUris.push(uri);
+        }
+      }
+
+      continue;
     }
+
+    addedUris.push(...chunk);
   }
+
+  return { addedUris, failedUris };
 }
 
 async function resolveTrackUris(
@@ -203,18 +235,20 @@ export async function POST(request: Request) {
 
     const { foundUris, missingTracks } = await resolveTrackUris(sanitizedTracks, accessToken);
 
-    if (foundUris.length > 0) {
-      await spotifyAddTracks(playlist.id, foundUris, accessToken);
-    }
+    const { addedUris, failedUris } =
+      foundUris.length > 0
+        ? await spotifyAddTracks(playlist.id, foundUris, accessToken)
+        : { addedUris: [], failedUris: [] };
 
     const response = NextResponse.json({
       ok: true,
       playlistId: playlist.id,
       playlistUrl: playlist.external_urls?.spotify ?? null,
       totalRequested: sanitizedTracks.length,
-      totalAdded: foundUris.length,
+      totalAdded: addedUris.length,
       totalMissing: missingTracks.length,
       missingTracks,
+      totalFailedToAdd: failedUris.length,
       cappedByServer: body.tracks.length > MAX_EXPORT_TRACKS,
     });
 
@@ -246,7 +280,7 @@ export async function POST(request: Request) {
         {
           error: message,
           hint: isForbidden
-            ? "Spotify menolak create playlist (403). Pastikan akun kamu sudah di Users and access, lalu disconnect-connect ulang agar scope playlist terpasang ulang."
+            ? "Spotify menolak aksi playlist (403). Pastikan akun ada di Users and access, lalu remove access app di Spotify Account dan connect ulang agar scope playlist terpasang ulang."
             : undefined,
         },
         { status: Number.isFinite(status) ? status : 500 },
