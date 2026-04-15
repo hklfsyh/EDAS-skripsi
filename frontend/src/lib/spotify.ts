@@ -4,6 +4,11 @@ export const SPOTIFY_ACCESS_COOKIE = "spotify_access_token";
 export const SPOTIFY_REFRESH_COOKIE = "spotify_refresh_token";
 export const SPOTIFY_EXPIRES_COOKIE = "spotify_token_expires_at";
 export const SPOTIFY_STATE_COOKIE = "spotify_oauth_state";
+export const SPOTIFY_SCOPE_COOKIE = "spotify_granted_scope";
+export const SPOTIFY_REQUIRED_SCOPES = [
+  "playlist-modify-private",
+  "playlist-modify-public",
+];
 
 export type SpotifyTokenResponse = {
   access_token: string;
@@ -93,4 +98,16 @@ export async function refreshSpotifyToken(refreshToken: string): Promise<Spotify
   }
 
   return (await response.json()) as SpotifyTokenResponse;
+}
+
+export function parseSpotifyScopes(scopeText?: string | null): string[] {
+  return String(scopeText ?? "")
+    .split(" ")
+    .map((scope) => scope.trim())
+    .filter(Boolean);
+}
+
+export function hasRequiredSpotifyScopes(scopeText?: string | null): boolean {
+  const granted = new Set(parseSpotifyScopes(scopeText));
+  return SPOTIFY_REQUIRED_SCOPES.every((scope) => granted.has(scope));
 }

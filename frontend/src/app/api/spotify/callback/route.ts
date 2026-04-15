@@ -4,6 +4,7 @@ import {
   SPOTIFY_ACCESS_COOKIE,
   SPOTIFY_EXPIRES_COOKIE,
   SPOTIFY_REFRESH_COOKIE,
+  SPOTIFY_SCOPE_COOKIE,
   SPOTIFY_STATE_COOKIE,
 } from "@/lib/spotify";
 
@@ -57,6 +58,14 @@ export async function GET(request: Request) {
     }
 
     response.cookies.set(SPOTIFY_EXPIRES_COOKIE, String(expiresAt), {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: false,
+      path: "/",
+      maxAge: token.expires_in,
+    });
+
+    response.cookies.set(SPOTIFY_SCOPE_COOKIE, token.scope, {
       httpOnly: true,
       sameSite: "lax",
       secure: false,

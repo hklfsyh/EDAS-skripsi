@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import {
+  hasRequiredSpotifyScopes,
+  parseSpotifyScopes,
   refreshSpotifyToken,
   SPOTIFY_ACCESS_COOKIE,
   SPOTIFY_EXPIRES_COOKIE,
   SPOTIFY_REFRESH_COOKIE,
+  SPOTIFY_SCOPE_COOKIE,
 } from "@/lib/spotify";
 
 type ExportTrack = {
@@ -47,8 +50,13 @@ async function getValidAccessToken(request: Request): Promise<{
   const cookieHeader = request.headers.get("cookie") ?? "";
   const accessToken = readCookie(cookieHeader, SPOTIFY_ACCESS_COOKIE);
   const refreshToken = readCookie(cookieHeader, SPOTIFY_REFRESH_COOKIE);
+  const grantedScope = readCookie(cookieHeader, SPOTIFY_SCOPE_COOKIE);
   const expiresAtRaw = readCookie(cookieHeader, SPOTIFY_EXPIRES_COOKIE);
   const expiresAt = expiresAtRaw ? Number(expiresAtRaw) : 0;
+
+  if (!hasRequiredSpotifyScopes(grantedScope)) {
+    throw new Error(`insufficient_scope:${grantedScope ?? ""}`);
+  }
 
   if (accessToken && expiresAt > Date.now()) {
     return { accessToken };
@@ -293,6 +301,19 @@ export async function POST(request: Request) {
     const message = error instanceof Error ? error.message : "unknown_error";
     if (message === "not_authenticated") {
       return NextResponse.json({ error: "Spotify belum terhubung." }, { status: 401 });
+    }
+
+    if (message.startsWith("insufficient_scope:")) {
+      const scopeText = message.replace("insufficient_scope:", "");
+      return NextResponse.json(
+        {
+          error: "spotify_insufficient_scope",
+          hint: "Scope playlist belum lengkap. Klik Hubungkan Spotify lagi dan setujui ulang permission.",
+          grantedScopes: parseSpotifyScopes(scopeText),
+          requiredScopes: ["playlist-modify-private", "playlist-modify-public"],
+        },
+        { status: 403 },
+      );
     }
 
     const spotifyStatusMatch = /spotify_[^:]+_failed:(\d+):/.exec(message);
