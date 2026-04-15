@@ -101,7 +101,19 @@ export async function refreshSpotifyToken(refreshToken: string): Promise<Spotify
 }
 
 export function parseSpotifyScopes(scopeText?: string | null): string[] {
-  return String(scopeText ?? "")
+  const rawScope = String(scopeText ?? "").trim();
+  if (!rawScope) {
+    return [];
+  }
+
+  let decodedScope = rawScope;
+  try {
+    decodedScope = decodeURIComponent(rawScope);
+  } catch {
+    decodedScope = rawScope;
+  }
+
+  return decodedScope
     .split(" ")
     .map((scope) => scope.trim())
     .filter(Boolean);
