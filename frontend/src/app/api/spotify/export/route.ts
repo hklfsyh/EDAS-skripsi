@@ -16,6 +16,12 @@ type ExportRequestBody = {
   tracks: ExportTrack[];
 };
 
+type AddTrackFailure = {
+  uri: string;
+  status: number;
+  detail: string;
+};
+
 const MAX_EXPORT_TRACKS = 20;
 const SEARCH_CONCURRENCY = 5;
 
@@ -109,40 +115,51 @@ async function spotifyCreatePlaylist(playlistName: string, accessToken: string):
 }
 
 async function spotifySearchTrackUri(track: ExportTrack, accessToken: string): Promise<string | null> {
-  const query = `track:${track.title} artist:${track.artist}`;
-  const params = new URLSearchParams({
-    q: query,
-    type: "track",
-    limit: "1",
-  });
+  const queries = [
+    `track:"${track.title}" artist:"${track.artist}"`,
+    `${track.title} ${track.artist}`,
+    `track:"${track.title}"`,
+  ];
 
-  const response = await fetch(`https://api.spotify.com/v1/search?${params.toString()}`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
+  for (const query of queries) {
+    const params = new URLSearchParams({
+      q: query,
+      type: "track",
+      limit: "1",
+    });
 
-  if (!response.ok) {
-    return null;
+    const response = await fetch(`https://api.spotify.com/v1/search?${params.toString()}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (!response.ok) {
+      continue;
+    }
+
+    const payload = (await response.json()) as {
+      tracks?: { items?: Array<{ uri: string }> };
+    };
+
+    const uri = payload.tracks?.items?.[0]?.uri;
+    if (uri) {
+      return uri;
+    }
   }
 
-  const payload = (await response.json()) as {
-    tracks?: { items?: Array<{ uri: string }> };
-  };
-
-  const uri = payload.tracks?.items?.[0]?.uri;
-  return uri ?? null;
+  return null;
 }
 
 async function spotifyAddTracks(
   playlistId: string,
   uris: string[],
   accessToken: string,
-): Promise<{ addedUris: string[]; failedUris: string[] }> {
+): Promise<{ addedUris: string[]; failedUris: AddTrackFailure[] }> {
   const addedUris: string[] = [];
-  const failedUris: string[] = [];
+  const failedUris: AddTrackFailure[] = [];
 
   for (let index = 0; index < uris.length; index += 100) {
     const chunk = uris.slice(index, index + 100);
-    const response = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks`, {
+    const response = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/items`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -158,7 +175,7 @@ async function spotifyAddTracks(
       }
 
       for (const uri of chunk) {
-        const singleResponse = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks`, {
+        const singleResponse = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/items`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -170,7 +187,12 @@ async function spotifyAddTracks(
         if (singleResponse.ok) {
           addedUris.push(uri);
         } else {
-          failedUris.push(uri);
+          const singleDetail = await getResponseTextSafe(singleResponse);
+          failedUris.push({
+            uri,
+            status: singleResponse.status,
+            detail: singleDetail,
+          });
         }
       }
 
@@ -238,7 +260,20 @@ export async function POST(request: Request) {
     const { addedUris, failedUris } =
       foundUris.length > 0
         ? await spotifyAddTracks(playlist.id, foundUris, accessToken)
-        : { addedUris: [], failedUris: [] };
+        : { addedUris: [], failedUris: [] as AddTrackFailure[] };
+
+    if (foundUris.length > 0 && addedUris.length === 0 && failedUris.length > 0) {
+      const sample = failedUris.slice(0, 3);
+      return NextResponse.json(
+        {
+          error: "spotify_add_tracks_all_failed",
+          hint: "Playlist berhasil dibuat, tapi Spotify menolak penambahan semua lagu. Coba reconnect Spotify agar token + scope segar, lalu ulangi export.",
+          totalResolvedUris: foundUris.length,
+          sampleFailures: sample,
+        },
+        { status: 403 },
+      );
+    }
 
     const response = NextResponse.json({
       ok: true,
@@ -249,6 +284,7 @@ export async function POST(request: Request) {
       totalMissing: missingTracks.length,
       missingTracks,
       totalFailedToAdd: failedUris.length,
+      failedToAddSample: failedUris.slice(0, 3),
       cappedByServer: body.tracks.length > MAX_EXPORT_TRACKS,
     });
 
