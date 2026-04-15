@@ -16,14 +16,28 @@ type ExportRequestBody = {
   tracks: ExportTrack[];
 };
 
+const MAX_EXPORT_TRACKS = 20;
+const SEARCH_CONCURRENCY = 5;
+
 function readCookie(cookieHeader: string, name: string): string | null {
-  return (
-    cookieHeader
-      .split(";")
-      .map((part) => part.trim())
-      .find((part) => part.startsWith(`${name}=`))
-      ?.split("=")[1] ?? null
-  );
+  const pair = cookieHeader
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(`${name}=`));
+
+  if (!pair) {
+    return null;
+  }
+
+  return pair.slice(name.length + 1);
+}
+
+async function getResponseTextSafe(response: Response): Promise<string> {
+  try {
+    return await response.text();
+  } catch {
+    return "";
+  }
 }
 
 async function getValidAccessToken(request: Request): Promise<{
@@ -78,7 +92,8 @@ async function spotifyGetMe(accessToken: string): Promise<{ id: string }> {
   });
 
   if (!response.ok) {
-    throw new Error("spotify_me_failed");
+    const detail = await getResponseTextSafe(response);
+    throw new Error(`spotify_me_failed:${response.status}:${detail}`);
   }
 
   return (await response.json()) as { id: string };
@@ -99,7 +114,8 @@ async function spotifyCreatePlaylist(userId: string, playlistName: string, acces
   });
 
   if (!response.ok) {
-    throw new Error("spotify_create_playlist_failed");
+    const detail = await getResponseTextSafe(response);
+    throw new Error(`spotify_create_playlist_failed:${response.status}:${detail}`);
   }
 
   return (await response.json()) as { id: string; external_urls?: { spotify?: string } };
@@ -142,9 +158,38 @@ async function spotifyAddTracks(playlistId: string, uris: string[], accessToken:
     });
 
     if (!response.ok) {
-      throw new Error("spotify_add_tracks_failed");
+      const detail = await getResponseTextSafe(response);
+      throw new Error(`spotify_add_tracks_failed:${response.status}:${detail}`);
     }
   }
+}
+
+async function resolveTrackUris(
+  tracks: ExportTrack[],
+  accessToken: string,
+): Promise<{ foundUris: string[]; missingTracks: ExportTrack[] }> {
+  const foundUris: string[] = [];
+  const missingTracks: ExportTrack[] = [];
+
+  for (let index = 0; index < tracks.length; index += SEARCH_CONCURRENCY) {
+    const chunk = tracks.slice(index, index + SEARCH_CONCURRENCY);
+    const chunkResults = await Promise.all(
+      chunk.map(async (track) => {
+        const uri = await spotifySearchTrackUri(track, accessToken);
+        return { track, uri };
+      }),
+    );
+
+    for (const item of chunkResults) {
+      if (item.uri) {
+        foundUris.push(item.uri);
+      } else {
+        missingTracks.push(item.track);
+      }
+    }
+  }
+
+  return { foundUris, missingTracks };
 }
 
 export async function POST(request: Request) {
@@ -154,21 +199,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Payload export tidak valid." }, { status: 400 });
     }
 
+    const sanitizedTracks = body.tracks
+      .filter((track) => track?.title?.trim() && track?.artist?.trim())
+      .slice(0, MAX_EXPORT_TRACKS)
+      .map((track) => ({
+        title: track.title.trim(),
+        artist: track.artist.trim(),
+      }));
+
+    if (sanitizedTracks.length === 0) {
+      return NextResponse.json({ error: "Daftar lagu kosong setelah validasi." }, { status: 400 });
+    }
+
     const { accessToken, setCookies } = await getValidAccessToken(request);
     const me = await spotifyGetMe(accessToken);
     const playlist = await spotifyCreatePlaylist(me.id, body.playlistName, accessToken);
 
-    const foundUris: string[] = [];
-    const missingTracks: ExportTrack[] = [];
-
-    for (const track of body.tracks) {
-      const uri = await spotifySearchTrackUri(track, accessToken);
-      if (uri) {
-        foundUris.push(uri);
-      } else {
-        missingTracks.push(track);
-      }
-    }
+    const { foundUris, missingTracks } = await resolveTrackUris(sanitizedTracks, accessToken);
 
     if (foundUris.length > 0) {
       await spotifyAddTracks(playlist.id, foundUris, accessToken);
@@ -178,10 +225,11 @@ export async function POST(request: Request) {
       ok: true,
       playlistId: playlist.id,
       playlistUrl: playlist.external_urls?.spotify ?? null,
-      totalRequested: body.tracks.length,
+      totalRequested: sanitizedTracks.length,
       totalAdded: foundUris.length,
       totalMissing: missingTracks.length,
       missingTracks,
+      cappedByServer: body.tracks.length > MAX_EXPORT_TRACKS,
     });
 
     if (setCookies) {
