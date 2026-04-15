@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import {
   hasRequiredSpotifyScopes,
+  normalizeSpotifyScopeText,
   parseSpotifyScopes,
   refreshSpotifyToken,
   SPOTIFY_ACCESS_COOKIE,
@@ -45,7 +46,7 @@ export async function GET(request: Request) {
   try {
     const refreshed = await refreshSpotifyToken(refreshToken);
     const refreshedExpiresAt = Date.now() + refreshed.expires_in * 1000;
-    const refreshedScope = refreshed.scope ?? grantedScope ?? "";
+    const refreshedScope = normalizeSpotifyScopeText(refreshed.scope ?? grantedScope ?? "");
 
     const response = NextResponse.json({
       connected: true,

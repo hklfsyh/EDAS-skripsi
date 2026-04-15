@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import {
   hasRequiredSpotifyScopes,
+  normalizeSpotifyScopeText,
   parseSpotifyScopes,
   refreshSpotifyToken,
   SPOTIFY_ACCESS_COOKIE,
@@ -67,6 +68,7 @@ async function getValidAccessToken(request: Request): Promise<{
   }
 
   const refreshed = await refreshSpotifyToken(refreshToken);
+  const refreshedScope = normalizeSpotifyScopeText(refreshed.scope ?? grantedScope ?? "");
   const nextCookies: Array<{ name: string; value: string; maxAge: number }> = [
     {
       name: SPOTIFY_ACCESS_COOKIE,
@@ -76,6 +78,11 @@ async function getValidAccessToken(request: Request): Promise<{
     {
       name: SPOTIFY_EXPIRES_COOKIE,
       value: String(Date.now() + refreshed.expires_in * 1000),
+      maxAge: refreshed.expires_in,
+    },
+    {
+      name: SPOTIFY_SCOPE_COOKIE,
+      value: refreshedScope,
       maxAge: refreshed.expires_in,
     },
   ];

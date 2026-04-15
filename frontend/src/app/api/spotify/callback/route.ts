@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import {
   exchangeSpotifyCode,
+  normalizeSpotifyScopeText,
   SPOTIFY_ACCESS_COOKIE,
   SPOTIFY_EXPIRES_COOKIE,
   SPOTIFY_REFRESH_COOKIE,
@@ -65,7 +66,7 @@ export async function GET(request: Request) {
       maxAge: token.expires_in,
     });
 
-    response.cookies.set(SPOTIFY_SCOPE_COOKIE, token.scope, {
+    response.cookies.set(SPOTIFY_SCOPE_COOKIE, normalizeSpotifyScopeText(token.scope), {
       httpOnly: true,
       sameSite: "lax",
       secure: false,

@@ -100,20 +100,49 @@ export async function refreshSpotifyToken(refreshToken: string): Promise<Spotify
   return (await response.json()) as SpotifyTokenResponse;
 }
 
-export function parseSpotifyScopes(scopeText?: string | null): string[] {
+function decodeScopeRepeatedly(scopeText: string): string {
+  let current = scopeText;
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    let next = current;
+    try {
+      next = decodeURIComponent(current);
+    } catch {
+      break;
+    }
+
+    if (next === current) {
+      break;
+    }
+
+    current = next;
+  }
+
+  return current;
+}
+
+export function normalizeSpotifyScopeText(scopeText?: string | null): string {
   const rawScope = String(scopeText ?? "").trim();
   if (!rawScope) {
+    return "";
+  }
+
+  const decodedScope = decodeScopeRepeatedly(rawScope);
+
+  return decodedScope
+    .replace(/\+/g, " ")
+    .replace(/[;,]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export function parseSpotifyScopes(scopeText?: string | null): string[] {
+  const normalizedScope = normalizeSpotifyScopeText(scopeText);
+  if (!normalizedScope) {
     return [];
   }
 
-  let decodedScope = rawScope;
-  try {
-    decodedScope = decodeURIComponent(rawScope);
-  } catch {
-    decodedScope = rawScope;
-  }
-
-  return decodedScope
+  return normalizedScope
     .split(" ")
     .map((scope) => scope.trim())
     .filter(Boolean);
