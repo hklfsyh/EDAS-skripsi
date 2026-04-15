@@ -2,6 +2,9 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { NextResponse } from "next/server";
 
+const DEFAULT_REMOTE_CSV_URL =
+  "https://raw.githubusercontent.com/hklfsyh/EDAS-skripsi/main/data/output.csv";
+
 type CsvTrack = {
   artist: string;
   title: string;
@@ -112,18 +115,49 @@ function buildPlaylistFromCsv(tracks: CsvTrack[], targetMinutes: number): Playli
   return items;
 }
 
+async function loadCsvText(): Promise<{ csvText: string; source: string }> {
+  const localCandidates = [
+    path.resolve(process.cwd(), "..", "data", "output.csv"),
+    path.resolve(process.cwd(), "data", "output.csv"),
+    path.resolve(process.cwd(), "public", "output.csv"),
+  ];
+
+  for (const candidate of localCandidates) {
+    try {
+      const csvText = await readFile(candidate, "utf-8");
+      if (csvText.trim().length > 0) {
+        return { csvText, source: candidate };
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  const remoteUrl = process.env.DUMMY_PLAYLIST_CSV_URL ?? DEFAULT_REMOTE_CSV_URL;
+  const response = await fetch(remoteUrl, { cache: "no-store" });
+
+  if (!response.ok) {
+    throw new Error(`Tidak bisa membaca CSV dari lokal maupun remote (${remoteUrl}).`);
+  }
+
+  const csvText = await response.text();
+  if (csvText.trim().length === 0) {
+    throw new Error(`CSV remote kosong (${remoteUrl}).`);
+  }
+
+  return { csvText, source: remoteUrl };
+}
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const targetMinutes = Number(searchParams.get("targetMinutes") ?? 30);
-    const csvPath = path.resolve(process.cwd(), "..", "data", "output.csv");
-
-    const csvText = await readFile(csvPath, "utf-8");
+    const { csvText, source } = await loadCsvText();
     const tracks = parseCsvRows(csvText);
     const playlist = buildPlaylistFromCsv(tracks, Number.isFinite(targetMinutes) ? targetMinutes : 30);
 
     return NextResponse.json({
-      source: csvPath,
+      source,
       totalTracks: tracks.length,
       playlist,
     });
