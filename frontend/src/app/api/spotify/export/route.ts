@@ -20,6 +20,12 @@ type ExportRequestBody = {
   tracks: ExportTrack[];
 };
 
+type SpotifyProfile = {
+  id: string;
+  country?: string;
+  product?: string;
+};
+
 const MAX_EXPORT_TRACKS = 20;
 const SEARCH_CONCURRENCY = 5;
 
@@ -123,28 +129,82 @@ async function spotifyCreatePlaylist(playlistName: string, accessToken: string):
   return (await response.json()) as { id: string; external_urls?: { spotify?: string } };
 }
 
-async function spotifySearchTrackUri(track: ExportTrack, accessToken: string): Promise<string | null> {
-  const query = `track:${track.title} artist:${track.artist}`;
-  const params = new URLSearchParams({
-    q: query,
-    type: "track",
-    limit: "1",
-  });
-
-  const response = await fetch(`https://api.spotify.com/v1/search?${params.toString()}`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
+async function spotifyGetCurrentUser(accessToken: string): Promise<SpotifyProfile> {
+  const response = await fetch("https://api.spotify.com/v1/me", {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
   });
 
   if (!response.ok) {
-    return null;
+    const detail = await getResponseTextSafe(response);
+    throw new Error(`spotify_get_profile_failed:${response.status}:${detail}`);
   }
 
-  const payload = (await response.json()) as {
-    tracks?: { items?: Array<{ uri: string }> };
-  };
+  return (await response.json()) as SpotifyProfile;
+}
 
-  const uri = payload.tracks?.items?.[0]?.uri;
-  return uri ?? null;
+async function spotifySearchTrackUri(
+  track: ExportTrack,
+  accessToken: string,
+  country?: string,
+): Promise<string | null> {
+  const queryCandidates = [
+    `track:${track.title} artist:${track.artist}`,
+    `${track.title} ${track.artist}`,
+    track.title,
+  ];
+
+  for (const query of queryCandidates) {
+    const params = new URLSearchParams({
+      q: query,
+      type: "track",
+      limit: "5",
+    });
+
+    if (country) {
+      params.set("market", country);
+    }
+
+    const response = await fetch(`https://api.spotify.com/v1/search?${params.toString()}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (!response.ok) {
+      continue;
+    }
+
+    const payload = (await response.json()) as {
+      tracks?: {
+        items?: Array<{
+          uri: string;
+          available_markets?: string[];
+        }>;
+      };
+    };
+
+    const items = payload.tracks?.items ?? [];
+
+    if (!country) {
+      const fallbackUri = items[0]?.uri;
+      if (fallbackUri) {
+        return fallbackUri;
+      }
+      continue;
+    }
+
+    const marketMatch = items.find((item) => item.available_markets?.includes(country));
+    if (marketMatch?.uri) {
+      return marketMatch.uri;
+    }
+
+    const fallbackUri = items[0]?.uri;
+    if (fallbackUri) {
+      return fallbackUri;
+    }
+  }
+
+  return null;
 }
 
 async function spotifyAddTracks(
@@ -174,6 +234,55 @@ async function spotifyAddTracks(
     if (!response.ok) {
       if (response.status !== 403 || chunk.length === 1) {
         const detail = await getResponseTextSafe(response);
+        if (response.status === 403 && chunk.length > 1) {
+          for (const uri of chunk) {
+            const singleResponse = await fetch(
+              `https://api.spotify.com/v1/playlists/${playlistId}/tracks`,
+              {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${accessToken}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ uris: [uri] }),
+              },
+            );
+
+            if (singleResponse.ok) {
+              addedUris.push(uri);
+              continue;
+            }
+
+            const singleDetail = await getResponseTextSafe(singleResponse);
+            const putResponse = await fetch(
+              `https://api.spotify.com/v1/playlists/${playlistId}/tracks`,
+              {
+                method: "PUT",
+                headers: {
+                  Authorization: `Bearer ${accessToken}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ uris: [uri] }),
+              },
+            );
+
+            if (putResponse.ok) {
+              addedUris.push(uri);
+              continue;
+            }
+
+            const putDetail = await getResponseTextSafe(putResponse);
+            failedUris.push(uri);
+            failedDetails.push({
+              uri,
+              status: putResponse.status,
+              detail: `POST:${singleResponse.status}:${singleDetail} | PUT:${putResponse.status}:${putDetail}`,
+            });
+          }
+
+          continue;
+        }
+
         throw new Error(`spotify_add_tracks_failed:${response.status}:${detail}`);
       }
 
@@ -212,6 +321,7 @@ async function spotifyAddTracks(
 async function resolveTrackUris(
   tracks: ExportTrack[],
   accessToken: string,
+  country?: string,
 ): Promise<{ foundUris: string[]; missingTracks: ExportTrack[] }> {
   const foundUris: string[] = [];
   const missingTracks: ExportTrack[] = [];
@@ -220,7 +330,7 @@ async function resolveTrackUris(
     const chunk = tracks.slice(index, index + SEARCH_CONCURRENCY);
     const chunkResults = await Promise.all(
       chunk.map(async (track) => {
-        const uri = await spotifySearchTrackUri(track, accessToken);
+        const uri = await spotifySearchTrackUri(track, accessToken, country);
         return { track, uri };
       }),
     );
@@ -257,9 +367,14 @@ export async function POST(request: Request) {
     }
 
     const { accessToken, setCookies } = await getValidAccessToken(request);
+    const profile = await spotifyGetCurrentUser(accessToken);
     const playlist = await spotifyCreatePlaylist(body.playlistName, accessToken);
 
-    const { foundUris, missingTracks } = await resolveTrackUris(sanitizedTracks, accessToken);
+    const { foundUris, missingTracks } = await resolveTrackUris(
+      sanitizedTracks,
+      accessToken,
+      profile.country,
+    );
 
     const { addedUris, failedUris, failedDetails } =
       foundUris.length > 0
@@ -280,6 +395,9 @@ export async function POST(request: Request) {
 
     const response = NextResponse.json({
       ok: true,
+      accountId: profile.id,
+      accountCountry: profile.country ?? null,
+      accountProduct: profile.product ?? null,
       playlistId: playlist.id,
       playlistUrl: playlist.external_urls?.spotify ?? null,
       totalRequested: sanitizedTracks.length,
@@ -320,6 +438,19 @@ export async function POST(request: Request) {
           requiredScopes: ["playlist-modify-private", "playlist-modify-public"],
         },
         { status: 403 },
+      );
+    }
+
+    const profileStatusMatch = /spotify_get_profile_failed:(\d+):/.exec(message);
+    if (profileStatusMatch) {
+      const status = Number(profileStatusMatch[1]);
+      return NextResponse.json(
+        {
+          error: message,
+          hint:
+            "Token valid tapi preflight profil gagal. Coba reconnect Spotify, lalu pastikan akun yang connect sama dengan akun tujuan playlist.",
+        },
+        { status: Number.isFinite(status) ? status : 500 },
       );
     }
 
