@@ -86,21 +86,8 @@ async function getValidAccessToken(request: Request): Promise<{
   };
 }
 
-async function spotifyGetMe(accessToken: string): Promise<{ id: string }> {
-  const response = await fetch("https://api.spotify.com/v1/me", {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-
-  if (!response.ok) {
-    const detail = await getResponseTextSafe(response);
-    throw new Error(`spotify_me_failed:${response.status}:${detail}`);
-  }
-
-  return (await response.json()) as { id: string };
-}
-
-async function spotifyCreatePlaylist(userId: string, playlistName: string, accessToken: string): Promise<{ id: string; external_urls?: { spotify?: string } }> {
-  const response = await fetch(`https://api.spotify.com/v1/users/${userId}/playlists`, {
+async function spotifyCreatePlaylist(playlistName: string, accessToken: string): Promise<{ id: string; external_urls?: { spotify?: string } }> {
+  const response = await fetch("https://api.spotify.com/v1/me/playlists", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -212,8 +199,7 @@ export async function POST(request: Request) {
     }
 
     const { accessToken, setCookies } = await getValidAccessToken(request);
-    const me = await spotifyGetMe(accessToken);
-    const playlist = await spotifyCreatePlaylist(me.id, body.playlistName, accessToken);
+    const playlist = await spotifyCreatePlaylist(body.playlistName, accessToken);
 
     const { foundUris, missingTracks } = await resolveTrackUris(sanitizedTracks, accessToken);
 
@@ -250,6 +236,23 @@ export async function POST(request: Request) {
     if (message === "not_authenticated") {
       return NextResponse.json({ error: "Spotify belum terhubung." }, { status: 401 });
     }
+
+    const spotifyStatusMatch = /spotify_[^:]+_failed:(\d+):/.exec(message);
+    if (spotifyStatusMatch) {
+      const status = Number(spotifyStatusMatch[1]);
+      const isForbidden = status === 403;
+
+      return NextResponse.json(
+        {
+          error: message,
+          hint: isForbidden
+            ? "Spotify menolak create playlist (403). Pastikan akun kamu sudah di Users and access, lalu disconnect-connect ulang agar scope playlist terpasang ulang."
+            : undefined,
+        },
+        { status: Number.isFinite(status) ? status : 500 },
+      );
+    }
+
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
