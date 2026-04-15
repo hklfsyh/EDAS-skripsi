@@ -8,6 +8,7 @@ import { MusicCursorTrail } from "@/components/common/MusicCursorTrail";
 import styles from "./page.module.css";
 
 const RESULT_STORAGE_KEY = "playlist-result-v1";
+const TRANSFER_SESSION_STORAGE_KEY = "playlist-transfer-session-v1";
 const EVALUATION_STORAGE_KEY = "playlist-evaluation-v1";
 const THEME_STORAGE_KEY = "playlist-theme-v1";
 
@@ -37,6 +38,83 @@ type ResultData = {
   nlgText: string;
 };
 
+type TransferTrack = {
+  title: string;
+  artist: string;
+};
+
+type TransferSessionData = {
+  id: string;
+  target: "spotify";
+  stage: "draft" | "target-connected" | "transferring" | "done" | "failed";
+  spotifyConnected: boolean;
+  playlistName: string;
+  tracks: TransferTrack[];
+  updatedAt: string;
+  errorMessage?: string;
+  transferResult?: {
+    playlistUrl?: string | null;
+    totalAdded: number;
+    totalRequested: number;
+  };
+};
+
+type SpotifyStatusResponse = {
+  connected: boolean;
+  hasRequiredScopes?: boolean;
+};
+
+function getDefaultTransferSession(result: ResultData): TransferSessionData {
+  return {
+    id: crypto.randomUUID(),
+    target: "spotify",
+    stage: "draft",
+    spotifyConnected: false,
+    playlistName: `EDAS Dummy ${new Date().toLocaleDateString("id-ID")}`,
+    tracks: result.playlist.map((song) => ({
+      title: song.title,
+      artist: song.artist,
+    })),
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+function loadTransferSession(result: ResultData): TransferSessionData {
+  const raw = sessionStorage.getItem(TRANSFER_SESSION_STORAGE_KEY);
+  if (!raw) {
+    return getDefaultTransferSession(result);
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as Partial<TransferSessionData>;
+    const fallback = getDefaultTransferSession(result);
+
+    const tracks =
+      Array.isArray(parsed.tracks) && parsed.tracks.length > 0
+        ? parsed.tracks
+            .filter((item) => item?.title?.trim() && item?.artist?.trim())
+            .map((item) => ({
+              title: item.title.trim(),
+              artist: item.artist.trim(),
+            }))
+        : fallback.tracks;
+
+    return {
+      id: parsed.id || fallback.id,
+      target: "spotify",
+      stage: parsed.stage ?? fallback.stage,
+      spotifyConnected: Boolean(parsed.spotifyConnected),
+      playlistName: parsed.playlistName?.trim() || fallback.playlistName,
+      tracks,
+      updatedAt: parsed.updatedAt ?? new Date().toISOString(),
+      errorMessage: parsed.errorMessage,
+      transferResult: parsed.transferResult,
+    };
+  } catch {
+    return getDefaultTransferSession(result);
+  }
+}
+
 function formatDuration(sec: number): string {
   const m = Math.floor(sec / 60);
   const s = sec % 60;
@@ -48,7 +126,7 @@ export default function HasilPage() {
   const [usability, setUsability] = useState(4);
   const [understanding, setUnderstanding] = useState(4);
   const [comment, setComment] = useState("");
-  const [spotifyConnected, setSpotifyConnected] = useState(false);
+  const [transferSession, setTransferSession] = useState<TransferSessionData | null>(null);
   const [spotifyLoading, setSpotifyLoading] = useState(false);
   const [spotifyMessage, setSpotifyMessage] = useState<string | null>(null);
 
@@ -57,33 +135,71 @@ export default function HasilPage() {
     document.documentElement.setAttribute("data-theme", saved === "light" ? "light" : "dark");
   }, []);
 
+  const result = useMemo(() => {
+    if (typeof window === "undefined") return null;
+    const raw =
+      sessionStorage.getItem(RESULT_STORAGE_KEY) ??
+      localStorage.getItem(RESULT_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as ResultData;
+    sessionStorage.setItem(RESULT_STORAGE_KEY, raw);
+    localStorage.removeItem(RESULT_STORAGE_KEY);
+    return parsed;
+  }, []);
+
   useEffect(() => {
+    if (!result) return;
+
+    const current = loadTransferSession(result);
+    sessionStorage.setItem(TRANSFER_SESSION_STORAGE_KEY, JSON.stringify(current));
+    setTransferSession(current);
+
     const params = new URLSearchParams(window.location.search);
     const spotifyStatus = params.get("spotify");
     const reason = params.get("reason");
 
     if (spotifyStatus === "success") {
-      setSpotifyMessage("Spotify berhasil terhubung.");
+      setSpotifyMessage("Target Spotify berhasil dihubungkan. Lanjut klik Mulai transfer.");
     } else if (spotifyStatus === "error") {
       setSpotifyMessage(`Gagal menghubungkan Spotify${reason ? ` (${reason})` : ""}.`);
     }
 
     void fetch("/api/spotify/status")
-      .then((response) => response.json() as Promise<{ connected: boolean }>)
+      .then((response) => response.json() as Promise<SpotifyStatusResponse>)
       .then((payload) => {
-        setSpotifyConnected(Boolean(payload.connected));
+        const isConnected = Boolean(payload.connected && payload.hasRequiredScopes !== false);
+        setTransferSession((prev) => {
+          if (!prev) return prev;
+
+          const nextStage =
+            isConnected && (prev.stage === "draft" || prev.stage === "failed")
+              ? "target-connected"
+              : prev.stage;
+
+          const next: TransferSessionData = {
+            ...prev,
+            spotifyConnected: isConnected,
+            stage: nextStage,
+            updatedAt: new Date().toISOString(),
+          };
+
+          sessionStorage.setItem(TRANSFER_SESSION_STORAGE_KEY, JSON.stringify(next));
+          return next;
+        });
       })
       .catch(() => {
-        setSpotifyConnected(false);
+        setTransferSession((prev) => {
+          if (!prev) return prev;
+          const next: TransferSessionData = {
+            ...prev,
+            spotifyConnected: false,
+            updatedAt: new Date().toISOString(),
+          };
+          sessionStorage.setItem(TRANSFER_SESSION_STORAGE_KEY, JSON.stringify(next));
+          return next;
+        });
       });
-  }, []);
-
-  const result = useMemo(() => {
-    if (typeof window === "undefined") return null;
-    const raw = localStorage.getItem(RESULT_STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw) as ResultData;
-  }, []);
+  }, [result]);
 
   if (!result) {
     return (
@@ -101,9 +217,24 @@ export default function HasilPage() {
     window.location.href = "/api/spotify/login";
   };
 
-  const handleExportSpotify = async () => {
+  const handleStartTransfer = async () => {
+    if (!transferSession) {
+      setSpotifyMessage("Data transfer sesi tidak ditemukan. Kembali ke proses rekomendasi dulu.");
+      return;
+    }
+
     setSpotifyLoading(true);
-    setSpotifyMessage("Sedang membuat playlist di Spotify...");
+    setSpotifyMessage("Transfer dimulai: membuat playlist dan menambahkan lagu ke Spotify...");
+
+    const transferringState: TransferSessionData = {
+      ...transferSession,
+      stage: "transferring",
+      errorMessage: undefined,
+      updatedAt: new Date().toISOString(),
+    };
+
+    setTransferSession(transferringState);
+    sessionStorage.setItem(TRANSFER_SESSION_STORAGE_KEY, JSON.stringify(transferringState));
 
     try {
       const exportResponse = await fetch("/api/spotify/export", {
@@ -112,11 +243,8 @@ export default function HasilPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          playlistName: `EDAS Dummy ${new Date().toLocaleDateString("id-ID")}`,
-          tracks: result.playlist.map((song) => ({
-            title: song.title,
-            artist: song.artist,
-          })),
+          playlistName: transferSession.playlistName,
+          tracks: transferSession.tracks,
         }),
       });
 
@@ -134,14 +262,38 @@ export default function HasilPage() {
       const added = payload.totalAdded ?? 0;
       const requested = payload.totalRequested ?? 0;
 
+      const successState: TransferSessionData = {
+        ...transferSession,
+        stage: "done",
+        spotifyConnected: true,
+        transferResult: {
+          playlistUrl: payload.playlistUrl ?? null,
+          totalAdded: added,
+          totalRequested: requested,
+        },
+        errorMessage: undefined,
+        updatedAt: new Date().toISOString(),
+      };
+
+      setTransferSession(successState);
+      sessionStorage.setItem(TRANSFER_SESSION_STORAGE_KEY, JSON.stringify(successState));
+
       if (payload.playlistUrl) {
-        setSpotifyMessage(`Berhasil! ${added}/${requested} lagu ditambahkan. Membuka playlist Spotify...`);
-        window.open(payload.playlistUrl, "_blank", "noopener,noreferrer");
+        setSpotifyMessage(`Transfer selesai. ${added}/${requested} lagu ditambahkan. Klik tombol buka playlist.`);
       } else {
-        setSpotifyMessage(`Berhasil membuat playlist. Lagu ditambahkan: ${added}/${requested}.`);
+        setSpotifyMessage(`Transfer selesai. Lagu ditambahkan: ${added}/${requested}.`);
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Export ke Spotify gagal.";
+      const failedState: TransferSessionData = {
+        ...transferSession,
+        stage: "failed",
+        errorMessage: message,
+        updatedAt: new Date().toISOString(),
+      };
+
+      setTransferSession(failedState);
+      sessionStorage.setItem(TRANSFER_SESSION_STORAGE_KEY, JSON.stringify(failedState));
       setSpotifyMessage(message);
     } finally {
       setSpotifyLoading(false);
@@ -210,28 +362,48 @@ export default function HasilPage() {
         </section>
 
         <section className={styles.card}>
-          <h2>Eksperimen export playlist (opsional)</h2>
+          <h2>Transfer ke Spotify (mode sesi)</h2>
           <p className={styles.experimentText}>
-            Mode ini hanya untuk uji coba lokal dan tidak mengubah alur utama skripsi.
+            Alur: simpan hasil sesi → pilih target Spotify → mulai transfer → buka playlist hasil transfer.
           </p>
 
+          {transferSession && (
+            <div className={styles.metrics}>
+              <span>Sesi: {transferSession.id.slice(0, 8)}</span>
+              <span>Target: Spotify</span>
+              <span>Status: {transferSession.stage}</span>
+            </div>
+          )}
+
           <div className={styles.experimentActions}>
-            {!spotifyConnected ? (
+            {!transferSession?.spotifyConnected ? (
               <button
                 type="button"
                 className={styles.secondaryButton}
                 onClick={handleConnectSpotify}
               >
-                Hubungkan Spotify
+                Pilih Target Spotify & Hubungkan Akun
               </button>
             ) : (
               <button
                 type="button"
                 className={styles.primaryButton}
-                onClick={handleExportSpotify}
+                onClick={handleStartTransfer}
                 disabled={spotifyLoading}
               >
-                {spotifyLoading ? "Memproses..." : "Kirim playlist ke Spotify"}
+                {spotifyLoading ? "Transfer berlangsung..." : "Mulai Transfer"}
+              </button>
+            )}
+
+            {transferSession?.stage === "done" && transferSession.transferResult?.playlistUrl && (
+              <button
+                type="button"
+                className={styles.secondaryButton}
+                onClick={() =>
+                  window.open(transferSession.transferResult?.playlistUrl ?? "", "_blank", "noopener,noreferrer")
+                }
+              >
+                Buka Playlist di Spotify
               </button>
             )}
           </div>
