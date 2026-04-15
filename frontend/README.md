@@ -20,6 +20,43 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Spotify Export (Eksperimen Lokal)
+
+Fitur ini opsional untuk uji coba export playlist hasil dummy ke akun Spotify pribadi.
+
+### 1) Buat app di Spotify Developer
+
+- Buka `https://developer.spotify.com/dashboard`.
+- Buat app baru.
+- Tambahkan Redirect URI yang sama dengan env kamu, contoh:
+	- `http://localhost:3000/api/spotify/callback`
+
+### 2) Buat file env lokal
+
+Buat file `.env.local` di folder `frontend`:
+
+```bash
+SPOTIFY_CLIENT_ID=isi_client_id
+SPOTIFY_CLIENT_SECRET=isi_client_secret
+SPOTIFY_REDIRECT_URI=http://localhost:3000/api/spotify/callback
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
+
+### 3) Jalankan aplikasi
+
+```bash
+npm run dev
+```
+
+Lalu buka halaman hasil (`/hasil`), gunakan bagian:
+
+- `Hubungkan Spotify` (OAuth)
+- `Kirim playlist ke Spotify`
+
+Catatan:
+- Ini mode eksperimen. Tidak mengubah fitur utama skripsi.
+- Proses add lagu memakai strategi search-and-match, jadi bisa ada sebagian lagu tidak ditemukan.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

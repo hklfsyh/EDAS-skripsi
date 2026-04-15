@@ -1,0 +1,648 @@
+﻿DOKUMENTASI IMPLEMENTASI SISTEM
+Sistem Rekomendasi Playlist Musik Berbasis Konteks Aktivitas Pengguna Menggunakan Metode EDAS
+
+Dokumen ini disusun untuk mendukung penulisan Bab 4, khususnya Subbab 4.3 (Implementasi Sistem).
+Format dokumentasi dibuat bertahap per level pengembangan agar konsisten antara praktik coding dan narasi penelitian.
+
+====================================================================
+RINGKASAN PENDEKATAN IMPLEMENTASI
+====================================================================
+Implementasi dilakukan secara bertahap sesuai arsitektur sistem pada paper:
+1) Level 1: Foundation Data (preprocessing dan validasi data siap EDAS)
+2) Level 2: Konversi Preferensi Pengguna menjadi Bobot + Jenis Kriteria
+3) Level 3: Implementasi Perhitungan EDAS (AV, PDA, NDA, SP, SN, NSP, NSN, AS)
+4) Level 4: Pembentukan Playlist berdasarkan ranking dan target durasi
+5) Level 5: Pembungkusan ke backend API
+6) Level 6: Integrasi NLG
+7) Level 7: Integrasi frontend
+
+Catatan metodologis penting:
+- Variabel aktivitas berfungsi sebagai konteks framing pengisian kuesioner.
+- Faktor yang masuk langsung ke perhitungan EDAS adalah hasil jawaban kuesioner
+  yang telah dikonversi menjadi bobot kriteria dan jenis kriteria (benefit/cost).
+
+====================================================================
+LEVEL 1 - FOUNDATION DATA (SELESAI)
+====================================================================
+Tujuan Level 1:
+Menyiapkan dataset agar valid sebagai matriks keputusan EDAS sesuai rancangan di paper
+(Subbab 4.2.5), yaitu memiliki alternatif lagu, 8 kriteria numerik, dan data durasi
+untuk pembentukan playlist.
+
+Ekspektasi hasil Level 1:
+- Dataset dapat dibaca dari file CSV.
+- Data difilter berdasarkan status valid (status = ok).
+- Delapan parameter audio tersedia dan bertipe numerik:
+  bpm, energy, danceability, happiness, popularity, acousticness,
+  instrumentalness, speechiness.
+- Durasi lagu berhasil dikonversi dari format menit:detik ke detik.
+- Decision matrix terbentuk dengan ukuran (m x 8) tanpa nilai NaN.
+
+--------------------------------------------------
+A. File yang diimplementasikan/diubah
+--------------------------------------------------
+1) backend/src/preprocess.py (file baru)
+2) backend/src/main.py (diperbarui untuk menjalankan validasi Level 1)
+
+--------------------------------------------------
+B. Penjelasan fungsi per file
+--------------------------------------------------
+1) File: backend/src/preprocess.py
+   Fungsi utama yang dibuat:
+
+   a. EDAS_CRITERIA
+      - Konstanta daftar 8 kriteria EDAS sesuai paper:
+        ["bpm", "energy", "danceability", "happiness", "popularity",
+         "acousticness", "instrumentalness", "speechiness"]
+
+   b. parse_duration_to_seconds(duration_text)
+      - Mengubah format durasi "mm:ss" menjadi detik.
+      - Menangani normalisasi ketika ditemukan anomali scraping, misalnya "2:60".
+
+   c. _safe_parse_duration_to_seconds(duration_text)
+      - Wrapper aman agar baris dengan format durasi bermasalah tidak membuat
+        proses berhenti total.
+
+   d. _ensure_columns(df, required_columns)
+      - Memastikan kolom wajib tersedia sebelum preprocessing dilakukan.
+
+   e. preprocess_for_edas(df)
+      - Menjalankan pipeline preprocessing:
+        1. validasi kolom wajib,
+        2. normalisasi/filtrasi kolom status menjadi "ok",
+        3. konversi duration -> duration_seconds,
+        4. konversi 8 kriteria menjadi numerik,
+        5. drop baris invalid,
+        6. bentuk decision matrix.
+      - Return:
+        - cleaned_df (data siap pemrosesan lanjutan)
+        - decision_matrix (matriks keputusan EDAS)
+
+2) File: backend/src/main.py
+   - Menambahkan pemanggilan preprocess_for_edas(df).
+   - Menampilkan indikator validasi Level 1:
+     - jumlah baris mentah,
+     - jumlah baris setelah filter status,
+     - shape decision matrix,
+     - jumlah NaN,
+  - rentang durasi detik,
+  - contoh data siap EDAS.
+
+--------------------------------------------------
+B1. Cuplikan kode perubahan (rekam historis)
+--------------------------------------------------
+1) Cuplikan dari backend/src/main.py
+
+   preprocess_result = preprocess_for_edas(df)
+   cleaned_df = preprocess_result.cleaned_df
+   decision_matrix = preprocess_result.decision_matrix
+
+   Penjelasan bahasa manusia:
+   - Program tidak berhenti di "baca CSV", tapi langsung menjalankan tahap
+     pembersihan data agar menghasilkan data bersih dan matriks keputusan EDAS.
+
+2) Cuplikan dari backend/src/preprocess.py
+
+   working_df["status"] = working_df["status"].astype(str).str.strip().str.lower()
+   working_df = working_df[working_df["status"] == "ok"].copy()
+
+   Penjelasan bahasa manusia:
+   - Sistem menstandarkan format teks status lalu hanya mengambil baris valid
+     dengan status "ok" supaya data yang dihitung benar-benar layak.
+
+3) Cuplikan dari backend/src/preprocess.py
+
+   working_df["duration_seconds"] = working_df["duration"].apply(_safe_parse_duration_to_seconds)
+   working_df = working_df.dropna(subset=[*EDAS_CRITERIA, "duration_seconds"]).copy()
+
+   Penjelasan bahasa manusia:
+   - Durasi teks diubah ke detik, lalu data yang masih tidak valid dibuang agar
+     proses hitung di level berikutnya tidak error.
+
+--------------------------------------------------
+C. Hasil pengujian Level 1
+--------------------------------------------------
+Perintah uji:
+python src/main.py
+
+Hasil utama yang diperoleh:
+- Jumlah baris mentah: 5290
+- Jumlah baris setelah filter status=ok: 5290
+- Shape decision matrix: (5290, 8)
+- Cek NaN pada decision matrix: 0
+- Durasi minimum: 36 detik
+- Durasi maksimum: 779 detik
+
+Interpretasi hasil:
+- Data telah siap digunakan pada tahap perhitungan EDAS.
+- Matriks keputusan sudah memenuhi format alternatif x kriteria.
+- Tidak ada nilai hilang pada 8 kriteria utama.
+
+--------------------------------------------------
+D. Kendala teknis dan penanganan
+--------------------------------------------------
+Kendala:
+- Terdapat anomali data durasi dengan format "2:60".
+
+Dampak:
+- Parsing durasi gagal jika hanya menerima detik 0-59 secara ketat.
+
+Penanganan:
+- Parser durasi dinormalisasi sehingga detik >= 60 dikonversi
+  ke menit + sisa detik (contoh 2:60 -> 180 detik).
+- Baris yang benar-benar tidak valid ditangani aman melalui safe parser.
+
+Kesimpulan kendala:
+- Pipeline preprocessing menjadi robust terhadap variasi data scraping,
+  tanpa mengubah prinsip perhitungan EDAS.
+
+--------------------------------------------------
+E. Kesesuaian dengan paper
+--------------------------------------------------
+Level 1 sudah konsisten dengan isi paper pada bagian:
+- Parameter audio sebagai kriteria (8 parameter utama).
+- Pembentukan matriks keputusan sebagai dasar metode EDAS.
+- Persiapan data numerik sebelum tahapan perhitungan AV, PDA, NDA, dst.
+
+Pada tahap ini belum dilakukan perhitungan ranking EDAS.
+Tahap ini hanya menyiapkan data yang valid dan terstruktur untuk perhitungan
+pada level berikutnya.
+
+====================================================================
+TEMPLATE UPDATE LEVEL BERIKUTNYA
+====================================================================
+Gunakan format berikut untuk menambah dokumentasi setiap progress baru:
+
+[LEVEL X - NAMA TAHAP]
+Tujuan:
+Ekspektasi:
+File yang ditambah/diubah:
+Penjelasan fungsi:
+Cuplikan kode perubahan:
+Penjelasan bahasa manusia dari cuplikan:
+Perintah pengujian:
+Hasil pengujian:
+Kendala & penanganan:
+Kesesuaian dengan paper:
+Status: (Lanjut / Tunda)
+
+====================================================================
+CATATAN UPDATE BERKELANJUTAN
+====================================================================
+- Dokumen ini diperbarui setiap selesai 1 level implementasi.
+- Prinsip pengerjaan: tidak lanjut ke level berikutnya bila hasil level saat ini
+  belum sesuai ekspektasi.
+- Cuplikan kode pada dokumen ini berfungsi sebagai rekam historis perubahan.
+- Jika file sumber berubah di level berikutnya, cuplikan level sebelumnya tetap
+  dipertahankan agar jejak implementasi tidak hilang.
+- Dengan pola ini, narasi Bab 4.3 dapat langsung dipindahkan dari dokumen ini
+  ke naskah skripsi dengan penyesuaian redaksional minimal.
+
+====================================================================
+LEVEL 2 - KONVERSI PREFERENSI KUESIONER (SELESAI)
+====================================================================
+Tujuan Level 2:
+Mengimplementasikan mekanisme konversi jawaban kuesioner (14 butir skala Likert)
+menjadi dua komponen utama yang dibutuhkan metode EDAS, yaitu:
+1) bobot kriteria, dan
+2) jenis kriteria (benefit/cost/neutral).
+
+Ekspektasi hasil Level 2:
+- Sistem menerima jawaban 14 butir (skala 1-5) secara lengkap.
+- Jawaban dipetakan ke 8 parameter audio sesuai rancangan pada paper.
+- Skor parameter dihitung dengan rata-rata per parameter.
+- Bobot dinormalisasi sehingga total bobot = 1.
+- Jenis kriteria ditentukan dari aturan paper:
+  skor > 3 = benefit, skor < 3 = cost, skor = 3 = neutral.
+
+--------------------------------------------------
+A. File yang diimplementasikan/diubah
+--------------------------------------------------
+1) backend/src/preferences.py (file baru)
+2) backend/src/main.py (diperbarui untuk demo output Level 2)
+3) backend/tests/test_preferences.py (unit test ringan)
+
+--------------------------------------------------
+B. Penjelasan fungsi per file
+--------------------------------------------------
+1) File: backend/src/preferences.py
+   Komponen utama:
+
+   a. PARAMETERS
+      - Daftar 8 parameter audio yang digunakan pada EDAS.
+
+   b. QUESTIONNAIRE_MAPPING
+      - Pemetaan 14 butir ke parameter audio sesuai tabel pemetaan pada paper.
+      - Menyertakan orientasi butir (apakah jawaban tinggi berarti preferensi
+        tinggi terhadap parameter).
+      - Butir bernada kebalikan di-handle melalui reverse scoring, misalnya:
+        - Q2 (BPM santai),
+        - Q4 (Energy tenang),
+        - Q14 (Speechiness tidak terlalu banyak kata).
+
+   c. build_preferences_from_questionnaire(answers)
+      - Validasi kelengkapan nomor pertanyaan dan rentang skala 1-5.
+      - Konversi jawaban ke skor parameter (rata-rata per parameter).
+      - Normalisasi skor menjadi bobot (jumlah bobot = 1).
+      - Klasifikasi jenis kriteria berdasarkan threshold skor.
+      - Menghasilkan:
+        - parameter_scores
+        - weights
+        - criteria_types
+
+2) File: backend/src/main.py
+   - Menambahkan blok demo Level 2 dengan sample jawaban kuesioner.
+   - Menampilkan:
+     - skor per parameter,
+     - bobot per parameter,
+     - total bobot,
+     - jenis kriteria.
+
+3) File: backend/tests/test_preferences.py
+   - Test 1: total bobot harus sama dengan 1.
+   - Test 2: klasifikasi benefit/cost/neutral mengikuti threshold skor.
+   - Test 3: reverse item berpengaruh sesuai arah yang diharapkan.
+
+--------------------------------------------------
+B1. Cuplikan kode perubahan (rekam historis)
+--------------------------------------------------
+1) Cuplikan dari backend/src/preferences.py
+
+   QUESTIONNAIRE_MAPPING = [
+     QuestionnaireItem(question_id=1, parameter="bpm", positive_toward_higher_value=True),
+     QuestionnaireItem(question_id=2, parameter="bpm", positive_toward_higher_value=False),
+     ...
+     QuestionnaireItem(question_id=14, parameter="speechiness", positive_toward_higher_value=False),
+   ]
+
+   Penjelasan bahasa manusia:
+   - Ini peta tetap antara 14 pertanyaan dan 8 parameter audio.
+   - Nilai True/False menandai arah pertanyaan (langsung atau kebalikan).
+
+2) Cuplikan dari backend/src/preferences.py
+
+   def _normalize_answer(answer: int, positive_toward_higher_value: bool) -> float:
+     if positive_toward_higher_value:
+       return float(answer)
+     return float(6 - answer)
+
+   Penjelasan bahasa manusia:
+   - Fungsi ini menerapkan reverse scoring untuk pertanyaan yang arahnya
+   berkebalikan, supaya makna akhirnya tetap konsisten saat dihitung.
+
+3) Cuplikan dari backend/src/preferences.py
+
+   weights = {
+     parameter: score / total_score
+     for parameter, score in parameter_scores.items()
+   }
+
+   Penjelasan bahasa manusia:
+   - Skor preferensi tiap parameter diubah menjadi proporsi bobot.
+   - Karena dibagi total skor, jumlah akhir semua bobot menjadi 1.
+
+4) Cuplikan dari backend/src/main.py (demo Level 2)
+
+   demo_answers = {
+     1: 4, 2: 2, 3: 4, 4: 2, 5: 5, 6: 4, 7: 4,
+     8: 4, 9: 3, 10: 3, 11: 4, 12: 4, 13: 2, 14: 4,
+   }
+   preference_result = build_preferences_from_questionnaire(demo_answers)
+
+   Penjelasan bahasa manusia:
+   - Ini simulasi sementara untuk memastikan konversi preferensi sudah benar
+   sebelum dihubungkan ke input form frontend.
+   - Walau nanti kode demo dihapus/diubah, jejak validasi awal tetap tercatat
+   di dokumentasi ini.
+
+--------------------------------------------------
+C. Hasil pengujian Level 2
+--------------------------------------------------
+1) Uji integrasi melalui main.py
+Perintah:
+python src/main.py
+
+Ringkasan output:
+- Total bobot: 1.000000
+- Contoh klasifikasi:
+  - energy: benefit
+  - speechiness: cost
+  - popularity: neutral
+  - acousticness: neutral
+
+2) Uji unit test
+Perintah:
+python -m unittest discover -s tests -p "test_*.py"
+
+Hasil:
+- Ran 3 tests
+- OK
+
+Interpretasi hasil:
+- Konversi kuesioner ke bobot dan jenis kriteria berjalan konsisten.
+- Aturan klasifikasi preferensi terhadap kriteria sudah sesuai definisi metodologis.
+- Modul siap dipakai pada Level 3 untuk perhitungan EDAS.
+
+--------------------------------------------------
+D. Kesesuaian dengan paper
+--------------------------------------------------
+Level 2 konsisten dengan rancangan pada paper bagian penentuan bobot dan jenis
+kriteria berdasarkan preferensi pengguna, dengan poin kesesuaian utama:
+- input berasal dari kuesioner 14 butir skala Likert,
+- pemetaan butir ke 8 parameter audio,
+- agregasi skor per parameter,
+- normalisasi bobot,
+- klasifikasi benefit/cost/netral berbasis ambang nilai 3.
+
+Catatan konseptual:
+- Aktivitas tetap diposisikan sebagai framing konteks pengisian kuesioner.
+- Yang masuk langsung ke perhitungan EDAS adalah hasil konversi preferensi
+  (bobot + jenis kriteria).
+
+Status Level 2: Lanjut (siap masuk Level 3 - Perhitungan EDAS).
+
+====================================================================
+LEVEL 3 - IMPLEMENTASI PERHITUNGAN EDAS (SELESAI)
+====================================================================
+Tujuan Level 3:
+Mengimplementasikan seluruh tahapan perhitungan EDAS sesuai rumus di paper,
+mulai dari Average Solution hingga Appraisal Score dan ranking alternatif lagu.
+
+Ekspektasi hasil Level 3:
+- Sistem menerima decision matrix dari Level 1.
+- Sistem menerima bobot dan jenis kriteria dari Level 2.
+- Seluruh komponen EDAS terhitung lengkap:
+  AV, PDA, NDA, SP, SN, NSP, NSN, Appraisal Score.
+- Sistem menghasilkan ranking lagu dari skor tertinggi ke terendah.
+- Tidak ada nilai NaN pada skor akhir.
+
+--------------------------------------------------
+A. File yang diimplementasikan/diubah
+--------------------------------------------------
+1) backend/src/edas.py (file baru)
+2) backend/src/main.py (integrasi Level 3)
+3) backend/tests/test_edas.py (unit test Level 3)
+
+--------------------------------------------------
+B. Penjelasan fungsi per file
+--------------------------------------------------
+1) File: backend/src/edas.py
+  Komponen utama:
+
+  a. EdasResult
+    - Struktur hasil untuk menyimpan seluruh komponen perhitungan:
+      average_solution, pda, nda, sp, sn, nsp, nsn, appraisal_score, ranking.
+
+  b. run_edas(decision_matrix, weights, criteria_types)
+    - Validasi kolom terhadap bobot dan jenis kriteria.
+    - Hitung Average Solution per kriteria.
+    - Hitung PDA dan NDA per elemen matriks berdasarkan jenis kriteria.
+    - Hitung SP dan SN sebagai penjumlahan berbobot.
+    - Hitung NSP dan NSN menggunakan normalisasi terhadap nilai maksimum.
+    - Hitung Appraisal Score dengan rata-rata NSP dan NSN.
+    - Hitung ranking menurun berdasarkan Appraisal Score.
+
+  Catatan implementasi untuk kriteria netral:
+  - Kriteria berlabel "neutral" diproses dengan arah benefit (tanpa membalik arah),
+    sejalan dengan prinsip paper bahwa preferensi netral tidak diperlakukan ekstrem.
+
+2) File: backend/src/main.py
+  - Menambahkan blok eksekusi Level 3:
+    - panggil run_edas(...),
+    - tampilkan Average Solution,
+    - gabungkan hasil score ke data lagu,
+    - tampilkan Top 10 ranking,
+    - tampilkan ringkasan validasi (jumlah alternatif, rentang score, NaN check).
+
+3) File: backend/tests/test_edas.py
+  - Test 1: memverifikasi ranking EDAS pada matriks kecil dengan hasil terduga.
+  - Test 2: memverifikasi kriteria "neutral" tidak membalik arah preferensi.
+  - Test 3: memverifikasi output score tidak mengandung NaN.
+
+--------------------------------------------------
+B1. Cuplikan kode perubahan (rekam historis)
+--------------------------------------------------
+1) Cuplikan dari backend/src/edas.py
+
+  average_solution = matrix.mean(axis=0)
+
+  Penjelasan bahasa manusia:
+  - Sistem menghitung nilai rata-rata tiap kriteria sebagai titik acuan
+    untuk mengukur jarak positif dan jarak negatif tiap lagu.
+
+2) Cuplikan dari backend/src/edas.py
+
+  if criterion_type == "cost":
+     pda_column = (av - values).clip(lower=0)
+     nda_column = (values - av).clip(lower=0)
+  else:
+     pda_column = (values - av).clip(lower=0)
+     nda_column = (av - values).clip(lower=0)
+
+  Penjelasan bahasa manusia:
+  - Untuk kriteria benefit, nilai di atas rata-rata dihitung sebagai jarak positif.
+  - Untuk kriteria cost, arah perhitungan dibalik sesuai rumus EDAS.
+
+3) Cuplikan dari backend/src/edas.py
+
+  sp = weighted_pda.sum(axis=1)
+  sn = weighted_nda.sum(axis=1)
+
+  max_sp = float(sp.max())
+  max_sn = float(sn.max())
+
+  nsp = sp / max_sp
+  nsn = 1 - (sn / max_sn)
+
+  appraisal_score = 0.5 * (nsp + nsn)
+
+  Penjelasan bahasa manusia:
+  - Nilai positif dan negatif dijumlahkan berbobot, lalu dinormalisasi.
+  - Skor akhir didapat dari gabungan dua sisi tersebut agar penilaian seimbang.
+
+4) Cuplikan dari backend/src/main.py
+
+  edas_result = run_edas(
+     decision_matrix=decision_matrix,
+     weights=preference_result.weights,
+     criteria_types=preference_result.criteria_types,
+  )
+
+  ranking_df["appraisal_score"] = edas_result.appraisal_score.values
+  ranking_df["rank"] = edas_result.ranking.values
+
+  Penjelasan bahasa manusia:
+  - Pipeline utama kini benar-benar menghitung EDAS end-to-end dan menghasilkan
+    skor serta ranking lagu yang bisa dipakai untuk pembentukan playlist.
+
+--------------------------------------------------
+C. Hasil pengujian Level 3
+--------------------------------------------------
+1) Uji integrasi melalui main.py
+Perintah:
+python src/main.py
+
+Ringkasan output:
+- Jumlah alternatif terhitung: 5290
+- Min appraisal score: 0.015291
+- Max appraisal score: 0.948574
+- NaN pada appraisal score: False
+- Top 10 ranking berhasil ditampilkan.
+
+2) Uji unit test
+Perintah:
+python -m unittest discover -s tests -p "test_*.py"
+
+Hasil:
+- Ran 6 tests
+- OK
+
+Interpretasi hasil:
+- Implementasi rumus EDAS berjalan stabil.
+- Hasil ranking dapat dihasilkan tanpa nilai kosong.
+- Modul siap dilanjutkan ke Level 4 (pembentukan playlist berdasarkan ranking).
+
+--------------------------------------------------
+D. Kesesuaian dengan paper
+--------------------------------------------------
+Level 3 konsisten dengan tahapan perhitungan EDAS pada paper:
+- perhitungan Average Solution,
+- perhitungan PDA/NDA berbasis benefit/cost,
+- perhitungan SP/SN berbobot,
+- normalisasi NSP/NSN,
+- perhitungan Appraisal Score,
+- pemeringkatan alternatif lagu.
+
+Status Level 3: Lanjut (siap masuk Level 4 - Pembentukan Playlist).
+
+====================================================================
+LEVEL 4 - PEMBENTUKAN PLAYLIST BERDASARKAN DURASI (SELESAI)
+====================================================================
+Tujuan Level 4:
+Membentuk playlist rekomendasi dari hasil ranking EDAS dengan mekanisme seleksi
+berurutan hingga total durasi mendekati atau sedikit melebihi target durasi pengguna.
+
+Ekspektasi hasil Level 4:
+- Playlist dibentuk dari lagu berperingkat tertinggi terlebih dahulu.
+- Total durasi playlist mencapai target durasi (atau sedikit di atas target).
+- Urutan lagu pada playlist mengikuti urutan ranking hasil EDAS.
+- Sistem menampilkan ringkasan target, total durasi, selisih, dan jumlah lagu.
+
+--------------------------------------------------
+A. File yang diimplementasikan/diubah
+--------------------------------------------------
+1) backend/src/playlist_builder.py (file baru)
+2) backend/src/main.py (integrasi Level 4)
+3) backend/tests/test_playlist_builder.py (unit test Level 4)
+
+--------------------------------------------------
+B. Penjelasan fungsi per file
+--------------------------------------------------
+1) File: backend/src/playlist_builder.py
+  Komponen utama:
+
+  a. PlaylistBuildResult
+    - Struktur hasil pembentukan playlist:
+      playlist_df, total_duration_seconds, target_duration_seconds,
+      remaining_seconds, exceeded_seconds.
+
+  b. build_playlist_by_duration(ranked_songs, target_duration_minutes)
+    - Validasi kolom wajib (`duration_seconds`, `appraisal_score`, `rank`).
+    - Urutkan lagu berdasarkan appraisal_score (desc) lalu rank (asc).
+    - Ambil lagu satu per satu (greedy) sambil menjumlahkan durasi.
+    - Berhenti ketika total durasi sudah mencapai target.
+    - Kembalikan playlist final beserta metrik selisih durasi.
+
+2) File: backend/src/main.py
+  - Menambahkan blok eksekusi Level 4:
+    - panggil build_playlist_by_duration(...),
+    - tampilkan target vs total durasi,
+    - tampilkan sisa/kelebihan detik,
+    - tampilkan jumlah lagu terpilih,
+    - tampilkan preview playlist.
+
+3) File: backend/tests/test_playlist_builder.py
+  - Test 1: playlist mencapai target durasi minimal.
+  - Test 2: urutan lagu mengikuti ranking.
+  - Test 3: target non-positif mengembalikan playlist kosong.
+
+--------------------------------------------------
+B1. Cuplikan kode perubahan (rekam historis)
+--------------------------------------------------
+1) Cuplikan dari backend/src/playlist_builder.py
+
+  ordered_df = ranked_songs.sort_values(
+      by=["appraisal_score", "rank"],
+      ascending=[False, True],
+  ).reset_index(drop=True)
+
+  Penjelasan bahasa manusia:
+  - Lagu disusun dari skor tertinggi agar playlist diprioritaskan oleh kualitas
+    rekomendasi EDAS yang paling sesuai preferensi pengguna.
+
+2) Cuplikan dari backend/src/playlist_builder.py
+
+  for _, row in ordered_df.iterrows():
+      total_duration_seconds += int(row["duration_seconds"])
+      selected_rows.append(row_dict)
+
+      if total_duration_seconds >= target_duration_seconds:
+          break
+
+  Penjelasan bahasa manusia:
+  - Lagu ditambahkan satu per satu sampai target tercapai.
+  - Setelah target tercapai, proses berhenti agar playlist tidak terlalu panjang.
+
+3) Cuplikan dari backend/src/main.py
+
+  target_duration_minutes = 60
+  playlist_result = build_playlist_by_duration(
+      ranked_songs=ranking_df,
+      target_duration_minutes=target_duration_minutes,
+  )
+
+  print(f"Total durasi playlist (detik): {playlist_result.total_duration_seconds}")
+  print(f"Kelebihan durasi terhadap target (detik): {playlist_result.exceeded_seconds}")
+
+  Penjelasan bahasa manusia:
+  - Blok ini menjalankan simulasi pembentukan playlist selama 60 menit.
+  - Hasilnya langsung menampilkan apakah durasi sudah pas, kurang, atau sedikit lebih.
+
+--------------------------------------------------
+C. Hasil pengujian Level 4
+--------------------------------------------------
+1) Uji integrasi melalui main.py
+Perintah:
+python src/main.py
+
+Ringkasan output:
+- Target durasi: 3600 detik (60 menit)
+- Total durasi playlist: 3623 detik
+- Sisa durasi: 0 detik
+- Kelebihan durasi: 23 detik
+- Jumlah lagu terpilih: 17
+
+2) Uji unit test
+Perintah:
+python -m unittest discover -s tests -p "test_*.py"
+
+Hasil:
+- Ran 9 tests
+- OK
+
+Interpretasi hasil:
+- Pembentukan playlist berjalan sesuai strategi yang dirancang.
+- Urutan lagu konsisten mengikuti ranking EDAS.
+- Target durasi tercapai dengan kelebihan kecil yang masih dalam batas wajar.
+
+--------------------------------------------------
+D. Kesesuaian dengan paper
+--------------------------------------------------
+Level 4 konsisten dengan paper pada bagian pembentukan playlist:
+- playlist dibentuk dari hasil pemeringkatan EDAS,
+- lagu dipilih berurutan dari prioritas tertinggi,
+- total durasi disesuaikan dengan input pengguna,
+- total akhir dapat mendekati atau sedikit melebihi target durasi.
+
+Status Level 4: Lanjut (siap masuk Level 5 - Pembungkusan Backend API).
+

@@ -1,28 +1,87 @@
 .heroCard {
   background: var(--surface);
-  border: 2px solid var(--surface-border);
-  border-radius: 26px;
-  backdrop-filter: blur(8px);
-  box-shadow: 0 14px 26px rgba(18, 23, 54, 0.3);
-  padding: 28px;
+  border: 1.5px solid var(--surface-border);
+  border-radius: 22px;
+  backdrop-filter: blur(14px);
+  padding: 28px 32px 24px;
+  position: relative;
+  overflow: hidden;
 }
 
-.heroCard h1 {
-  margin: 0 0 10px;
+/* top-right glow accent */
+.heroCard::before {
+  content: "";
+  position: absolute;
+  top: -40px; right: -40px;
+  width: 180px; height: 180px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(30,215,96,0.22), transparent 70%);
+  pointer-events: none;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1.5px solid rgba(30,215,96,0.4);
+  background: rgba(30,215,96,0.10);
+  color: #1ed760;
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+
+.title {
+  margin: 0 0 12px;
   color: var(--text-primary);
-  font-size: clamp(2rem, 3.2vw, 2.9rem);
-  line-height: 1.15;
+  font-size: clamp(1.9rem, 3.4vw, 2.8rem);
+  font-weight: 900;
+  line-height: 1.1;
   letter-spacing: -0.03em;
 }
 
-.heroCard p {
-  margin: 0;
+.highlight {
+  background: linear-gradient(90deg, #1ed760, #00c3ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.body {
+  margin: 0 0 20px;
   color: var(--text-secondary);
   line-height: 1.65;
+  font-size: 1rem;
+  max-width: 520px;
+}
+
+/* ── decorative mini equalizer ── */
+.eq {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 28px;
+}
+
+.eqBar {
+  display: block;
+  width: 4px;
+  border-radius: 2px 2px 0 0;
+  background: linear-gradient(180deg, #1ed760, #00c3ff);
+  animation: eqAnim calc(0.5s + calc(var(--i) * 0.06s)) ease-in-out infinite alternate;
+  animation-delay: calc(var(--i) * 0.045s);
+}
+
+@keyframes eqAnim {
+  from { height: 4px; opacity: 0.4; }
+  to   { height: calc(8px + (var(--i) * 1.8px)); opacity: 1; }
 }
 
 @media (max-width: 600px) {
-  .heroCard {
-    padding: 18px;
-  }
+  .heroCard { padding: 20px; }
+  .title { font-size: 1.8rem; }
 }

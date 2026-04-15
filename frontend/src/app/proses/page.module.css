@@ -1,0 +1,131 @@
+.page {
+  --surface-bg: rgba(10, 10, 18, 0.9);
+  --surface-border: rgba(255, 255, 255, 0.3);
+  --surface-shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
+  --title-color: #f5f5ff;
+  --text-color: #d3d3ea;
+  --progress-track: rgba(255, 255, 255, 0.2);
+  --step-border: rgba(255, 255, 255, 0.22);
+  --step-done-bg: rgba(30, 215, 96, 0.16);
+  --step-done-text: #d5ffe5;
+  --step-idle-bg: rgba(255, 255, 255, 0.1);
+  --step-idle-text: #e2e2f6;
+  --note-color: #f1f1ff;
+  --subtle-color: #cfcfe8;
+
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  position: relative;
+}
+
+:global(html[data-theme="light"]) .page {
+  --surface-bg: rgba(248, 250, 255, 0.92);
+  --surface-border: rgba(20, 24, 42, 0.2);
+  --surface-shadow: 0 14px 34px rgba(32, 46, 88, 0.12);
+  --title-color: #121428;
+  --text-color: #2f3350;
+  --progress-track: rgba(32, 40, 84, 0.14);
+  --step-border: rgba(27, 33, 68, 0.2);
+  --step-done-bg: rgba(30, 215, 96, 0.26);
+  --step-done-text: #0d5a2e;
+  --step-idle-bg: rgba(37, 45, 89, 0.08);
+  --step-idle-text: #2a3153;
+  --note-color: #101833;
+  --subtle-color: #3f466d;
+}
+
+.card {
+  position: relative;
+  z-index: 1;
+  width: min(760px, 100%);
+  border-radius: 22px;
+  border: 1.5px solid var(--surface-border);
+  background: var(--surface-bg);
+  backdrop-filter: blur(14px);
+  box-shadow: var(--surface-shadow);
+  padding: 24px;
+}
+
+.card h1 {
+  margin: 0 0 8px;
+  font-size: clamp(1.2rem, 3vw, 1.8rem);
+  color: var(--title-color);
+}
+
+.card p {
+  margin: 0;
+  color: var(--text-color);
+  line-height: 1.6;
+}
+
+.progressWrap {
+  margin-top: 16px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--progress-track);
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, #1ed760, #00c3ff, #9747ff);
+  transition: width 180ms linear;
+}
+
+.percentLabel {
+  margin-top: 8px;
+  display: inline-block;
+  font-weight: 700;
+  color: #1ed760;
+}
+
+.stepList {
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.stepDone,
+.stepIdle {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--step-border);
+  font-size: 0.92rem;
+}
+
+.stepDone {
+  background: var(--step-done-bg);
+  color: var(--step-done-text);
+}
+
+.stepIdle {
+  background: var(--step-idle-bg);
+  color: var(--step-idle-text);
+}
+
+.note {
+  margin-top: 14px !important;
+  font-size: 0.9rem;
+  color: var(--note-color) !important;
+}
+
+.previewTime {
+  margin-top: 4px !important;
+  font-size: 0.82rem;
+  color: var(--subtle-color) !important;
+  opacity: 1;
+}
+
+.helperDuration {
+  position: absolute;
+  right: 16px;
+  bottom: 12px;
+  z-index: 1;
+  color: var(--note-color);
+  opacity: 0.95;
+  font-size: 0.8rem;
+}

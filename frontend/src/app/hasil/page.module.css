@@ -1,0 +1,267 @@
+.page {
+  --surface-bg: rgba(10, 10, 18, 0.88);
+  --surface-border: rgba(255, 255, 255, 0.3);
+  --surface-shadow: 0 12px 30px rgba(0, 0, 0, 0.42);
+  --title-color: #f4f4ff;
+  --text-color: #d8d8f0;
+  --subtle-color: #cdcee8;
+  --back-link-color: #d9d9f0;
+  --badge-color: #7dffaf;
+  --badge-border: rgba(30, 215, 96, 0.75);
+  --badge-bg: rgba(30, 215, 96, 0.12);
+  --chip-bg: rgba(255, 255, 255, 0.14);
+  --chip-border: rgba(255, 255, 255, 0.28);
+  --chip-text: #f0f0ff;
+  --list-item-bg: rgba(255, 255, 255, 0.06);
+  --list-item-border: rgba(255, 255, 255, 0.24);
+  --song-title-color: #f8f8ff;
+  --song-meta-color: #f0f0ff;
+  --form-label-color: #e8e8ff;
+  --textarea-bg: rgba(255, 255, 255, 0.12);
+  --textarea-border: rgba(255, 255, 255, 0.28);
+  --textarea-color: #f0f0ff;
+  --fallback-color: #f4f4ff;
+
+  min-height: 100svh;
+  padding: 18px;
+  position: relative;
+}
+
+:global(html[data-theme="light"]) .page {
+  --surface-bg: rgba(249, 250, 255, 0.94);
+  --surface-border: rgba(24, 34, 74, 0.18);
+  --surface-shadow: 0 12px 30px rgba(40, 61, 116, 0.12);
+  --title-color: #101734;
+  --text-color: #2d3556;
+  --subtle-color: #424c74;
+  --back-link-color: #1f2a54;
+  --badge-color: #107a38;
+  --badge-border: rgba(16, 122, 56, 0.45);
+  --badge-bg: rgba(30, 215, 96, 0.14);
+  --chip-bg: rgba(32, 44, 92, 0.08);
+  --chip-border: rgba(26, 36, 78, 0.2);
+  --chip-text: #1b2445;
+  --list-item-bg: rgba(255, 255, 255, 0.75);
+  --list-item-border: rgba(23, 33, 72, 0.2);
+  --song-title-color: #121a39;
+  --song-meta-color: #24315e;
+  --form-label-color: #172042;
+  --textarea-bg: rgba(33, 44, 92, 0.06);
+  --textarea-border: rgba(24, 34, 75, 0.2);
+  --textarea-color: #131c3d;
+  --range-accent: #0f7f3a;
+  --fallback-color: #131d3d;
+}
+
+.layout {
+  position: relative;
+  z-index: 1;
+  width: min(980px, 100%);
+  margin: 0 auto;
+  display: grid;
+  gap: 14px;
+}
+
+.topBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.backLink {
+  color: var(--back-link-color);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.backLink:hover {
+  color: #1ed760;
+}
+
+.badge {
+  border: 1px solid var(--badge-border);
+  color: var(--badge-color);
+  background: var(--badge-bg);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.card {
+  border-radius: 18px;
+  border: 1.5px solid var(--surface-border);
+  background: var(--surface-bg);
+  backdrop-filter: blur(14px);
+  box-shadow: var(--surface-shadow);
+  padding: 18px;
+}
+
+.card h1,
+.card h2 {
+  color: var(--title-color);
+}
+
+.card h1,
+.card h2 {
+  margin: 0 0 8px;
+}
+
+.card p {
+  margin: 0;
+  color: var(--text-color);
+}
+
+.metrics {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.metrics span {
+  font-size: 0.82rem;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--chip-bg);
+  border: 1px solid var(--chip-border);
+  color: var(--chip-text);
+}
+
+.songList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.songList li {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+  border: 1px solid var(--list-item-border);
+  background: var(--list-item-bg);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.songList strong {
+  color: var(--song-title-color);
+}
+
+.songList p {
+  margin-top: 2px;
+  font-size: 0.84rem;
+  color: var(--subtle-color);
+}
+
+.songMeta {
+  display: grid;
+  gap: 4px;
+  text-align: right;
+  font-size: 0.8rem;
+  color: var(--song-meta-color);
+}
+
+.nlgText {
+  line-height: 1.7;
+  font-size: 0.92rem;
+}
+
+.experimentText {
+  margin-bottom: 10px !important;
+  color: var(--subtle-color) !important;
+}
+
+.experimentActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.primaryButton,
+.secondaryButton {
+  border: none;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.primaryButton {
+  color: #0d0d14;
+  background: linear-gradient(135deg, #1ed760, #00c3ff);
+}
+
+.primaryButton:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.secondaryButton {
+  color: var(--chip-text);
+  border: 1px solid var(--chip-border);
+  background: var(--chip-bg);
+}
+
+.experimentMessage {
+  margin-top: 10px !important;
+  font-size: 0.86rem;
+  color: var(--text-color) !important;
+}
+
+.form {
+  display: grid;
+  gap: 12px;
+}
+
+.form label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.9rem;
+  color: var(--form-label-color);
+}
+
+.form input[type="range"] {
+  width: 100%;
+  accent-color: var(--range-accent, #1ed760);
+}
+
+.form textarea {
+  border-radius: 10px;
+  border: 1px solid var(--textarea-border);
+  background: var(--textarea-bg);
+  color: var(--textarea-color);
+  padding: 10px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.form textarea::placeholder {
+  color: var(--subtle-color);
+}
+
+.form button {
+  border: none;
+  border-radius: 10px;
+  padding: 11px 14px;
+  font-weight: 800;
+  color: #0d0d14;
+  background: linear-gradient(135deg, #1ed760, #00c3ff);
+}
+
+.fallback {
+  min-height: 100svh;
+  display: grid;
+  place-content: center;
+  gap: 8px;
+  text-align: center;
+  color: var(--fallback-color);
+}
+
+.fallback a {
+  color: #1ed760;
+}

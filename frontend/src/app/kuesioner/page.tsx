@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
-import { ComicStarField, type StarSwarmState } from "@/components/common/ComicStarField";
+import { MusicBackground } from "@/components/common/MusicBackground";
+import { MusicCursorTrail } from "@/components/common/MusicCursorTrail";
 import styles from "./page.module.css";
 
 const THEME_STORAGE_KEY = "playlist-theme-v1";
@@ -45,54 +47,37 @@ type ContextData = {
 };
 
 const defaultContext: ContextData = {
-  activity: "",
-  timeOfDay: "",
-  mood: "",
-  durationMinutes: 0,
-  profileName: "",
-  createdAt: "",
+  activity: "", timeOfDay: "", mood: "",
+  durationMinutes: 0, profileName: "", createdAt: "",
 };
 
 export default function KuesionerPage() {
+  const router = useRouter();
   const [theme, setTheme] = useState<"dark" | "light">(() => {
-    if (typeof window === "undefined") {
-      return "dark";
-    }
-
-    const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
-    return savedTheme === "dark" || savedTheme === "light" ? savedTheme : "dark";
+    if (typeof window === "undefined") return "dark";
+    const saved = localStorage.getItem(THEME_STORAGE_KEY);
+    return saved === "light" ? "light" : "dark";
   });
+
   const [contextData] = useState<ContextData>(() => {
-    if (typeof window === "undefined") {
-      return defaultContext;
-    }
-
-    const savedContext = localStorage.getItem(CONTEXT_STORAGE_KEY);
-    if (!savedContext) {
-      return defaultContext;
-    }
-
+    if (typeof window === "undefined") return defaultContext;
     try {
-      return JSON.parse(savedContext) as ContextData;
-    } catch {
-      return defaultContext;
-    }
+      const saved = localStorage.getItem(CONTEXT_STORAGE_KEY);
+      return saved ? JSON.parse(saved) : defaultContext;
+    } catch { return defaultContext; }
   });
+
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [step, setStep] = useState(1);
   const [isSaved, setIsSaved] = useState(false);
-  const [swarm, setSwarm] = useState<StarSwarmState>({
-    trail: [{ xPct: 50, yPct: 50 }],
-    active: false,
-  });
-  const trailLengthRef = useRef(30);
 
   const totalSteps = Math.ceil(questions.length / QUESTIONS_PER_STEP);
 
   const currentQuestions = useMemo(() => {
     const start = (step - 1) * QUESTIONS_PER_STEP;
-    const end = start + QUESTIONS_PER_STEP;
-    return questions.map((question, index) => ({ question, index })).slice(start, end);
+    return questions
+      .map((question, index) => ({ question, index }))
+      .slice(start, start + QUESTIONS_PER_STEP);
   }, [step]);
 
   useEffect(() => {
@@ -101,64 +86,47 @@ export default function KuesionerPage() {
   }, [theme]);
 
   const answeredCount = useMemo(
-    () => Object.values(answers).filter((value) => value >= 1 && value <= 5).length,
+    () => Object.values(answers).filter((v) => v >= 1 && v <= 5).length,
     [answers],
   );
-  const progressPercentage = (answeredCount / questions.length) * 100;
-
+  const progressPct = (answeredCount / questions.length) * 100;
   const isCurrentStepComplete = currentQuestions.every(({ index }) => {
-    const answerValue = answers[index];
-    return answerValue >= 1 && answerValue <= 5;
+    const v = answers[index];
+    return v >= 1 && v <= 5;
   });
 
   const contextNarrative = useMemo(() => {
-    const activityText = contextData.activity || "aktivitas pilihanmu";
-    const timeText = contextData.timeOfDay || "waktu yang kamu tentukan";
-    const moodText = contextData.mood || "suasana yang kamu pilih";
-    const durationText =
-      contextData.durationMinutes > 0
-        ? `${contextData.durationMinutes} menit`
-        : "durasi yang kamu atur";
-
-    return `Untuk sesi ${activityText} di ${timeText} dengan suasana ${moodText} selama ${durationText}, jawab pernyataan berikut sesuai preferensi musik yang ingin kamu dengarkan.`;
+    const activity = contextData.activity || "aktivitas pilihanmu";
+    const time = contextData.timeOfDay || "waktu yang kamu tentukan";
+    const mood = contextData.mood || "suasana yang kamu pilih";
+    const dur = contextData.durationMinutes > 0
+      ? `${contextData.durationMinutes} menit`
+      : "durasi yang kamu atur";
+    return `Untuk sesi ${activity} di ${time} dengan suasana ${mood} selama ${dur}, jawab pernyataan berikut sesuai preferensi musikmu.`;
   }, [contextData]);
 
   const handleSave = () => {
-    if (answeredCount !== questions.length) {
-      return;
-    }
-
+    if (answeredCount !== questions.length) return;
     localStorage.setItem("playlist-questionnaire-v1", JSON.stringify(answers));
     setIsSaved(true);
   };
 
+  const handleContinueToProcess = () => {
+    router.push("/proses");
+  };
+
   return (
-    <main
-      className={styles.page}
-      data-theme={theme}
-      onMouseMove={(event) => {
-        const xPct = (event.clientX / window.innerWidth) * 100;
-        const yPct = (event.clientY / window.innerHeight) * 100;
-        setSwarm((previous) => ({
-          trail: [{ xPct, yPct }, ...previous.trail].slice(0, trailLengthRef.current),
-          active: true,
-        }));
-      }}
-      onMouseLeave={() => {
-        setSwarm((previous) => ({ ...previous, active: false }));
-      }}
-    >
-      <ComicStarField swarm={swarm} />
+    <main className={styles.page} data-theme={theme}>
+      <MusicBackground />
+      <MusicCursorTrail />
 
       <section className={styles.layout}>
         <header className={styles.topBar}>
-          <Link href="/" className={styles.backLink}>
-            ← Balik ke halaman awal
-          </Link>
+          <Link href="/" className={styles.backLink}>← Balik ke halaman awal</Link>
           <button
             type="button"
             className={styles.themeToggle}
-            onClick={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}
+            onClick={() => setTheme((p) => p === "dark" ? "light" : "dark")}
           >
             {theme === "dark" ? "☀️ Light" : "🌙 Dark"}
           </button>
@@ -169,8 +137,6 @@ export default function KuesionerPage() {
           <p>
             Berikan jawaban terhadap setiap pernyataan berikut sesuai dengan preferensi musik
             yang ingin Anda dengarkan pada aktivitas yang telah Anda pilih sebelumnya.
-            Bayangkan Anda sedang melakukan aktivitas tersebut, kemudian tentukan sejauh mana
-            Anda setuju dengan pernyataan yang diberikan.
           </p>
         </section>
 
@@ -178,10 +144,7 @@ export default function KuesionerPage() {
           <p className={styles.descriptionText}>{contextNarrative}</p>
 
           <div className={styles.progressBarWrap} aria-label="Progress jawaban">
-            <div
-              className={styles.progressBarFill}
-              style={{ width: `${progressPercentage}%` }}
-            />
+            <div className={styles.progressBarFill} style={{ width: `${progressPct}%` }} />
           </div>
 
           <ol className={styles.questionList}>
@@ -197,10 +160,7 @@ export default function KuesionerPage() {
                         value={choice.value}
                         checked={answers[index] === choice.value}
                         onChange={() =>
-                          setAnswers((previous) => ({
-                            ...previous,
-                            [index]: choice.value,
-                          }))
+                          setAnswers((prev) => ({ ...prev, [index]: choice.value }))
                         }
                       />
                       <span>{choice.label}</span>
@@ -216,7 +176,7 @@ export default function KuesionerPage() {
               <button
                 type="button"
                 className={styles.ghostButton}
-                onClick={() => setStep((previous) => Math.max(1, previous - 1))}
+                onClick={() => setStep((p) => Math.max(1, p - 1))}
               >
                 ← Sebelumnya
               </button>
@@ -227,9 +187,9 @@ export default function KuesionerPage() {
                 type="button"
                 className={styles.saveButton}
                 disabled={!isCurrentStepComplete}
-                onClick={() => setStep((previous) => Math.min(totalSteps, previous + 1))}
+                onClick={() => setStep((p) => Math.min(totalSteps, p + 1))}
               >
-                Lanjut pertanyaan berikutnya →
+                Lanjut →
               </button>
             )}
 
@@ -244,9 +204,19 @@ export default function KuesionerPage() {
               </button>
             )}
 
-            {step < totalSteps && !isCurrentStepComplete && <span className={styles.savedBadge}>Lengkapi pilihan di halaman ini dulu ya.</span>}
-
+            {step < totalSteps && !isCurrentStepComplete && (
+              <span className={styles.savedBadge}>Lengkapi pilihan di halaman ini dulu ya.</span>
+            )}
             {isSaved && <span className={styles.savedBadge}>Jawaban tersimpan ✅</span>}
+            {isSaved && (
+              <button
+                type="button"
+                className={styles.saveButton}
+                onClick={handleContinueToProcess}
+              >
+                Lanjut ke proses rekomendasi →
+              </button>
+            )}
           </div>
         </section>
       </section>

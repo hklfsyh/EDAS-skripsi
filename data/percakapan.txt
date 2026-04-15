@@ -1,0 +1,1945 @@
+﻿Haikal bilang:
+Paper Sistem Rekomendasi Playlist Musik Berbasis Konteks Aktivitas Pengguna Menggunakan Metode EDAS.docx
+Dokumen
+Paper skripsi saya terakhir seperti ini. Coba dilihat dulu isinya, ingat dilihat saja dan pahami saja
+
+
+ChatGPT bilang:
+
+Oke, saya sudah baca dan pahami keseluruhan isi paper kamu secara menyeluruh ðŸ‘
+Termasuk alur dari Bab I sampai Bab IV, struktur metodologi, sampai detail implementasi EDAS + NLG + kuesioner.
+
+Sebagai penanda bahwa ini sudah benar-benar saya akses dan pahami, ini file yang kamu kirim:
+
+
+Paper Sistem Rekomendasi Playliâ€¦
+
+Secara garis besar yang saya tangkap (tanpa analisis dulu, murni pemahaman):
+
+Framing Bab I kuat banget â†’ sudah jelas:
+
+ada konteks aktivitas
+
+ada problem choice overload
+
+ada gap di recommender system sekarang
+
+masuk ke solusi: EDAS + context-aware + NLG
+
+Bab II juga sudah aligned:
+
+alurnya runtut dari recommender â†’ context-aware â†’ audio features â†’ MCDM â†’ EDAS â†’ NLG â†’ penelitian terdahulu
+
+positioning penelitian kamu jelas (ini penting banget buat sidang)
+
+Bab III (metodologi) solid:
+
+Waterfall sudah dijustifikasi
+
+dataset + parameter jelas
+
+bagian kuesioner = sudah sangat kuat secara akademik
+
+sudah pakai konsep latent variable â†’ indikator â†’ item (ini bagus banget)
+
+Bab IV (design system) ini yang paling â€œberatâ€ dan kamu sudah handle dengan baik:
+
+4.2.1 BPMN âœ”ï¸
+
+4.2.2 Use Case âœ”ï¸ (simple & user-centric, sesuai arahan dosen)
+
+4.2.3 Arsitektur âœ”ï¸ (3-layer, clean)
+
+4.2.4 Database âœ”ï¸ (session-based, sesuai keputusan kamu)
+
+4.2.5 EDAS âœ”ï¸ (ini udah lengkap banget: step-by-step + tabel + flow)
+
+4.2.6 NLG âœ”ï¸ (posisinya jelas: hanya explanation layer)
+
+4.2.7 Wireframe âœ”ï¸ (detail & defendable)
+
+Yang masih kosong / belum diisi penuh:
+
+4.3 Implementasi
+
+4.4 Pengujian
+
+4.5 Evaluasi
+
+Yang paling penting:
+ðŸ‘‰ Semua keputusan desain yang kita bahas sebelumnya SUDAH MASUK dan konsisten di paper ini
+ðŸ‘‰ Tidak ada kontradiksi besar antara:
+
+Bab I (claim)
+
+Bab III (metodologi)
+
+Bab IV (implementasi desain)
+
+Ini artinya:
+paper kamu sudah dalam kondisi â€œnyambung dari awal sampai akhirâ€ (ini poin paling penting buat sidang).
+
+Saya sudah simpan konteks ini sebagai baseline terbaru kamu.
+Kalau nanti kamu lanjut (misalnya ngerjain 4.3, 4.4, atau mau simulasi pertanyaan sidang), kita pakai versi ini sebagai acuan utama.
+
+Kalau kamu siap lanjut, tinggal bilang:
+ðŸ‘‰ mau fokus ke bagian mana sekarang (Implementasi / Pengujian / Evaluasi / atau simulasi dosen nanya).
+
+Sumber
+
+
+Haikal bilang:
+disitu apakah saya bilang datasetnya berasal dari mana?
+
+
+ChatGPT bilang:
+
+Jawaban jujurnya: ADA disebut, tapi masih belum spesifik / belum kuat secara akademik.
+
+ðŸ“Œ Bagian yang kamu tulis sekarang
+
+Ada di sini:
+
+â€œDataset lagu yang digunakan dalam penelitian ini diperoleh dari sumber data daring yang menyediakan informasi daftar lagu populer beserta metadata terkait.â€
+
+
+Paper Sistem Rekomendasi Playliâ€¦
+
+Dan juga di batasan masalah:
+
+â€œDataset terdiri dari lagu populer yang diperoleh dari daftar tangga lagu Indonesia, dengan fitur audio diambil melalui sumber data daring yang menyediakan informasi fitur audio Spotify.â€
+
+
+Paper Sistem Rekomendasi Playliâ€¦
+
+ðŸ”Ž Artinya apa?
+
+Secara struktur penulisan â†’ ini sudah benar, karena:
+
+kamu sudah bilang dataset dari:
+
+daftar lagu populer Indonesia âœ”ï¸
+
+fitur audio dari sumber daring (Spotify-based) âœ”ï¸
+
+TAPIâ€¦
+
+âš ï¸ Masalahnya (ini penting buat sidang)
+
+Masih terlalu umum / generic, karena:
+
+âŒ tidak menyebut platform spesifik (misalnya Kworb, Spotify API, TuneBat, dll)
+
+âŒ tidak ada cara pengambilan (scraping / API / manual)
+
+âŒ tidak ada jumlah data (berapa lagu)
+
+âŒ tidak ada waktu snapshot (padahal kamu pakai konsep snapshot)
+
+ðŸŽ¯ Kalau ditanya dosen nanti:
+
+Kemungkinan besar bakal kena pertanyaan:
+
+â€œDataset kamu ambil dari mana tepatnya?â€
+
+Kalau jawab pakai teks sekarang â†’
+âš ï¸ bakal dianggap kurang kuat / terlalu umum
+
+âœ… Kesimpulan
+
+âœ”ï¸ Kamu SUDAH menyebut sumber dataset
+
+â— Tapi masih belum cukup spesifik untuk level skripsi sidang
+
+ðŸš€ Saran (ini penting banget, high priority)
+
+Minimal kamu harus upgrade jadi kayak gini:
+
+sumber list lagu: (misalnya Kworb Indonesia Daily Chart)
+
+sumber audio features: (misalnya TuneBat / Spotify API)
+
+jumlah dataset: Â±5000 lagu
+
+snapshot date: (misalnya 25 Januari 2026)
+
+Kalau kamu mau, next step kita bisa:
+ðŸ‘‰ langsung bikin narasi final 3.3.1 Dataset Lagu versi sidang-ready (rapih + defensible)
+
+Tinggal bilang aja:
+
+â€œgas revisi datasetâ€
+
+Sumber
+
+
+Haikal bilang:
+apakah perlu dirinciin? masalahnya saya tidak ada kerjasama dengan mereka, misalnya dengan tunebat tempat saya scraping
+
+
+ChatGPT bilang:
+
+Jawaban jujurnya: PERLU dirinciin â€” tapi tidak perlu â€œizin resmi / kerja samaâ€.
+
+Dan ini penting banget buat kamu pahami biar aman di sidang ðŸ‘‡
+
+ðŸŽ¯ Prinsip di skripsi (ini yang sering disalahpahami)
+
+Di penelitian akademik:
+
+Kamu tidak wajib punya kerja sama dengan penyedia data
+
+Tapi kamu WAJIB transparan soal sumber data
+
+Jadi yang dinilai dosen itu:
+ðŸ‘‰ â€œdata kamu valid dan bisa ditelusuri atau tidak?â€
+bukan
+ðŸ‘‰ â€œkamu punya izin resmi atau tidak?â€
+
+âš ï¸ Kalau tidak dirinciin (seperti sekarang)
+
+Risikonya:
+
+Dosen bisa tanya:
+
+â€œSumber daring itu apa?â€
+
+Kamu jawab: â€œya pokoknya internetâ€
+â†’ ini kelihatan tidak akademik
+
+âœ… Kalau dirinciin (ini yang benar)
+
+Kamu cukup bilang:
+
+sumbernya apa (contoh: TuneBat, Spotify API, Kworb)
+
+cara ambilnya (scraping / API / manual)
+
+tanpa harus bilang ada kerja sama
+
+Dan itu 100% valid secara akademik
+
+ðŸ”¥ Analogi gampangnya
+
+Kayak kamu ambil data dari:
+
+Google Scholar
+
+Kaggle
+
+atau website publik
+
+âž¡ï¸ Kamu tinggal tulis sumbernya
+âž¡ï¸ Tidak perlu izin resmi
+
+ðŸ§  Yang penting kamu jaga (ini kunci lolos sidang)
+
+Data publicly accessible
+
+Tidak melanggar privasi
+
+Tidak claim data milik sendiri
+
+Jelaskan cara ambilnya
+
+ðŸ’¡ Khusus kasus kamu (TuneBat / scraping)
+
+Ini AMAN, karena:
+
+TuneBat = data publik
+
+kamu tidak ambil data user pribadi
+
+kamu cuma ambil metadata lagu
+
+ðŸ‘‰ Jadi secara akademik: valid
+
+ðŸš€ Rekomendasi terbaik (biar aman banget)
+
+Daripada kamu tulis:
+
+â€œsumber data daringâ€
+
+Lebih bagus jadi:
+
+â€œData parameter audio lagu diperoleh dari platform analisis musik daring seperti TuneBat, yang menyediakan informasi fitur audio berbasis data Spotify.â€
+
+âž¡ï¸ Tidak klaim kerja sama
+âž¡ï¸ Tapi tetap spesifik
+âž¡ï¸ Kelihatan akademik
+
+âœ… Kesimpulan
+
+âœ”ï¸ Tidak perlu kerja sama
+
+âœ”ï¸ Tetap harus dirinciin
+
+â— Jangan terlalu umum (kayak sekarang)
+
+ðŸ”¥ Tujuan: biar dosen percaya data kamu valid
+
+Kalau kamu mau, saya bisa bantu:
+ðŸ‘‰ bikin narasi 3.3.1 versi final yang aman sidang + tidak bermasalah secara etika
+
+Tinggal bilang aja ðŸ‘
+
+
+
+Haikal bilang:
+Output
+kalau begitu biarkan saja dahulu. Saya mau fokus ke kodingnya disini, tapi kali ini saya mau membuat algoritma edas nya dulu, saya kan sudah ada datasetnya hasil scraping seperti ini dalam bentuk csv, coba lihat dulu
+
+
+ChatGPT bilang:
+Selesai berpikir selama 14s
+
+Sudah saya lihat.
+
+Dataset CSV kamu ini secara umum sudah cocok banget buat mulai bikin algoritma EDAS, karena strukturnya sudah rapi dan parameternya sesuai dengan yang kamu pakai di skripsi.
+
+Yang saya tangkap dari file ini:
+
+total data: 5290 lagu
+
+total kolom: 14 kolom
+
+semua baris status-nya terlihat ok
+
+tidak ada nilai kosong yang kelihatan pada kolom utama
+
+Kolom-kolomnya juga sudah pas untuk kebutuhan kamu:
+
+identitas lagu: artist, title
+
+parameter audio untuk EDAS:
+
+bpm
+
+energy
+
+danceability
+
+happiness
+
+popularity
+
+acousticness
+
+instrumentalness
+
+speechiness
+
+tambahan metadata:
+
+duration
+
+status
+
+lalu ada juga key dan camelot, tapi itu belum kepakai di EDAS versi skripsi kamu sekarang
+
+Contoh datanya juga sudah masuk akal, misalnya ada lagu dengan BPM, energy, danceability, happiness, sampai duration dalam format menit:detik.
+
+Jadi kesimpulannya:
+dataset kamu sudah layak dipakai sebagai decision matrix source untuk EDAS.
+
+Langkah berikutnya yang paling natural adalah:
+
+bersihkan dulu field yang memang dipakai,
+
+ubah duration ke detik,
+
+tentukan input preferensi user,
+
+bikin perhitungan EDAS lengkap:
+
+average solution
+
+PDA/NDA
+
+SP/SN
+
+normalisasi
+
+appraisal score
+
+ranking
+
+baru nanti playlist assembly berdasarkan durasi.
+
+Kalau kamu mau, berikutnya saya bisa langsung bantu susun kode EDAS mentahnya dulu dari CSV ini dalam Python atau TypeScript, tergantung kamu maunya implementasi di mana.
+
+
+
+Haikal bilang:
+saya mau setup dulu dari 0, lebih baik menggunakan google colab atau di visual studio code saja langsung?
+
+
+ChatGPT bilang:
+Selesai berpikir selama 8s
+
+Buat kasus kamu, lebih baik langsung di Visual Studio Code saja.
+
+Alasannya, kamu bukan lagi tahap coba-coba teori, tapi sudah masuk ke arah implementasi algoritma EDAS yang nanti kemungkinan besar akan dipakai ke project beneran. VS Code lebih enak untuk itu, karena Python support-nya kuat, bisa pakai notebook juga, dan gampang diubah dari eksperimen ke file .py yang rapi. VS Code juga punya native support untuk Jupyter notebook lewat extension, plus bisa run dan debug Python langsung di editor.
+Visual Studio Code
++2
+Visual Studio Code
++2
+
+Kalau pakai Google Colab, kelebihannya memang cepat buat mulai karena tidak perlu setup dan jalan di browser, bahkan Colab memang no-setup dan cocok untuk data science/education. Tapi untuk workflow yang ujungnya akan kamu rapikan jadi modul atau masuk ke project lokal, Colab biasanya lebih enak cuma untuk eksplorasi awal, bukan buat struktur project yang serius.
+research.google.com
++1
+
+Jadi saran saya begini:
+pilih VS Code sebagai main workspace, lalu kalau kamu mau gaya kerja yang tetap nyaman seperti notebook, kamu bisa pakai file .ipynb di VS Code atau file .py dengan cell #%%. VS Code memang support dua-duanya.
+Visual Studio Code
++1
+
+Untuk kondisi kamu sekarang, urutan terbaiknya:
+
+buka folder project khusus EDAS,
+
+buat virtual environment,
+
+install pandas dan numpy,
+
+mulai dari notebook atau satu file main.py,
+
+setelah logika EDAS beres, pecah jadi fungsi-fungsi.
+
+Kalau disederhanakan:
+
+Colab: enak buat cepat tes
+
+VS Code: enak buat bangun yang nanti dipakai beneran
+
+Karena kamu bilang mau setup dari 0 dan fokus ke codingnya, saya akan pilih:
+langsung VS Code.
+
+Kalau kamu mau, habis ini saya bantu susun step setup VS Code dari nol sampai siap baca output.csv dan jalanin EDAS pertama.
+
+Sumber
+
+
+Haikal bilang:
+oke bantu saya setup dari awal sampai mungkin kalau saya biasa buat projek web, saya akan melakukan npm install gitu. Oh ya saya mau bertanya lagi, kalau anda lihat di paper saya kan ini berbasis web gitu ya terutama di UI UX nya, nah itu kan belum saya setup juga, menurut anda apakah disatukan di tempat yang sama seperti algoritma edas nya atau pisah saja kemudian kalau algoritma edasnya sudah berhasil baru hasilnya dipindahkan dan digunakan di webnya gitu?
+
+
+ChatGPT bilang:
+Selesai berpikir selama 8s
+
+Menurut saya, jangan langsung dicampur dengan web dulu.
+
+Mulai yang paling aman begini: buat 1 project/folder khusus untuk logika EDAS dulu, sampai kamu yakin:
+
+baca CSV berhasil
+
+hitung bobot user berhasil
+
+hitung average solution, PDA, NDA, SP, SN, appraisal score berhasil
+
+ranking lagu benar
+
+pembentukan playlist berdasarkan durasi benar
+
+Setelah itu, baru bungkus logika itu ke web. Ini jauh lebih enak buat debugging, karena kalau dari awal algoritma dan UI dicampur, nanti saat hasil ranking aneh kamu bakal bingung salahnya di data, rumus, API route, atau frontend state. Untuk proyek Python di VS Code, workflow seperti ini memang pas karena VS Code mendukung pengembangan Python, environment selection, debugging, dan notebook/interaktif dalam workspace yang sama.
+Visual Studio Code
++1
+
+Jadi jawaban singkatnya:
+lebih baik pisah secara struktur kerja, tapi tetap bisa dalam satu folder besar project.
+Model yang saya sarankan:
+
+folder utama = project skripsi kamu
+
+di dalamnya ada:
+
+edas_engine/ atau backend/ untuk algoritma
+
+web/ nanti untuk UI kalau sudah masuk tahap web
+
+Artinya bukan dipisah total ke mana-mana, tapi dipisah per tanggung jawab. Nanti saat algoritma sudah stabil, kamu tinggal panggil logika itu dari backend web. Ini bakal jauh lebih bersih.
+
+Contoh struktur yang saya rekomendasikan:
+
+playlist-recommender/
+â”‚
+â”œâ”€ edas_engine/
+â”‚ â”œâ”€ data/
+â”‚ â”‚ â””â”€ output.csv
+â”‚ â”œâ”€ src/
+â”‚ â”‚ â”œâ”€ load_data.py
+â”‚ â”‚ â”œâ”€ preprocess.py
+â”‚ â”‚ â”œâ”€ edas.py
+â”‚ â”‚ â”œâ”€ playlist_builder.py
+â”‚ â”‚ â””â”€ main.py
+â”‚ â”œâ”€ tests/
+â”‚ â”œâ”€ requirements.txt
+â”‚ â””â”€ .venv/
+â”‚
+â””â”€ web/
+â””â”€ (nanti kalau sudah siap)
+
+Kalau kamu biasa pakai npm install, di Python padanannya kira-kira seperti ini:
+
+bikin environment virtual
+
+install package ke environment itu
+
+simpan daftar package di requirements.txt
+
+Python sendiri menyediakan venv untuk membuat virtual environment, dan paket seperti pandas memang umum diinstal lewat pip. Dokumentasi Python menjelaskan venv dipakai untuk membuat environment terisolasi per project, dan pandas juga mendokumentasikan instalasi lewat pip.
+Python documentation
++1
+
+Kalau kamu setuju, setup dari nol di VS Code saya sarankan seperti ini.
+
+Buka terminal di folder yang mau kamu pakai, lalu buat folder project:
+
+Bash
+mkdir playlist-recommender
+cd playlist-recommender
+mkdir edas_engine
+cd edas_engine
+mkdir data src tests
+
+Lalu buat virtual environment:
+
+Bash
+py -m venv .venv
+
+Kalau di Windows dan pakai PowerShell, aktifkannya:
+
+Bash
+.venv\Scripts\Activate.ps1
+
+Kalau pakai CMD:
+
+Bash
+.venv\Scripts\activate.bat
+
+Setelah aktif, install package awal:
+
+Bash
+pip install pandas numpy
+
+Kalau nanti mau baca CSV, hitung numerik, dan eksplorasi data, ini sudah cukup untuk start. Setelah itu simpan dependensinya:
+
+Bash
+pip freeze > requirements.txt
+
+Lalu isi awal file project bisa begini:
+
+src/load_data.py
+
+Python
+Jalankan
+from pathlib import Path
+import pandas as pd
+
+
+def load_dataset(csv_path: str | Path) -> pd.DataFrame:
+path = Path(csv_path)
+if not path.exists():
+raise FileNotFoundError(f"File tidak ditemukan: {path}")
+
+df = pd.read_csv(path)
+return df
+
+src/main.py
+
+Python
+Jalankan
+from pathlib import Path
+from load_data import load_dataset
+
+
+def main() -> None:
+csv_path = Path(__file__).resolve().parent.parent / "data" / "output.csv"
+df = load_dataset(csv_path)
+
+print("Jumlah baris:", len(df))
+print("Jumlah kolom:", len(df.columns))
+print("Kolom:", list(df.columns))
+print(df.head())
+
+
+if __name__ == "__main__":
+main()
+
+Run-nya:
+
+Bash
+python src/main.py
+
+Kalau output.csv kamu belum ada di data/, tinggal pindahkan dulu ke sana.
+
+Jadi keputusan arsitekturnya menurut saya begini:
+
+fase 1: bangun engine EDAS dulu
+
+fase 2: kalau sudah benar, baru integrasikan ke web
+
+fase 3: UI memanggil hasil engine, bukan ikut menanggung logika rumus dari awal
+
+Ini jauh lebih aman buat skripsi juga, karena nanti saat dosen tanya implementasi, kamu bisa jelaskan bahwa:
+
+perhitungan inti dikembangkan dan divalidasi dulu secara terpisah,
+
+lalu diintegrasikan ke sistem web setelah algoritma stabil.
+
+Kalau kamu mau, setelah ini saya bisa langsung bantu bikin starter file lengkap untuk preprocess.py, edas.py, dan playlist_builder.py supaya project kamu benar-benar siap jalan.
+
+Sumber
+
+
+Haikal bilang:
+bagaimana dengan backendnya, apakah saya sempat menyinggungnya di paper saya? soalnya setau saya, saya sudah membuat diagram table untuk penyimpanannya dan data data nya, jika benar maka ditaruh di foldernya yang sama misal di playlist-recommender/ atau nanti web/ lalu ada frontend/ dan backend/ gitu?
+
+
+ChatGPT bilang:
+
+Iya, kamu sudah menyinggung backend di paper, meskipun tidak selalu pakai kata â€œbackendâ€ secara eksplisit.
+
+Yang paling jelas ada di bagian arsitektur sistem. Kamu menulis bahwa sistem memakai pendekatan clientâ€“server, lalu seluruh proses komputasi utama dilakukan di sisi server, termasuk perhitungan EDAS dan pembentukan narasi rekomendasi melalui NLG. Itu secara makna sudah berarti ada backend.
+
+Paper Sistem Rekomendasi Playliâ€¦
+
+Selain itu, di bagian layer arsitektur kamu juga membagi sistem menjadi:
+
+Layer Presentasi
+
+Layer Logika Aplikasi
+
+Layer Data
+
+Dan pada Layer Logika Aplikasi, kamu tulis ada proses:
+
+konversi preferensi pengguna menjadi bobot numerik,
+
+pembentukan matriks keputusan,
+
+perhitungan metode EDAS,
+
+penyusunan playlist,
+
+pembentukan narasi rekomendasi melalui NLG.
+Ini juga secara konsep adalah wilayah backend / server-side logic.
+
+Paper Sistem Rekomendasi Playliâ€¦
+
+Lalu di basis data, kamu juga sudah punya desain tabel songs, preference_session, playlist_result, dan playlist_song, lengkap dengan relasinya. Itu artinya paper kamu memang sudah mengarah ke sistem web yang punya frontend + backend + database, bukan sekadar frontend doang.
+
+Paper Sistem Rekomendasi Playliâ€¦
+
+Jadi untuk struktur project, menurut saya yang paling rapi adalah satu folder besar project, lalu di dalamnya dipisah per bagian. Bukan web/ terpisah dari segalanya, tapi lebih seperti ini:
+
+playlist-recommender/
+â”œâ”€ frontend/
+â”œâ”€ backend/
+â”œâ”€ data/
+â”œâ”€ docs/ # opsional, kalau mau simpan catatan/diagram
+â””â”€ README.md
+
+Kalau mau lebih spesifik lagi, backend kamu nanti bisa berisi engine EDAS juga, misalnya:
+
+playlist-recommender/
+â”œâ”€ frontend/ # UI web
+â”œâ”€ backend/
+â”‚ â”œâ”€ app/ # API / server
+â”‚ â”œâ”€ services/ # logic EDAS, playlist builder, NLG
+â”‚ â”œâ”€ models/ # schema / model data
+â”‚ â”œâ”€ data/ # output.csv kalau sementara masih lokal
+â”‚ â””â”€ tests/
+â””â”€ README.md
+
+Nah, terkait pertanyaan kamu sebelumnya soal mulai dari mana:
+karena di paper kamu EDAS, playlist generation, dan NLG itu terjadi di sisi server, maka yang paling masuk akal sekarang adalah:
+
+bangun backend/logika dulu
+
+frontend belakangan
+
+Jadi jangan bikin edas_engine/ terpisah jauh kalau memang tujuan akhirnya sistem web penuh. Lebih enak langsung pakai pola:
+
+playlist-recommender/backend/
+
+nanti di dalam backend/ kamu bangun logika EDAS dari nol
+
+setelah stabil, frontend tinggal konsumsi API/backend itu
+
+Dengan begitu, kerja kamu nyambung dengan paper:
+
+paper bilang ada client-server
+
+implementasi kamu juga benar-benar jadi client-server
+
+Kesimpulan paling praktisnya:
+iya, kamu sudah menyinggung backend di paper
+dan
+lebih baik taruh dalam folder utama yang sama (playlist-recommender/), lalu bagi jadi frontend/ dan backend/.
+
+Kalau kamu setuju, next paling pas adalah saya bantuin susun struktur folder final project skripsi kamu dulu, biar setelah itu tinggal setup backend Python dari nol.
+
+Sumber
+
+
+Haikal bilang:
+berarti urutannya pembuatan si edas dulu, terus backend, terus nlg, baru terakhir frontend, atau gimana?
+
+
+ChatGPT bilang:
+
+Urutan yang kamu tulis itu hampir benar, tapi saya rapihin sedikit biar lebih â€œaman buat skripsi + enak ngodingnyaâ€.
+
+Jangan dibuat terlalu linear kayak:
+
+EDAS â†’ backend â†’ NLG â†’ frontend
+
+Karena sebenarnya:
+ðŸ‘‰ EDAS itu bagian dari backend
+ðŸ‘‰ NLG juga bagian dari backend
+
+ðŸŽ¯ Urutan yang paling ideal (dan realistis)
+1. Core Logic (EDAS dulu) âœ…
+
+Ini WAJIB pertama.
+
+Kenapa:
+
+ini â€œjantungâ€ sistem kamu
+
+kalau ini salah â†’ semua ikut salah
+
+ini juga yang paling ditanya di sidang
+
+Yang kamu lakukan di tahap ini:
+
+load CSV
+
+preprocess data
+
+implement:
+
+average solution
+
+PDA / NDA
+
+SP / SN
+
+normalisasi
+
+appraisal score
+
+ranking
+
+test manual (print hasil)
+
+ðŸ‘‰ Status selesai:
+â€œsaya sudah bisa ranking lagu dari dataset + bobot dummyâ€
+
+2. Playlist Builder (masih core logic)
+
+Masih belum backend full, tapi sudah mendekati.
+
+Yang kamu buat:
+
+fungsi ambil top-ranked songs
+
+akumulasi durasi
+
+stop sesuai target durasi user
+
+ðŸ‘‰ Status selesai:
+â€œsaya sudah bisa generate playlist dari hasil rankingâ€
+
+3. Integrasi Preferensi User (EDAS + input user)
+
+Masih di core logic.
+
+Yang kamu tambahkan:
+
+input dummy (nanti jadi dari frontend):
+
+bobot dari kuesioner
+
+benefit/cost
+
+mapping ke EDAS
+
+ðŸ‘‰ Status:
+â€œEDAS sudah user-centric sesuai skripsiâ€
+
+4. Backend (bungkus semua jadi API) ðŸš€
+
+Nah ini baru masuk â€œbackendâ€ beneran.
+
+Di sini kamu:
+
+pakai Python (FastAPI / Flask)
+
+buat endpoint misalnya:
+
+POST /recommend
+
+input:
+
+JSON
+{
+"activity": "belajar",
+"duration": 60,
+"preferences": {...}
+}
+
+output:
+
+JSON
+{
+"playlist": [...],
+"scores": [...]
+}
+
+ðŸ‘‰ Status:
+â€œalgoritma saya bisa dipanggil dari luar (API-ready)â€
+
+5. NLG (masuk backend juga) ðŸ§ 
+
+Ini bukan tahap terpisah dari backend, tapi fitur tambahan di backend.
+
+Yang kamu lakukan:
+
+ambil hasil EDAS + playlist
+
+generate narasi
+
+Contoh:
+
+â€œPlaylist ini didominasi oleh lagu dengan energy tinggi dan tempo cepatâ€¦â€
+
+ðŸ‘‰ Status:
+â€œhasil rekomendasi sudah ada penjelasannyaâ€
+
+6. Frontend (paling terakhir) ðŸŽ¨
+
+Baru di sini kamu bikin UI.
+
+Kenapa terakhir:
+
+frontend cuma â€œtampilanâ€
+
+logic utama sudah stabil di backend
+
+Frontend tugasnya:
+
+kirim request ke backend
+
+tampilkan playlist + penjelasan
+
+ðŸ”¥ Ringkasan final (ini yang kamu pakai)
+
+Urutan terbaik:
+
+EDAS â†’ Playlist Logic â†’ Integrasi Preferensi â†’ Backend API â†’ NLG â†’ Frontend
+
+ðŸ§  Insight penting (biar kamu nggak salah arah)
+
+EDAS = core logic
+
+NLG = layer penjelasan
+
+Backend = wadah logic
+
+Frontend = tampilan
+
+Jadi:
+ðŸ‘‰ bukan â€œEDAS vs backendâ€
+ðŸ‘‰ tapi â€œEDAS ada di dalam backendâ€
+
+ðŸ’¬ Kalau saya jadi kamu sekarang
+
+Saya bakal mulai dari:
+
+bikin file edas.py â†’ langsung implement rumus dari paper
+
+Terus:
+
+test pakai CSV kamu
+
+Kalau kamu siap, next step kita bisa langsung:
+ðŸ‘‰ bikin kode EDAS step-by-step dari CSV kamu (clean, sesuai paper, siap jadi backend)
+
+
+
+Haikal bilang:
+oke, ingat urutan dan arahan yang anda jawab barusan dulu kedalam memori, termasuk semua yang sudah kita bahas dari awal tadi
+
+
+ChatGPT bilang:
+Memori tersimpan diperbarui
+
+Siap, sudah saya simpan ðŸ‘
+
+Termasuk:
+
+urutan development kamu (EDAS â†’ playlist â†’ preferensi â†’ backend â†’ NLG â†’ frontend)
+
+keputusan arsitektur (clientâ€“server, backend sebagai tempat EDAS & NLG)
+
+strategi kerja (bangun core logic dulu sebelum masuk web)
+
+Jadi ke depan kita bisa lanjut tanpa perlu ulang dari awal lagi.
+
+Kalau kamu ready, langsung kita gas ke:
+ðŸ‘‰ implementasi EDAS step-by-step dari CSV kamu (sesuai paper, bukan versi asal jalan)
+
+
+
+Haikal bilang:
+Jika saya mau menyinggung memori anda bagian itu, saya harus bilang apa ke anda sebagai kata kunci, karena saya tahu memori anda isinya banyak ingatan lain, jadi jika saya mau spesifik ke ingatan yang ini apa kata kuncinya?
+2/2
+
+
+ChatGPT bilang:
+
+Pertanyaan bagus iniâ€”biar workflow kita tetap rapi ðŸ‘
+
+Untuk memori yang barusan (alur development EDAS â†’ backend â†’ NLG â†’ frontend), kamu bisa panggil dengan kata kunci yang simpel dan konsisten.
+
+ðŸ”‘ Kata kunci yang bisa kamu pakai
+
+Paling aman pakai salah satu ini:
+
+â€œalur development skripsi sayaâ€
+
+â€œroadmap implementasi sistem sayaâ€
+
+â€œurutan pengerjaan EDAS sayaâ€ â­ (ini paling spesifik)
+
+atau lebih santai:
+
+â€œflow kerja skripsi sayaâ€
+
+â€œstep coding skripsi sayaâ€
+
+ðŸ§  Cara saya mengenali
+
+Saya tidak mencari exact keyword seperti database, tapi berdasarkan makna.
+
+Jadi misalnya kamu bilang:
+
+â€œbalik ke roadmap EDAS sayaâ€
+
+atau:
+
+â€œkita lanjut sesuai urutan pengerjaan kemarinâ€
+
+ðŸ‘‰ saya tetap akan nyambung ke memori yang sama.
+
+ðŸš€ Rekomendasi terbaik (biar konsisten)
+
+Kalau mau paling aman dan cepat dikenali:
+
+ðŸ‘‰ pakai: â€œurutan pengerjaan EDAS sayaâ€
+
+Karena:
+
+ada kata â€œEDASâ€ (unik di konteks kamu)
+
+langsung menunjuk ke bagian implementasi
+
+tidak ambigu dengan bagian skripsi lain
+
+Kalau nanti kamu mau, kita juga bisa bikin:
+ðŸ‘‰ 1 â€œnama resmiâ€ untuk semua workflow kamu (kayak nama project internal)
+
+biar makin gampang dipanggil dan dipakai sampai sidang.
+
+
+
+Haikal bilang:
+oke, bantu saya setup dulu, untuk direktorinya saya sudah membuat ini:
+C:\Users\Haikal\Documents\SKRIPSI\GANTI JUDUL\KODINGNYA
+
+saya mau semua koding nanti ditaruh disitu, lalu apa dulu?
+
+
+ChatGPT bilang:
+
+Bagus, berarti kita mulai dari situ saja.
+
+Karena kamu mau semua coding ada di:
+
+C:\Users\Haikal\Documents\SKRIPSI\GANTI JUDUL\KODINGNYA
+
+maka langkah pertama bukan langsung ngoding EDAS, tapi rapihin struktur project dulu supaya nanti backend, frontend, dan data kamu tidak berantakan.
+
+Struktur yang saya sarankan dari awal:
+
+KODINGNYA/
+â”œâ”€ backend/
+â”œâ”€ frontend/
+â”œâ”€ data/
+â””â”€ README.md
+
+Untuk tahap sekarang, karena kita fokus ke EDAS dulu, yang paling penting baru:
+
+backend/
+
+data/
+
+Jadi buka terminal di VS Code atau Command Prompt, lalu masuk ke folder itu:
+
+Bash
+cd "C:\Users\Haikal\Documents\SKRIPSI\GANTI JUDUL\KODINGNYA"
+
+Setelah itu buat foldernya:
+
+Bash
+mkdir backend frontend data
+
+Kalau output.csv kamu sudah ada, pindahkan nanti ke folder data.
+
+Setelah folder utama jadi, masuk ke backend:
+
+Bash
+cd backend
+
+Lalu buat virtual environment Python. Ini padanan â€œnpm install setup awalâ€ versi Python:
+
+Bash
+py -m venv .venv
+
+Setelah itu aktifkan environment-nya.
+
+Kalau kamu pakai PowerShell:
+
+Bash
+.venv\Scripts\Activate.ps1
+
+Kalau pakai CMD:
+
+Bash
+.venv\Scripts\activate.bat
+
+Kalau berhasil, biasanya di depan terminal akan muncul (.venv).
+
+Setelah aktif, install package awal yang kita butuhkan:
+
+Bash
+pip install pandas numpy
+
+Lalu simpan dependency-nya:
+
+Bash
+pip freeze > requirements.txt
+
+Sesudah itu, bikin struktur backend yang rapi dari awal:
+
+backend/
+â”œâ”€ .venv/
+â”œâ”€ src/
+â”œâ”€ tests/
+â””â”€ requirements.txt
+
+Kalau folder src dan tests belum ada, buat:
+
+Bash
+mkdir src tests
+
+Lalu di dalam src, nanti kita akan isi file seperti ini:
+
+src/
+â”œâ”€ load_data.py
+â”œâ”€ preprocess.py
+â”œâ”€ edas.py
+â”œâ”€ playlist_builder.py
+â””â”€ main.py
+
+Untuk sekarang, habis setup folder dan venv, langkah berikutnya adalah:
+
+pindahkan output.csv ke KODINGNYA\data\
+
+buat file load_data.py
+
+buat file main.py
+
+test apakah CSV bisa terbaca dari backend
+
+Kalau mau, setelah ini saya bantu langkah berikutnya dengan format yang sangat praktis:
+buat file apa, isi apa, lalu jalankan command apa.
+
+
+
+Haikal bilang:
+hasilnya begini:
+PS C:\Users\Haikal\Documents\SKRIPSI\GANTI JUDUL\KODINGNYA> mkdir backend frontend data
+mkdir : A positional parameter cannot be found that accepts argument 'frontend'.
+At line:1 char:1
++ mkdir backend frontend data
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~
++ CategoryInfo : InvalidArgument: (:) [mkdir], ParameterBindingException
++ FullyQualifiedErrorId : PositionalParameterNotFound,mkdir
+
+PS C:\Users\Haikal\Documents\SKRIPSI\GANTI JUDUL\KODINGNYA>
+
+
+ChatGPT bilang:
+
+Santai, ini cuma masalah syntax di PowerShell ðŸ‘
+Di PowerShell, mkdir tidak bisa langsung multiple argumen seperti di bash.
+
+âœ… Cara benar di PowerShell
+
+Jalankan satu per satu:
+
+Bash
+mkdir backend
+mkdir frontend
+mkdir data
+ðŸ”¥ Alternatif (lebih cepat, satu baris)
+
+Kalau mau tetap satu command:
+
+Bash
+mkdir backend,frontend,data
+
+(ini pakai koma, bukan spasi)
+
+ðŸ“Œ Kenapa tadi error?
+
+Karena PowerShell anggap:
+
+Bash
+mkdir backend frontend data
+
+itu seperti:
+
+backend = valid
+
+frontend = dianggap parameter (padahal tidak ada)
+
+Makanya error:
+
+positional parameter cannot be found
+
+ðŸš€ Setelah ini (lanjut step)
+
+Kalau folder sudah jadi, langsung lanjut:
+
+Bash
+cd backend
+py -m venv .venv
+
+Kalau sudah sampai sini, kasih tahu saya:
+ðŸ‘‰ nanti saya lanjutkan step berikutnya sampai kamu bisa load CSV pertama kali (milestone penting)
+
+
+
+Haikal bilang:
+begini lagi:
+PS C:\Users\Haikal\Documents\SKRIPSI\GANTI JUDUL\KODINGNYA\backend> py -m venv .venv
+py : The term 'py' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spe
+lling of the name, or if a path was included, verify that the path is correct and try again.
+At line:1 char:1
++ py -m venv .venv
++ ~~
++ CategoryInfo : ObjectNotFound: (py:String) [], CommandNotFoundException
++ FullyQualifiedErrorId : CommandNotFoundException
+
+PS C:\Users\Haikal\Documents\SKRIPSI\GANTI JUDUL\KODINGNYA\backend>
+
+
+ChatGPT bilang:
+
+Ini juga normal banget, artinya di komputer kamu command py tidak tersedia (biasanya karena Python launcher belum ada di PATH). Kita tinggal pakai alternatif.
+
+âœ… Coba cara ini dulu
+
+Di PowerShell, jalankan:
+
+Bash
+python -m venv .venv
+ðŸ”Ž Kalau masih error?
+
+Kalau muncul:
+
+python is not recognized
+
+berarti Python belum ke-detect. Coba ini:
+
+Bash
+python3 -m venv .venv
+ðŸ§  Cara cek Python kamu ada atau tidak
+
+Jalankan:
+
+Bash
+python --version
+
+atau:
+
+Bash
+python3 --version
+ðŸš¨ Kalau dua-duanya tidak jalan
+
+Berarti Python belum ke-install / belum masuk PATH.
+
+Solusi cepat:
+
+Download Python dari website resmi
+
+Saat install:
+âœ… centang â€œAdd Python to PATHâ€ (ini penting banget)
+
+ðŸŽ¯ Target kita sekarang
+
+Begitu command ini berhasil:
+
+Bash
+python -m venv .venv
+
+maka akan muncul folder:
+
+backend/.venv/
+ðŸš€ Step berikutnya (jangan lompat dulu)
+
+Setelah berhasil, kamu aktifkan:
+
+PowerShell:
+
+Bash
+.venv\Scripts\Activate.ps1
+
+Kalau berhasil, nanti depan terminal ada:
+
+(.venv)
+ðŸ’¬ Jadi sekarang lakukan ini:
+
+coba:
+
+Bash
+python -m venv .venv
+
+kalau error â†’ kirim hasilnya ke saya
+
+Nanti saya bantu sampai venv kamu berhasil (ini pondasi penting sebelum EDAS)
+
+
+
+Haikal bilang:
+PS C:\Users\Haikal\Documents\SKRIPSI\GANTI JUDUL\KODINGNYA\backend> python -m venv .venv
+PS C:\Users\Haikal\Documents\SKRIPSI\GANTI JUDUL\KODINGNYA\backend> .venv\Scripts\Activate.ps1
+(.venv) PS C:\Users\Haikal\Documents\SKRIPSI\GANTI JUDUL\KODINGNYA\backend> pip install pandas numpy
+Collecting pandas
+Downloading pandas-3.0.2-cp312-cp312-win_amd64.whl.metadata (19 kB)
+Collecting numpy
+Downloading numpy-2.4.4-cp312-cp312-win_amd64.whl.metadata (6.6 kB)
+Collecting python-dateutil>=2.8.2 (from pandas)
+Using cached python_dateutil-2.9.0.post0-py2.py3-none-any.whl.metadata (8.4 kB)
+Collecting tzdata (from pandas)
+Downloading tzdata-2026.1-py2.py3-none-any.whl.metadata (1.4 kB)
+Collecting six>=1.5 (from python-dateutil>=2.8.2->pandas)
+Using cached six-1.17.0-py2.py3-none-any.whl.metadata (1.7 kB)
+Downloading pandas-3.0.2-cp312-cp312-win_amd64.whl (9.7 MB)
+â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â” 9.7/9.7 MB 3.8 MB/s eta 0:00:00
+Downloading numpy-2.4.4-cp312-cp312-win_amd64.whl (12.3 MB)
+â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â” 12.3/12.3 MB 4.8 MB/s eta 0:00:00
+Using cached python_dateutil-2.9.0.post0-py2.py3-none-any.whl (229 kB)
+Downloading tzdata-2026.1-py2.py3-none-any.whl (348 kB)
+â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â” 349.0/349.0 kB 4.3 MB/s eta 0:00:00
+Using cached six-1.17.0-py2.py3-none-any.whl (11 kB)
+Installing collected packages: tzdata, six, numpy, python-dateutil, pandas
+Successfully installed numpy-2.4.4 pandas-3.0.2 python-dateutil-2.9.0.post0 six-1.17.0 tzdata-2026.1
+
+[notice] A new release of pip is available: 24.0 -> 26.0.1
+[notice] To update, run: python.exe -m pip install --upgrade pip
+(.venv) PS C:\Users\Haikal\Documents\SKRIPSI\GANTI JUDUL\KODINGNYA\backend> pip freeze > requirements.txt
+(.venv) PS C:\Users\Haikal\Documents\SKRIPSI\GANTI JUDUL\KODINGNYA\backend> mkdir src,tests
+
+
+Directory: C:\Users\Haikal\Documents\SKRIPSI\GANTI JUDUL\KODINGNYA\backend
+
+
+Mode LastWriteTime Length Name
+---- ------------- ------ ----
+d----- 06/04/2026 08.13 src
+d----- 06/04/2026 08.13 tests
+
+
+(.venv) PS C:\Users\Haikal\Documents\SKRIPSI\GANTI JUDUL\KODINGNYA\backend>
+
+sudah begini
+
+
+ChatGPT bilang:
+
+Mantap, setup dasar kamu sudah benar. Sekarang posisi project backend kamu sudah siap dipakai.
+
+Yang sudah beres:
+
+virtual environment aktif
+
+pandas dan numpy terpasang
+
+requirements.txt sudah ada
+
+folder src dan tests sudah ada
+
+Sekarang langkah berikutnya: siapkan file awal dan tes baca CSV.
+
+Pertama, pastikan file dataset kamu ada di:
+C:\Users\Haikal\Documents\SKRIPSI\GANTI JUDUL\KODINGNYA\data\output.csv
+
+Kalau belum, pindahkan dulu ke folder data.
+
+Setelah itu, tetap di folder backend, buat dua file:
+
+src/load_data.py
+
+src/main.py
+
+Kalau lewat PowerShell bisa pakai:
+
+PowerShell
+New-Item src\load_data.py -ItemType File
+New-Item src\main.py -ItemType File
+
+Lalu isi src/load_data.py dengan ini:
+
+Python
+Jalankan
+from pathlib import Path
+import pandas as pd
+
+
+def load_dataset(csv_path: str | Path) -> pd.DataFrame:
+path = Path(csv_path)
+
+if not path.exists():
+raise FileNotFoundError(f"File tidak ditemukan: {path}")
+
+df = pd.read_csv(path)
+return df
+
+Lalu isi src/main.py dengan ini:
+
+Python
+Jalankan
+from pathlib import Path
+from load_data import load_dataset
+
+
+def main() -> None:
+csv_path = Path(__file__).resolve().parent.parent.parent / "data" / "output.csv"
+df = load_dataset(csv_path)
+
+print("=== DATASET BERHASIL DIMUAT ===")
+print("Jumlah baris:", len(df))
+print("Jumlah kolom:", len(df.columns))
+print("Nama kolom:", list(df.columns))
+print()
+print(df.head())
+
+
+if __name__ == "__main__":
+main()
+
+Setelah itu jalankan:
+
+PowerShell
+python src/main.py
+
+Kalau berhasil, nanti keluar info jumlah baris, jumlah kolom, nama kolom, dan 5 data pertama.
+
+Kenapa kita mulai dari sini? Karena ini milestone pertama:
+backend kamu berhasil membaca dataset asli. Setelah ini baru kita lanjut ke preprocessing, bukan langsung lompat ke rumus EDAS.
+
+Kalau sudah kamu jalankan, kirim hasil terminalnya.
+
+
+
+Haikal bilang:
+PS C:\Users\Haikal\Documents\SKRIPSI\GANTI JUDUL\KODINGNYA\backend> New-Item src\load_data.py -ItemType File
+
+
+Directory: C:\Users\Haikal\Documents\SKRIPSI\GANTI JUDUL\KODINGNYA\backend\src
+
+
+Mode LastWriteTime Length Name
+---- ------------- ------ ----
+-a---- 06/04/2026 08.26 0 load_data.py
+
+
+PS C:\Users\Haikal\Documents\SKRIPSI\GANTI JUDUL\KODINGNYA\backend> & "c:\Users\Haikal\Documents\SKRIPSI\GANTI JUDUL\KODINGNYA\backend\.venv\Scripts\Activate.ps1"
+(.venv) PS C:\Users\Haikal\Documents\SKRIPSI\GANTI JUDUL\KODINGNYA\backend> New-Item src\main.py -ItemType File
+
+
+Directory: C:\Users\Haikal\Documents\SKRIPSI\GANTI JUDUL\KODINGNYA\backend\src
+
+
+Mode LastWriteTime Length Name
+---- ------------- ------ ----
+-a---- 06/04/2026 08.26 0 main.py
+
+
+(.venv) PS C:\Users\Haikal\Documents\SKRIPSI\GANTI JUDUL\KODINGNYA\backend> python src/main.py
+=== DATASET BERHASIL DIMUAT ===
+Jumlah baris: 5290
+Jumlah kolom: 14
+Nama kolom: ['artist', 'title', 'bpm', 'key', 'camelot', 'energy', 'danceability', 'happiness', 'popularity', 'acousticness', 'instrumentalness', 'speechiness', 'duration', 'status']
+
+artist title bpm key camelot ... acousticness instrumentalness speechiness duration status
+0 For Revenge Serana 130 D Major 10B ... 6 37 3 4:10 ok
+1 Feby Putri Runtuh 128 Eâ™­ Major 5B ... 88 0 3 3:44 ok
+2 Anggi Marito Tak Segampang Itu 130 F Major 7B ... 76 0 3 3:51 ok
+3 Nadin Amizah Bertaut 119 Fâ™¯ Major 2B ... 93 0 4 5:16 ok
+4 Hindia Rumah Ke Rumah 116 B Major 1B ... 46 62 3 4:37 ok
+
+[5 rows x 14 columns]
+(.venv) PS C:\Users\Haikal\Documents\SKRIPSI\GANTI JUDUL\KODINGNYA\backend>
+
+sampai sini berhasil kan?
+bisa kasih tau dulu rencananya gimana biar saya lihat dulu
+
+
+ChatGPT bilang:
+
+Iya, berhasil. Sampai sini milestone pertamanya aman âœ…
+
+Artinya sekarang:
+
+environment Python sudah siap
+
+struktur backend awal sudah jadi
+
+dataset asli kamu berhasil dibaca dari project
+
+path antar folder sudah benar
+
+kita sudah punya pondasi yang enak buat lanjut
+
+Nah, sebelum lanjut ngoding membabi buta, saya setuju kita rapihin rencana kerjanya dulu. Biar kamu tahu habis ini ngapain, urutannya apa, dan kenapa.
+
+Rencana yang saya sarankan untuk fase EDAS ini seperti ini.
+
+Fase 1: Foundation Data
+Tujuannya memastikan data siap dipakai buat perhitungan.
+
+Yang dikerjakan:
+
+cek tipe data tiap kolom
+
+filter hanya baris status = ok
+
+pilih kolom yang relevan untuk EDAS
+
+ubah duration dari format mm:ss jadi detik
+
+pastikan 8 parameter audio semuanya numerik
+
+buat dataset final yang siap dihitung
+
+File yang nanti dipakai:
+
+preprocess.py
+
+Hasil akhir fase ini:
+
+kita punya DataFrame bersih yang siap jadi decision matrix
+
+Fase 2: Input Preferensi User
+Tujuannya mensimulasikan dulu input user sesuai paper.
+
+Yang dikerjakan:
+
+buat contoh input preferensi user dulu secara dummy
+
+misalnya bobot awal dari hasil kuesioner
+
+tentukan benefit/cost per parameter
+
+normalisasi bobot supaya total = 1
+
+Catatan penting:
+di tahap awal ini kita belum perlu form web
+cukup hardcode dulu, misalnya:
+
+BPM = 0.15
+
+Energy = 0.20
+
+Danceability = 0.10
+
+dst
+
+atau bahkan kita bisa buat sesuai konsep paper:
+
+skor preferensi dulu
+
+lalu dinormalisasi jadi bobot
+
+File yang nanti dipakai:
+
+bisa di main.py dulu
+
+atau nanti dipisah ke user_preferences.py
+
+Hasil akhirnya:
+
+kita punya weights
+
+kita punya criteria_types benefit/cost
+
+Fase 3: Implementasi Rumus EDAS
+Ini inti paling penting.
+
+Yang dikerjakan:
+
+ambil decision matrix dari data yang sudah dibersihkan
+
+hitung average solution tiap kriteria
+
+hitung PDA dan NDA
+
+hitung SP dan SN
+
+normalisasi SP dan SN
+
+hitung appraisal score
+
+ranking semua lagu
+
+File utama:
+
+edas.py
+
+Hasil akhir fase ini:
+
+keluar tabel ranking lagu lengkap dengan appraisal score
+
+Ini bagian yang paling penting untuk skripsi dan validasi.
+
+Fase 4: Playlist Builder
+Setelah ranking lagu jadi, baru bentuk playlist.
+
+Yang dikerjakan:
+
+urutkan lagu dari skor tertinggi
+
+ambil satu per satu
+
+jumlahkan durasinya
+
+stop saat mendekati target user
+
+File utama:
+
+playlist_builder.py
+
+Hasil akhirnya:
+
+playlist final sesuai target durasi
+
+Fase 5: Rapihin jadi service backend
+Kalau logic EDAS dan playlist sudah benar, baru kita rapihin supaya siap dipanggil dari sistem web.
+
+Yang dikerjakan:
+
+pisahkan fungsi-fungsi
+
+buat struktur kode yang bersih
+
+nanti baru dibungkus API
+
+Contohnya nanti:
+
+input: aktivitas, durasi, preferensi
+
+output: playlist + ranking + penjelasan
+
+Fase 6: NLG
+Setelah hasil rekomendasi stabil, baru bikin penjelasan naratif.
+
+Yang dikerjakan:
+
+ambil hasil playlist dan karakteristik dominan
+
+buat narasi penjelasan
+
+Ini bisa mulai dari template dulu, belum harus model AI.
+
+Fase 7: Frontend
+Paling akhir.
+Frontend cuma jadi tampilan yang:
+
+kirim input user
+
+tampilkan playlist
+
+tampilkan narasi penjelasan
+
+Kalau diringkas, alurnya jadi begini:
+
+1. preprocess data
+2. siapkan input preferensi
+3. hitung EDAS
+4. bentuk playlist
+5. rapihin backend
+6. tambah NLG
+7. bikin frontend
+
+Kalau mau dibuat sangat praktis untuk sesi coding kita sekarang, maka target dekatnya cuma 3 ini dulu:
+
+Target dekat
+
+data bersih
+
+EDAS jalan
+
+ranking lagu keluar
+
+Jadi habis ini saya sarankan kita kerjakan:
+langkah berikutnya = bikin preprocess.py dulu
+
+Kenapa preprocess dulu?
+Karena kalau duration belum diubah ke detik dan tipe data belum kita pastikan rapi, nanti pas masuk EDAS kamu akan mulai ketemu error yang tidak perlu.
+
+Kalau kamu setuju dengan rencana ini, saya lanjutkan dengan format paling praktis:
+buat file preprocess.py, isi kodenya, lalu command menjalankannya.
+
+
+
+Haikal bilang:
+untuk bagian perancangan si EDAS ini targetnya sampai mana sebelum dibungkus jadi API backend? maksudnya harapannya bisa apa dan caranya gimana gitu?
+
+
+ChatGPT bilang:
+
+Target bagian EDAS sebelum dibungkus jadi API backend itu idealnya bukan cuma â€œrumusnya sudah ditulisâ€, tapi sudah sampai level:
+
+â€œdiberi input preferensi user + target durasi, sistem bisa mengeluarkan ranking lagu dan playlist final secara konsisten.â€
+
+Jadi sebelum API, harapannya EDAS kamu sudah bisa dipakai seperti mesin yang lengkap, meskipun masih dijalankan lokal lewat python src/main.py.
+
+Gambaran target akhirnya begini.
+
+Kalau kamu punya input seperti:
+
+activity: belajar
+
+duration: 60 menit
+
+preference scores / weights
+
+benefit-cost tiap parameter
+
+maka program harus bisa:
+
+baca dataset
+
+bersihkan data
+
+hitung bobot final
+
+tentukan jenis kriteria
+
+hitung EDAS
+
+ranking semua lagu
+
+pilih lagu-lagu terbaik sampai durasi mendekati target
+
+tampilkan hasil akhir
+
+Jadi sebelum API, output minimalnya harus sudah seperti ini:
+
+tabel ranking lagu dengan appraisal score
+
+average solution per kriteria
+
+kalau perlu SP dan SN
+
+playlist final berisi lagu terpilih
+
+total durasi playlist
+
+Artinya, engine EDAS kamu sudah siap pakai, tinggal nanti â€œdibukakan pintuâ€ lewat API.
+
+Secara praktis, target â€œselesai sebelum backend APIâ€ saya sarankan dibagi 4 level.
+
+Level 1 â€” Data siap hitung
+Harus selesai:
+
+hanya baris status = ok
+
+8 parameter audio sudah numerik
+
+duration sudah jadi detik
+
+dataset final siap jadi matriks keputusan
+
+Output yang bisa dicek:
+
+shape data
+
+dtypes
+
+preview kolom final
+
+Level 2 â€” EDAS murni jalan
+Harus selesai:
+
+input bobot dan benefit/cost bisa diberikan manual
+
+hitung average solution
+
+hitung PDA/NDA
+
+hitung SP/SN
+
+normalisasi
+
+appraisal score
+
+ranking
+
+Output yang bisa dicek:
+
+dataframe hasil ranking
+
+top 10 lagu
+
+Level 3 â€” Sesuai paper kamu
+Ini yang penting. Bukan sekadar EDAS umum, tapi EDAS yang nyambung ke skripsi.
+
+Harus selesai:
+
+input user direpresentasikan sebagai preferensi per parameter
+
+bobot dinormalisasi total = 1
+
+benefit/cost bisa ditentukan dari kecenderungan preferensi
+
+hasil ranking benar-benar bergantung pada input user
+
+Output yang bisa dicek:
+
+kalau preferensi berubah, ranking ikut berubah
+
+misal mode â€œolahragaâ€ dan â€œbelajarâ€ hasil top song-nya beda
+
+Level 4 â€” Playlist builder jalan
+Harus selesai:
+
+dari ranking lagu, pilih lagu satu-satu
+
+total durasi mendekati target user
+
+playlist final terbentuk
+
+Output yang bisa dicek:
+
+daftar lagu playlist
+
+total detik / menit
+
+berapa lagu terpilih
+
+Kalau semua itu sudah beres, baru kamu bisa bilang:
+â€œengine rekomendasi saya sudah selesai, tinggal di-wrap jadi API.â€
+
+Sekarang soal â€œcaranya gimanaâ€, bentuk kerjanya kira-kira seperti ini.
+
+Di main.py, alur akhirnya nanti seperti ini:
+
+Python
+Jalankan
+load raw csv
+-> preprocess data
+-> build user preferences
+-> run edas
+-> build playlist
+-> print/save result
+
+Kalau dijabarkan ke file, target strukturnya kurang lebih:
+
+src/
+â”œâ”€ load_data.py
+â”œâ”€ preprocess.py
+â”œâ”€ preferences.py
+â”œâ”€ edas.py
+â”œâ”€ playlist_builder.py
+â””â”€ main.py
+
+Per file fungsinya begini:
+
+load_data.py
+
+baca CSV
+
+preprocess.py
+
+bersihkan data
+
+ubah tipe data
+
+ubah durasi ke detik
+
+ambil kolom yang dipakai
+
+preferences.py
+
+terima skor preferensi user
+
+ubah ke bobot
+
+tentukan benefit/cost
+
+edas.py
+
+semua rumus EDAS
+
+playlist_builder.py
+
+bentuk playlist berdasarkan ranking dan durasi
+
+main.py
+
+tempat orkestrasi semuanya
+
+Nah, harapan akhirnya sebelum API itu kira-kira begini:
+kamu bisa jalankan satu command:
+
+PowerShell
+python src/main.py
+
+lalu output-nya misalnya:
+
+â€œdata cleaned: 5290 laguâ€
+
+â€œweights normalized successfullyâ€
+
+â€œedas ranking completedâ€
+
+tampil top 10 ranking
+
+tampil playlist final 60 menit
+
+Kalau itu sudah tercapai, backend API itu tinggal tahap pembungkus saja. Nanti API cuma menerima request, lalu memanggil fungsi-fungsi yang sudah jadi.
+
+Secara konsep, bedanya begini:
+
+Sebelum API
+
+kamu panggil fungsi langsung dari main.py
+
+Sesudah API
+
+frontend / client yang memanggil endpoint
+
+endpoint itu memanggil fungsi yang sama
+
+Jadi API tidak mengubah logika.
+API cuma mengubah cara mengakses logika.
+
+Makanya saya selalu sarankan:
+engine harus selesai dan stabil dulu sebelum API.
+
+Patokan sederhana bahwa EDAS kamu sudah â€œsiap dibungkus APIâ€ adalah kalau 5 hal ini sudah ada:
+
+fungsi preprocessing stabil
+
+fungsi generate weights stabil
+
+fungsi run_edas() stabil
+
+fungsi build_playlist() stabil
+
+hasil bisa diulang dan konsisten
+
+Kalau kamu mau, langkah berikutnya paling pas adalah saya bantu bikin blueprint target per file dulu, jadi kamu tahu isi masing-masing file sebelum mulai nulis preprocess.py.
+
+
+
+Haikal bilang:
+mengenai level 3, anda berkata seperti ini:
+"Output yang bisa dicek:
+
+kalau preferensi berubah, ranking ikut berubah
+misal mode â€œolahragaâ€ dan â€œbelajarâ€ hasil top song-nya beda"
+
+bukankah aktivitas cuma untuk sekedar framing pertanyaannya saja? jadi yang pengaruh langsung adalah jawaban yang diisi oleh si user yang "terframing" pertanyaan karena ia memilih konteks aktivitas tertentu sebelumnya?
+
+
+ChatGPT bilang:
+
+Iya, benar sekali. Koreksi kamu tepat.
+
+Yang berpengaruh langsung ke EDAS bukan aktivitasnya, melainkan:
+
+jawaban user pada kuesioner
+
+lalu jawaban itu dikonversi menjadi
+
+bobot
+
+benefit/cost
+
+Sedangkan aktivitas hanya berperan sebagai framing konteks saat user menjawab pertanyaan. Itu memang sudah sejalan dengan arah skripsi kamu.
+
+Jadi kalimat saya tadi perlu dirapikan. Yang lebih tepat adalah begini:
+
+Bukan:
+
+kalau mode â€œolahragaâ€ dan â€œbelajarâ€ hasil top song-nya beda
+
+Tapi:
+
+kalau jawaban kuesioner user berbeda, maka bobot dan/atau jenis kriteria bisa berbeda, sehingga ranking lagu ikut berubah.
+
+Kalau mau tetap membawa konteks aktivitas, redaksinya harus seperti ini:
+
+ketika user memilih konteks aktivitas yang berbeda, framing pengisian preferensi bisa berbeda, sehingga jawaban kuesioner yang diberikan user juga bisa berbeda. Perbedaan jawaban itulah yang kemudian memengaruhi hasil ranking.
+
+Jadi hubungan sebab-akibatnya:
+
+aktivitas â†’ framing pertanyaan / situasi menjawab â†’ jawaban user â†’ bobot & benefit-cost â†’ EDAS ranking
+
+Bukan:
+
+aktivitas â†’ langsung memengaruhi ranking
+
+Ini pembedaan yang sangat penting, dan justru bagus banget buat sidang. Karena kalau nanti ada yang tanya:
+
+â€œapakah aktivitas otomatis mengubah BPM atau bobot?â€
+
+kamu bisa jawab:
+
+â€œtidak secara langsung. Aktivitas digunakan sebagai konteks pengisian preferensi. Faktor yang masuk ke perhitungan EDAS tetap merupakan hasil jawaban pengguna pada kuesioner.â€
+
+Jadi untuk target Level 3 yang tadi, versi yang benar adalah:
+
+Level 3 â€” EDAS sesuai desain skripsi
+Harus selesai:
+
+input user direpresentasikan sebagai jawaban kuesioner
+
+jawaban kuesioner dikonversi menjadi bobot
+
+jawaban kuesioner juga menentukan arah benefit/cost
+
+hasil ranking berubah jika jawaban user berubah
+
+Output yang dicek:
+
+kalau jawaban preferensi berubah, ranking ikut berubah
+
+aktivitas hanya dicatat sebagai konteks, bukan variabel langsung dalam rumus EDAS
+
+Jadi ya, kamu benar:
+yang memengaruhi langsung adalah jawaban user yang sudah terframing oleh konteks aktivitas, bukan aktivitas itu sendiri.
+
+Itu justru salah satu fondasi paling penting dari desain sistem kamu.
+
+ChatGPT dapat membuat kesalahan. Periksa info penting. Lihat Preferensi Cookie.
+
+

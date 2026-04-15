@@ -1,0 +1,101 @@
+.root {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+}
+
+/* ── mesh gradient ── */
+.mesh {
+  position: absolute;
+  inset: 0;
+  transition: background 80ms linear;
+  background:
+    radial-gradient(ellipse 60% 55% at 50% 50%, rgba(151,71,255,0.28), transparent 65%),
+    radial-gradient(ellipse 50% 50% at 50% 50%, rgba(0,195,255,0.22), transparent 60%);
+}
+
+/* ── noise grain ── */
+.grain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+}
+
+/* ── equalizer decoration ── */
+.eqBars {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 80px;
+  opacity: 0.07;
+}
+
+.eqBar {
+  display: block;
+  width: 4px;
+  border-radius: 3px 3px 0 0;
+  background: var(--accent-green);
+  animation: eqPulse calc(0.6s + calc(var(--i) * 0.07s)) ease-in-out infinite alternate;
+  animation-delay: calc(var(--i) * 0.04s);
+}
+
+@keyframes eqPulse {
+  from { height: 8px; }
+  to   { height: calc(20px + (var(--i) * 3px)); }
+}
+
+/* ── floating album card ── */
+.album {
+  position: absolute;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--from), var(--to));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.55;
+  transform: rotate(var(--rot));
+  transition: transform 60ms linear;
+  animation: albumFloat var(--duration) ease-in-out infinite alternate;
+  animation-delay: var(--delay);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.08),
+    0 8px 32px rgba(0,0,0,0.5);
+  /* inner shadow to look like vinyl / artwork */
+  overflow: hidden;
+}
+
+.album::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, transparent 60%);
+}
+
+.album::after {
+  content: "";
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 30%;
+  background: rgba(0,0,0,0.25);
+}
+
+.albumSymbol {
+  position: relative;
+  z-index: 1;
+  font-size: 1.6em;
+  opacity: 0.85;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+}
+
+@keyframes albumFloat {
+  from { margin-top: -8px; }
+  to   { margin-top: 8px; }
+}

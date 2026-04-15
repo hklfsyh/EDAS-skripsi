@@ -1,0 +1,36 @@
+.container {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  overflow: hidden;
+}
+
+.particle {
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  user-select: none;
+  will-change: transform, opacity;
+  transform-origin: center center;
+}
+
+.note {
+  font-family: Georgia, serif;
+  line-height: 1;
+  font-weight: 400;
+}
+
+.ring {
+  border-radius: 50%;
+}
+
+.dot {
+  border-radius: 50%;
+}
+
+.spark {
+  border-radius: 2px;
+  transform-origin: center top;
+}
