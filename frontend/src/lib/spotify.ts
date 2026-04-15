@@ -35,6 +35,7 @@ export function buildSpotifyAuthorizeUrl(state: string): string {
     scope: "playlist-modify-private playlist-modify-public user-read-private",
     redirect_uri: redirectUri,
     state,
+    show_dialog: "true",
   });
 
   return `https://accounts.spotify.com/authorize?${params.toString()}`;

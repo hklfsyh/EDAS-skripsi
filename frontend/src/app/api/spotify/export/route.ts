@@ -136,9 +136,14 @@ async function spotifyAddTracks(
   playlistId: string,
   uris: string[],
   accessToken: string,
-): Promise<{ addedUris: string[]; failedUris: string[] }> {
+): Promise<{
+  addedUris: string[];
+  failedUris: string[];
+  failedDetails: Array<{ uri: string; status: number; detail: string }>;
+}> {
   const addedUris: string[] = [];
   const failedUris: string[] = [];
+  const failedDetails: Array<{ uri: string; status: number; detail: string }> = [];
 
   for (let index = 0; index < uris.length; index += 100) {
     const chunk = uris.slice(index, index + 100);
@@ -171,6 +176,12 @@ async function spotifyAddTracks(
           addedUris.push(uri);
         } else {
           failedUris.push(uri);
+          const detail = await getResponseTextSafe(singleResponse);
+          failedDetails.push({
+            uri,
+            status: singleResponse.status,
+            detail,
+          });
         }
       }
 
@@ -180,7 +191,7 @@ async function spotifyAddTracks(
     addedUris.push(...chunk);
   }
 
-  return { addedUris, failedUris };
+  return { addedUris, failedUris, failedDetails };
 }
 
 async function resolveTrackUris(
@@ -235,10 +246,22 @@ export async function POST(request: Request) {
 
     const { foundUris, missingTracks } = await resolveTrackUris(sanitizedTracks, accessToken);
 
-    const { addedUris, failedUris } =
+    const { addedUris, failedUris, failedDetails } =
       foundUris.length > 0
         ? await spotifyAddTracks(playlist.id, foundUris, accessToken)
-        : { addedUris: [], failedUris: [] };
+        : { addedUris: [], failedUris: [], failedDetails: [] };
+
+    if (foundUris.length > 0 && addedUris.length === 0 && failedUris.length === foundUris.length) {
+      const firstFailure = failedDetails[0];
+      return NextResponse.json(
+        {
+          error: "spotify_add_tracks_forbidden_all",
+          hint: "Spotify menolak semua track. Ini biasanya karena scope playlist belum terpasang pada token. Klik Hubungkan Spotify lagi (show consent), setujui akses, lalu coba export ulang.",
+          firstFailure,
+        },
+        { status: 403 },
+      );
+    }
 
     const response = NextResponse.json({
       ok: true,
@@ -249,6 +272,7 @@ export async function POST(request: Request) {
       totalMissing: missingTracks.length,
       missingTracks,
       totalFailedToAdd: failedUris.length,
+      failedToAddSample: failedDetails.slice(0, 3),
       cappedByServer: body.tracks.length > MAX_EXPORT_TRACKS,
     });
 
