@@ -9,7 +9,6 @@ import styles from "./page.module.css";
 const CONTEXT_STORAGE_KEY = "playlist-context-v1";
 const QUESTIONNAIRE_STORAGE_KEY = "playlist-questionnaire-v1";
 const RESULT_STORAGE_KEY = "playlist-result-v1";
-const TRANSFER_SESSION_STORAGE_KEY = "playlist-transfer-session-v1";
 const THEME_STORAGE_KEY = "playlist-theme-v1";
 
 type ContextData = {
@@ -27,16 +26,6 @@ type PlaylistItem = {
   artist: string;
   durationSec: number;
   appraisalScore: number;
-};
-
-type TransferSessionData = {
-  id: string;
-  target: "spotify";
-  stage: "draft" | "target-connected" | "transferring" | "done" | "failed";
-  spotifyConnected: boolean;
-  playlistName: string;
-  tracks: Array<{ title: string; artist: string }>;
-  updatedAt: string;
 };
 
 function formatDuration(totalSec: number): string {
@@ -112,26 +101,7 @@ export default function ProsesPage() {
           nlgText: `Berdasarkan konteks ${context.activity || "aktivitas"} pada ${context.timeOfDay || "waktu dipilih"} dengan mood ${context.mood || "netral"}, sistem menampilkan dummy playlist langsung dari data output.csv hingga durasinya mendekati target ${context.durationMinutes} menit.`,
         };
 
-        sessionStorage.setItem(RESULT_STORAGE_KEY, JSON.stringify(resultPayload));
-        localStorage.removeItem(RESULT_STORAGE_KEY);
-
-        const transferSession: TransferSessionData = {
-          id: crypto.randomUUID(),
-          target: "spotify",
-          stage: "draft",
-          spotifyConnected: false,
-          playlistName: `EDAS Dummy ${new Date().toLocaleDateString("id-ID")}`,
-          tracks: playlist.map((song) => ({
-            title: song.title,
-            artist: song.artist,
-          })),
-          updatedAt: new Date().toISOString(),
-        };
-
-        sessionStorage.setItem(
-          TRANSFER_SESSION_STORAGE_KEY,
-          JSON.stringify(transferSession),
-        );
+        localStorage.setItem(RESULT_STORAGE_KEY, JSON.stringify(resultPayload));
 
         stepTimer = setInterval(() => {
           setCurrentStep((prev) => (prev < steps.length - 1 ? prev + 1 : prev));

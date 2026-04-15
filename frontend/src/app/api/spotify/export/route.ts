@@ -1,13 +1,9 @@
 import { NextResponse } from "next/server";
 import {
-  hasRequiredSpotifyScopes,
-  normalizeSpotifyScopeText,
-  parseSpotifyScopes,
   refreshSpotifyToken,
   SPOTIFY_ACCESS_COOKIE,
   SPOTIFY_EXPIRES_COOKIE,
   SPOTIFY_REFRESH_COOKIE,
-  SPOTIFY_SCOPE_COOKIE,
 } from "@/lib/spotify";
 
 type ExportTrack = {
@@ -18,12 +14,6 @@ type ExportTrack = {
 type ExportRequestBody = {
   playlistName: string;
   tracks: ExportTrack[];
-};
-
-type SpotifyProfile = {
-  id: string;
-  country?: string;
-  product?: string;
 };
 
 const MAX_EXPORT_TRACKS = 20;
@@ -57,13 +47,8 @@ async function getValidAccessToken(request: Request): Promise<{
   const cookieHeader = request.headers.get("cookie") ?? "";
   const accessToken = readCookie(cookieHeader, SPOTIFY_ACCESS_COOKIE);
   const refreshToken = readCookie(cookieHeader, SPOTIFY_REFRESH_COOKIE);
-  const grantedScope = readCookie(cookieHeader, SPOTIFY_SCOPE_COOKIE);
   const expiresAtRaw = readCookie(cookieHeader, SPOTIFY_EXPIRES_COOKIE);
   const expiresAt = expiresAtRaw ? Number(expiresAtRaw) : 0;
-
-  if (!hasRequiredSpotifyScopes(grantedScope)) {
-    throw new Error(`insufficient_scope:${grantedScope ?? ""}`);
-  }
 
   if (accessToken && expiresAt > Date.now()) {
     return { accessToken };
@@ -74,7 +59,6 @@ async function getValidAccessToken(request: Request): Promise<{
   }
 
   const refreshed = await refreshSpotifyToken(refreshToken);
-  const refreshedScope = normalizeSpotifyScopeText(refreshed.scope ?? grantedScope ?? "");
   const nextCookies: Array<{ name: string; value: string; maxAge: number }> = [
     {
       name: SPOTIFY_ACCESS_COOKIE,
@@ -84,11 +68,6 @@ async function getValidAccessToken(request: Request): Promise<{
     {
       name: SPOTIFY_EXPIRES_COOKIE,
       value: String(Date.now() + refreshed.expires_in * 1000),
-      maxAge: refreshed.expires_in,
-    },
-    {
-      name: SPOTIFY_SCOPE_COOKIE,
-      value: refreshedScope,
       maxAge: refreshed.expires_in,
     },
   ];
@@ -129,96 +108,37 @@ async function spotifyCreatePlaylist(playlistName: string, accessToken: string):
   return (await response.json()) as { id: string; external_urls?: { spotify?: string } };
 }
 
-async function spotifyGetCurrentUser(accessToken: string): Promise<SpotifyProfile> {
-  const response = await fetch("https://api.spotify.com/v1/me", {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
+async function spotifySearchTrackUri(track: ExportTrack, accessToken: string): Promise<string | null> {
+  const query = `track:${track.title} artist:${track.artist}`;
+  const params = new URLSearchParams({
+    q: query,
+    type: "track",
+    limit: "1",
+  });
+
+  const response = await fetch(`https://api.spotify.com/v1/search?${params.toString()}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
   });
 
   if (!response.ok) {
-    const detail = await getResponseTextSafe(response);
-    throw new Error(`spotify_get_profile_failed:${response.status}:${detail}`);
+    return null;
   }
 
-  return (await response.json()) as SpotifyProfile;
-}
+  const payload = (await response.json()) as {
+    tracks?: { items?: Array<{ uri: string }> };
+  };
 
-async function spotifySearchTrackUri(
-  track: ExportTrack,
-  accessToken: string,
-  country?: string,
-): Promise<string | null> {
-  const queryCandidates = [
-    `track:${track.title} artist:${track.artist}`,
-    `${track.title} ${track.artist}`,
-    track.title,
-  ];
-
-  for (const query of queryCandidates) {
-    const params = new URLSearchParams({
-      q: query,
-      type: "track",
-      limit: "5",
-    });
-
-    if (country) {
-      params.set("market", country);
-    }
-
-    const response = await fetch(`https://api.spotify.com/v1/search?${params.toString()}`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-
-    if (!response.ok) {
-      continue;
-    }
-
-    const payload = (await response.json()) as {
-      tracks?: {
-        items?: Array<{
-          uri: string;
-          available_markets?: string[];
-        }>;
-      };
-    };
-
-    const items = payload.tracks?.items ?? [];
-
-    if (!country) {
-      const fallbackUri = items[0]?.uri;
-      if (fallbackUri) {
-        return fallbackUri;
-      }
-      continue;
-    }
-
-    const marketMatch = items.find((item) => item.available_markets?.includes(country));
-    if (marketMatch?.uri) {
-      return marketMatch.uri;
-    }
-
-    const fallbackUri = items[0]?.uri;
-    if (fallbackUri) {
-      return fallbackUri;
-    }
-  }
-
-  return null;
+  const uri = payload.tracks?.items?.[0]?.uri;
+  return uri ?? null;
 }
 
 async function spotifyAddTracks(
   playlistId: string,
   uris: string[],
   accessToken: string,
-): Promise<{
-  addedUris: string[];
-  failedUris: string[];
-  failedDetails: Array<{ uri: string; status: number; detail: string }>;
-}> {
+): Promise<{ addedUris: string[]; failedUris: string[] }> {
   const addedUris: string[] = [];
   const failedUris: string[] = [];
-  const failedDetails: Array<{ uri: string; status: number; detail: string }> = [];
 
   for (let index = 0; index < uris.length; index += 100) {
     const chunk = uris.slice(index, index + 100);
@@ -234,55 +154,6 @@ async function spotifyAddTracks(
     if (!response.ok) {
       if (response.status !== 403 || chunk.length === 1) {
         const detail = await getResponseTextSafe(response);
-        if (response.status === 403 && chunk.length > 1) {
-          for (const uri of chunk) {
-            const singleResponse = await fetch(
-              `https://api.spotify.com/v1/playlists/${playlistId}/tracks`,
-              {
-                method: "POST",
-                headers: {
-                  Authorization: `Bearer ${accessToken}`,
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ uris: [uri] }),
-              },
-            );
-
-            if (singleResponse.ok) {
-              addedUris.push(uri);
-              continue;
-            }
-
-            const singleDetail = await getResponseTextSafe(singleResponse);
-            const putResponse = await fetch(
-              `https://api.spotify.com/v1/playlists/${playlistId}/tracks`,
-              {
-                method: "PUT",
-                headers: {
-                  Authorization: `Bearer ${accessToken}`,
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ uris: [uri] }),
-              },
-            );
-
-            if (putResponse.ok) {
-              addedUris.push(uri);
-              continue;
-            }
-
-            const putDetail = await getResponseTextSafe(putResponse);
-            failedUris.push(uri);
-            failedDetails.push({
-              uri,
-              status: putResponse.status,
-              detail: `POST:${singleResponse.status}:${singleDetail} | PUT:${putResponse.status}:${putDetail}`,
-            });
-          }
-
-          continue;
-        }
-
         throw new Error(`spotify_add_tracks_failed:${response.status}:${detail}`);
       }
 
@@ -300,12 +171,6 @@ async function spotifyAddTracks(
           addedUris.push(uri);
         } else {
           failedUris.push(uri);
-          const detail = await getResponseTextSafe(singleResponse);
-          failedDetails.push({
-            uri,
-            status: singleResponse.status,
-            detail,
-          });
         }
       }
 
@@ -315,13 +180,12 @@ async function spotifyAddTracks(
     addedUris.push(...chunk);
   }
 
-  return { addedUris, failedUris, failedDetails };
+  return { addedUris, failedUris };
 }
 
 async function resolveTrackUris(
   tracks: ExportTrack[],
   accessToken: string,
-  country?: string,
 ): Promise<{ foundUris: string[]; missingTracks: ExportTrack[] }> {
   const foundUris: string[] = [];
   const missingTracks: ExportTrack[] = [];
@@ -330,7 +194,7 @@ async function resolveTrackUris(
     const chunk = tracks.slice(index, index + SEARCH_CONCURRENCY);
     const chunkResults = await Promise.all(
       chunk.map(async (track) => {
-        const uri = await spotifySearchTrackUri(track, accessToken, country);
+        const uri = await spotifySearchTrackUri(track, accessToken);
         return { track, uri };
       }),
     );
@@ -367,37 +231,17 @@ export async function POST(request: Request) {
     }
 
     const { accessToken, setCookies } = await getValidAccessToken(request);
-    const profile = await spotifyGetCurrentUser(accessToken);
     const playlist = await spotifyCreatePlaylist(body.playlistName, accessToken);
 
-    const { foundUris, missingTracks } = await resolveTrackUris(
-      sanitizedTracks,
-      accessToken,
-      profile.country,
-    );
+    const { foundUris, missingTracks } = await resolveTrackUris(sanitizedTracks, accessToken);
 
-    const { addedUris, failedUris, failedDetails } =
+    const { addedUris, failedUris } =
       foundUris.length > 0
         ? await spotifyAddTracks(playlist.id, foundUris, accessToken)
-        : { addedUris: [], failedUris: [], failedDetails: [] };
-
-    if (foundUris.length > 0 && addedUris.length === 0 && failedUris.length === foundUris.length) {
-      const firstFailure = failedDetails[0];
-      return NextResponse.json(
-        {
-          error: "spotify_add_tracks_forbidden_all",
-          hint: "Spotify menolak semua track. Ini biasanya karena scope playlist belum terpasang pada token. Klik Hubungkan Spotify lagi (show consent), setujui akses, lalu coba export ulang.",
-          firstFailure,
-        },
-        { status: 403 },
-      );
-    }
+        : { addedUris: [], failedUris: [] };
 
     const response = NextResponse.json({
       ok: true,
-      accountId: profile.id,
-      accountCountry: profile.country ?? null,
-      accountProduct: profile.product ?? null,
       playlistId: playlist.id,
       playlistUrl: playlist.external_urls?.spotify ?? null,
       totalRequested: sanitizedTracks.length,
@@ -405,7 +249,6 @@ export async function POST(request: Request) {
       totalMissing: missingTracks.length,
       missingTracks,
       totalFailedToAdd: failedUris.length,
-      failedToAddSample: failedDetails.slice(0, 3),
       cappedByServer: body.tracks.length > MAX_EXPORT_TRACKS,
     });
 
@@ -426,32 +269,6 @@ export async function POST(request: Request) {
     const message = error instanceof Error ? error.message : "unknown_error";
     if (message === "not_authenticated") {
       return NextResponse.json({ error: "Spotify belum terhubung." }, { status: 401 });
-    }
-
-    if (message.startsWith("insufficient_scope:")) {
-      const scopeText = message.replace("insufficient_scope:", "");
-      return NextResponse.json(
-        {
-          error: "spotify_insufficient_scope",
-          hint: "Scope playlist belum lengkap. Klik Hubungkan Spotify lagi dan setujui ulang permission.",
-          grantedScopes: parseSpotifyScopes(scopeText),
-          requiredScopes: ["playlist-modify-private", "playlist-modify-public"],
-        },
-        { status: 403 },
-      );
-    }
-
-    const profileStatusMatch = /spotify_get_profile_failed:(\d+):/.exec(message);
-    if (profileStatusMatch) {
-      const status = Number(profileStatusMatch[1]);
-      return NextResponse.json(
-        {
-          error: message,
-          hint:
-            "Token valid tapi preflight profil gagal. Coba reconnect Spotify, lalu pastikan akun yang connect sama dengan akun tujuan playlist.",
-        },
-        { status: Number.isFinite(status) ? status : 500 },
-      );
     }
 
     const spotifyStatusMatch = /spotify_[^:]+_failed:(\d+):/.exec(message);

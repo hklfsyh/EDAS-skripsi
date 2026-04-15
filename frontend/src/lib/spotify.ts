@@ -4,11 +4,6 @@ export const SPOTIFY_ACCESS_COOKIE = "spotify_access_token";
 export const SPOTIFY_REFRESH_COOKIE = "spotify_refresh_token";
 export const SPOTIFY_EXPIRES_COOKIE = "spotify_token_expires_at";
 export const SPOTIFY_STATE_COOKIE = "spotify_oauth_state";
-export const SPOTIFY_SCOPE_COOKIE = "spotify_granted_scope";
-export const SPOTIFY_REQUIRED_SCOPES = [
-  "playlist-modify-private",
-  "playlist-modify-public",
-];
 
 export type SpotifyTokenResponse = {
   access_token: string;
@@ -40,7 +35,6 @@ export function buildSpotifyAuthorizeUrl(state: string): string {
     scope: "playlist-modify-private playlist-modify-public user-read-private",
     redirect_uri: redirectUri,
     state,
-    show_dialog: "true",
   });
 
   return `https://accounts.spotify.com/authorize?${params.toString()}`;
@@ -98,57 +92,4 @@ export async function refreshSpotifyToken(refreshToken: string): Promise<Spotify
   }
 
   return (await response.json()) as SpotifyTokenResponse;
-}
-
-function decodeScopeRepeatedly(scopeText: string): string {
-  let current = scopeText;
-
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    let next = current;
-    try {
-      next = decodeURIComponent(current);
-    } catch {
-      break;
-    }
-
-    if (next === current) {
-      break;
-    }
-
-    current = next;
-  }
-
-  return current;
-}
-
-export function normalizeSpotifyScopeText(scopeText?: string | null): string {
-  const rawScope = String(scopeText ?? "").trim();
-  if (!rawScope) {
-    return "";
-  }
-
-  const decodedScope = decodeScopeRepeatedly(rawScope);
-
-  return decodedScope
-    .replace(/\+/g, " ")
-    .replace(/[;,]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-export function parseSpotifyScopes(scopeText?: string | null): string[] {
-  const normalizedScope = normalizeSpotifyScopeText(scopeText);
-  if (!normalizedScope) {
-    return [];
-  }
-
-  return normalizedScope
-    .split(" ")
-    .map((scope) => scope.trim())
-    .filter(Boolean);
-}
-
-export function hasRequiredSpotifyScopes(scopeText?: string | null): boolean {
-  const granted = new Set(parseSpotifyScopes(scopeText));
-  return SPOTIFY_REQUIRED_SCOPES.every((scope) => granted.has(scope));
 }
