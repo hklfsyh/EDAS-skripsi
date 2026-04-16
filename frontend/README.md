@@ -20,9 +20,9 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-## Spotify Export (Eksperimen Lokal)
+## Spotify & YouTube Export (Eksperimen Lokal)
 
-Fitur ini opsional untuk uji coba export playlist hasil dummy ke akun Spotify pribadi.
+Fitur ini opsional untuk uji coba export playlist hasil dummy ke akun Spotify/YouTube pribadi.
 
 ### 1) Buat app di Spotify Developer
 
@@ -39,8 +39,23 @@ Buat file `.env.local` di folder `frontend`:
 SPOTIFY_CLIENT_ID=isi_client_id
 SPOTIFY_CLIENT_SECRET=isi_client_secret
 SPOTIFY_REDIRECT_URI=http://localhost:3000/api/spotify/callback
+YOUTUBE_CLIENT_ID=isi_google_oauth_client_id
+YOUTUBE_CLIENT_SECRET=isi_google_oauth_client_secret
+YOUTUBE_REDIRECT_URI=http://localhost:3000/api/youtube/callback
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
+
+### 2b) Siapkan OAuth YouTube (Google Cloud)
+
+- Buka `https://console.cloud.google.com/`.
+- Aktifkan **YouTube Data API v3** di project kamu.
+- Buat OAuth client type **Web application**.
+- Tambahkan Authorized redirect URI sesuai env:
+	- `http://localhost:3000/api/youtube/callback`
+	- (atau domain deploy kamu, misalnya Netlify)
+- Scope yang dipakai aplikasi:
+	- `https://www.googleapis.com/auth/youtube`
+	- `https://www.googleapis.com/auth/youtube.force-ssl`
 
 ### 3) Jalankan aplikasi
 
@@ -52,6 +67,8 @@ Lalu buka halaman hasil (`/hasil`), gunakan bagian:
 
 - `Hubungkan Spotify` (OAuth)
 - `Kirim playlist ke Spotify`
+- `Hubungkan YouTube` (OAuth)
+- `Kirim playlist ke YouTube`
 
 Catatan:
 - Ini mode eksperimen. Tidak mengubah fitur utama skripsi.

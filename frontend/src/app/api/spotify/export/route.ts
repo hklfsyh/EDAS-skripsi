@@ -22,7 +22,7 @@ type AddTrackFailure = {
   detail: string;
 };
 
-const MAX_EXPORT_TRACKS = 20;
+const MAX_EXPORT_TRACKS = 50;
 const SEARCH_CONCURRENCY = 5;
 
 function readCookie(cookieHeader: string, name: string): string | null {

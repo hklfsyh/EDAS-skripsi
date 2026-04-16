@@ -51,6 +51,9 @@ export default function HasilPage() {
   const [spotifyConnected, setSpotifyConnected] = useState(false);
   const [spotifyLoading, setSpotifyLoading] = useState(false);
   const [spotifyMessage, setSpotifyMessage] = useState<string | null>(null);
+  const [youtubeConnected, setYoutubeConnected] = useState(false);
+  const [youtubeLoading, setYoutubeLoading] = useState(false);
+  const [youtubeMessage, setYoutubeMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem(THEME_STORAGE_KEY);
@@ -61,11 +64,19 @@ export default function HasilPage() {
     const params = new URLSearchParams(window.location.search);
     const spotifyStatus = params.get("spotify");
     const reason = params.get("reason");
+    const youtubeStatus = params.get("youtube");
+    const youtubeReason = params.get("yt_reason");
 
     if (spotifyStatus === "success") {
       setSpotifyMessage("Spotify berhasil terhubung.");
     } else if (spotifyStatus === "error") {
       setSpotifyMessage(`Gagal menghubungkan Spotify${reason ? ` (${reason})` : ""}.`);
+    }
+
+    if (youtubeStatus === "success") {
+      setYoutubeMessage("YouTube berhasil terhubung.");
+    } else if (youtubeStatus === "error") {
+      setYoutubeMessage(`Gagal menghubungkan YouTube${youtubeReason ? ` (${youtubeReason})` : ""}.`);
     }
 
     void fetch("/api/spotify/status")
@@ -75,6 +86,15 @@ export default function HasilPage() {
       })
       .catch(() => {
         setSpotifyConnected(false);
+      });
+
+    void fetch("/api/youtube/status")
+      .then((response) => response.json() as Promise<{ connected: boolean }>)
+      .then((payload) => {
+        setYoutubeConnected(Boolean(payload.connected));
+      })
+      .catch(() => {
+        setYoutubeConnected(false);
       });
   }, []);
 
@@ -148,6 +168,57 @@ export default function HasilPage() {
     }
   };
 
+  const handleConnectYoutube = () => {
+    window.location.href = "/api/youtube/login";
+  };
+
+  const handleExportYoutube = async () => {
+    setYoutubeLoading(true);
+    setYoutubeMessage("Sedang membuat playlist di YouTube...");
+
+    try {
+      const exportResponse = await fetch("/api/youtube/export", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          playlistName: `EDAS Dummy ${new Date().toLocaleDateString("id-ID")}`,
+          tracks: result.playlist.map((song) => ({
+            title: song.title,
+            artist: song.artist,
+          })),
+        }),
+      });
+
+      const payload = (await exportResponse.json()) as {
+        playlistUrl?: string | null;
+        totalAdded?: number;
+        totalRequested?: number;
+        error?: string;
+      };
+
+      if (!exportResponse.ok) {
+        throw new Error(payload.error ?? "Export ke YouTube gagal.");
+      }
+
+      const added = payload.totalAdded ?? 0;
+      const requested = payload.totalRequested ?? 0;
+
+      if (payload.playlistUrl) {
+        setYoutubeMessage(`Berhasil! ${added}/${requested} video ditambahkan. Membuka playlist YouTube...`);
+        window.open(payload.playlistUrl, "_blank", "noopener,noreferrer");
+      } else {
+        setYoutubeMessage(`Berhasil membuat playlist YouTube. Video ditambahkan: ${added}/${requested}.`);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Export ke YouTube gagal.";
+      setYoutubeMessage(message);
+    } finally {
+      setYoutubeLoading(false);
+    }
+  };
+
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const payload = {
@@ -215,30 +286,59 @@ export default function HasilPage() {
             Mode ini hanya untuk uji coba lokal dan tidak mengubah alur utama skripsi.
           </p>
 
-          <div className={styles.experimentActions}>
-            {!spotifyConnected ? (
-              <button
-                type="button"
-                className={styles.secondaryButton}
-                onClick={handleConnectSpotify}
-              >
-                Hubungkan Spotify
-              </button>
-            ) : (
-              <button
-                type="button"
-                className={styles.primaryButton}
-                onClick={handleExportSpotify}
-                disabled={spotifyLoading}
-              >
-                {spotifyLoading ? "Memproses..." : "Kirim playlist ke Spotify"}
-              </button>
+          <div className={styles.platformBlock}>
+            <h3>Spotify</h3>
+            <div className={styles.experimentActions}>
+              {!spotifyConnected ? (
+                <button
+                  type="button"
+                  className={styles.secondaryButton}
+                  onClick={handleConnectSpotify}
+                >
+                  Hubungkan Spotify
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className={styles.primaryButton}
+                  onClick={handleExportSpotify}
+                  disabled={spotifyLoading}
+                >
+                  {spotifyLoading ? "Memproses..." : "Kirim playlist ke Spotify"}
+                </button>
+              )}
+            </div>
+            {spotifyMessage && (
+              <p className={styles.experimentMessage}>{spotifyMessage}</p>
             )}
           </div>
 
-          {spotifyMessage && (
-            <p className={styles.experimentMessage}>{spotifyMessage}</p>
-          )}
+          <div className={styles.platformBlock}>
+            <h3>YouTube</h3>
+            <div className={styles.experimentActions}>
+              {!youtubeConnected ? (
+                <button
+                  type="button"
+                  className={styles.secondaryButton}
+                  onClick={handleConnectYoutube}
+                >
+                  Hubungkan YouTube
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className={styles.primaryButton}
+                  onClick={handleExportYoutube}
+                  disabled={youtubeLoading}
+                >
+                  {youtubeLoading ? "Memproses..." : "Kirim playlist ke YouTube"}
+                </button>
+              )}
+            </div>
+            {youtubeMessage && (
+              <p className={styles.experimentMessage}>{youtubeMessage}</p>
+            )}
+          </div>
         </section>
 
         <section className={styles.card}>
