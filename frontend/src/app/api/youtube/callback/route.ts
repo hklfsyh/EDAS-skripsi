@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import {
   exchangeYouTubeCode,
+  verifyYouTubeOAuthState,
   YOUTUBE_ACCESS_COOKIE,
   YOUTUBE_EXPIRES_COOKIE,
   YOUTUBE_REFRESH_COOKIE,
@@ -37,8 +38,10 @@ export async function GET(request: Request) {
 
   const cookieHeader = request.headers.get("cookie") ?? "";
   const expectedState = readCookie(cookieHeader, YOUTUBE_STATE_COOKIE);
+  const hasValidSignedState = state ? verifyYouTubeOAuthState(state) : false;
+  const hasValidCookieState = !!state && !!expectedState && state === expectedState;
 
-  if (!code || !state || !expectedState || state !== expectedState) {
+  if (!code || !state || (!hasValidSignedState && !hasValidCookieState)) {
     return NextResponse.redirect(buildResultUrl("error", "oauth_state_invalid"));
   }
 

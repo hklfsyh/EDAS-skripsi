@@ -194,11 +194,15 @@ async function generateWithGemini(body: NlgRequestBody): Promise<GeminiGenerateR
   }
 
   const preferredModel = (process.env.GEMINI_MODEL ?? "").trim();
+  const strictFallbackOrder = ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.5-flash-lite"];
   const candidateModels = Array.from(
     new Set(
-      [preferredModel, "gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.5-flash-lite"].filter(
-        (model) => model.length > 0,
-      ),
+      [
+        ...strictFallbackOrder,
+        ...(preferredModel.length > 0 && !strictFallbackOrder.includes(preferredModel)
+          ? [preferredModel]
+          : []),
+      ].filter((model) => model.length > 0),
     ),
   );
   const prompt = buildGeminiPrompt(body);
@@ -217,6 +221,9 @@ async function generateWithGemini(body: NlgRequestBody): Promise<GeminiGenerateR
 
     lastFailure = result;
 
+    const isLocationUnsupported =
+      result.httpStatus === 400 && (result.reason ?? "").toLowerCase().includes("location is not supported");
+
     const shouldTryNextModel =
       result.httpStatus === 404 ||
       result.httpStatus === 429 ||
@@ -224,6 +231,7 @@ async function generateWithGemini(body: NlgRequestBody): Promise<GeminiGenerateR
       result.httpStatus === 502 ||
       result.httpStatus === 503 ||
       result.httpStatus === 504 ||
+      isLocationUnsupported ||
       result.reason === "empty_output" ||
       result.reason === "unsafe_output_filtered";
 

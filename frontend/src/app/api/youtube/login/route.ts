@@ -1,10 +1,14 @@
-import crypto from "node:crypto";
 import { NextResponse } from "next/server";
-import { buildYouTubeAuthorizeUrl, getYouTubeConfig, YOUTUBE_STATE_COOKIE } from "@/lib/youtube";
+import {
+  buildYouTubeAuthorizeUrl,
+  createYouTubeOAuthState,
+  getYouTubeConfig,
+  YOUTUBE_STATE_COOKIE,
+} from "@/lib/youtube";
 
 export async function GET(request: Request) {
   try {
-    const state = crypto.randomUUID();
+    const state = createYouTubeOAuthState();
     const authorizeUrl = buildYouTubeAuthorizeUrl(state);
     const debug = new URL(request.url).searchParams.get("debug") === "1";
 

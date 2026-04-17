@@ -1,3 +1,5 @@
+import crypto from "node:crypto";
+
 export const YOUTUBE_ACCESS_COOKIE = "youtube_access_token";
 export const YOUTUBE_REFRESH_COOKIE = "youtube_refresh_token";
 export const YOUTUBE_EXPIRES_COOKIE = "youtube_token_expires_at";
@@ -45,6 +47,58 @@ export function buildYouTubeAuthorizeUrl(state: string): string {
   });
 
   return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+}
+
+function getYouTubeStateSecret(): string {
+  const explicitStateSecret = (process.env.YOUTUBE_OAUTH_STATE_SECRET ?? "").trim();
+  if (explicitStateSecret) {
+    return explicitStateSecret;
+  }
+
+  return getYouTubeConfig().clientSecret;
+}
+
+export function createYouTubeOAuthState(): string {
+  const nonce = crypto.randomBytes(16).toString("hex");
+  const issuedAt = Math.floor(Date.now() / 1000);
+  const payload = `${nonce}.${issuedAt}`;
+  const signature = crypto.createHmac("sha256", getYouTubeStateSecret()).update(payload).digest("base64url");
+  return `${payload}.${signature}`;
+}
+
+export function verifyYouTubeOAuthState(state: string, maxAgeSec = 600): boolean {
+  const parts = state.split(".");
+  if (parts.length !== 3) {
+    return false;
+  }
+
+  const [nonce, issuedAtRaw, signature] = parts;
+  const issuedAt = Number(issuedAtRaw);
+  if (!nonce || !Number.isFinite(issuedAt) || !signature) {
+    return false;
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  if (issuedAt > now + 120) {
+    return false;
+  }
+  if (now - issuedAt > maxAgeSec) {
+    return false;
+  }
+
+  const payload = `${nonce}.${issuedAtRaw}`;
+  const expectedSignature = crypto
+    .createHmac("sha256", getYouTubeStateSecret())
+    .update(payload)
+    .digest("base64url");
+
+  const left = Buffer.from(signature);
+  const right = Buffer.from(expectedSignature);
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  return crypto.timingSafeEqual(left, right);
 }
 
 export async function exchangeYouTubeCode(code: string): Promise<YouTubeTokenResponse> {
