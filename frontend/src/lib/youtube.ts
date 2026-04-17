@@ -12,14 +12,20 @@ export type YouTubeTokenResponse = {
 };
 
 export function getYouTubeConfig() {
-  const clientId = process.env.YOUTUBE_CLIENT_ID;
-  const clientSecret = process.env.YOUTUBE_CLIENT_SECRET;
-  const redirectUri = process.env.YOUTUBE_REDIRECT_URI;
+  const clientId = (process.env.YOUTUBE_CLIENT_ID ?? "").trim();
+  const clientSecret = (process.env.YOUTUBE_CLIENT_SECRET ?? "").trim();
+  const redirectUri = (process.env.YOUTUBE_REDIRECT_URI ?? "").trim();
 
   if (!clientId || !clientSecret || !redirectUri) {
     throw new Error(
       "YouTube environment variables belum lengkap. Isi YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET, dan YOUTUBE_REDIRECT_URI.",
     );
+  }
+
+  try {
+    new URL(redirectUri);
+  } catch {
+    throw new Error("YOUTUBE_REDIRECT_URI tidak valid. Pastikan format URL lengkap dan sesuai callback route.");
   }
 
   return { clientId, clientSecret, redirectUri };

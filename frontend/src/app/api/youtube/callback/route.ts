@@ -21,7 +21,7 @@ function readCookie(cookieHeader: string, name: string): string | null {
 }
 
 function buildResultUrl(status: "success" | "error", reason?: string): URL {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000").trim();
   const url = new URL("/hasil", appUrl);
   url.searchParams.set("youtube", status);
   if (reason) {

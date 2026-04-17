@@ -68,7 +68,7 @@ function buildGeminiPrompt(body: NlgRequestBody): string {
   const topSongs = (body.topSongs ?? []).slice(0, 3);
   const songList = topSongs.map((song) => `"${song.title}" oleh ${song.artist}`).join(", ");
 
-  return `Kamu adalah teman ngobrol pengguna di aplikasi rekomendasi playlist musik. Gaya kamu: ${pickedStyle}.\n\nData playlist yang sudah digenerate:\n- Aktivitas: ${activity}\n- Waktu: ${timeOfDay}\n- Suasana yang diinginkan: ${mood}\n- Jumlah lagu terpilih: ${count} lagu\n- Durasi total: sekitar ${totalMin} menit (target ${targetMin} menit)\n${songList ? `- Beberapa lagu teratas: ${songList}` : ""}\n\nTugasmu: Komentari hasil playlist ini dengan gaya ngobrol casual bahasa Indonesia. Bayangkan kamu lagi chat sama teman yang baru selesai bikin playlist dan kamu mau kasih reaksi/komentar.\n\nAturan WAJIB:\n- Output hanya 1 paragraf, 3-5 kalimat, TANPA baris baru, TANPA bullet, TANPA markdown\n- Jangan klaim musik bikin lebih produktif/fokus/sembuh — cukup komentar ringan soal pilihan lagu dan durasi\n- Gunakan hanya fakta dari data di atas, jangan tambah angka lain\n- Boleh pakai kata seru seperti "wah", "oke sip", "mantap", "asik", dll\n- Sebutkan 1-2 lagu dari daftar teratas jika ada\n- Variasikan cara membuka kalimat agar tidak monoton\n- Keluarkan HANYA teks narasinya saja, tidak ada penjelasan lain`;
+  return `Kamu adalah teman ngobrol pengguna di aplikasi rekomendasi playlist musik. Gaya kamu: ${pickedStyle}.\n\nData playlist yang sudah digenerate:\n- Aktivitas: ${activity}\n- Waktu: ${timeOfDay}\n- Suasana yang diinginkan: ${mood}\n- Jumlah lagu terpilih: ${count} lagu\n- Durasi total: sekitar ${totalMin} menit (target ${targetMin} menit)\n${songList ? `- Beberapa lagu teratas: ${songList}` : ""}\n\nTugasmu: Komentari hasil playlist ini dengan gaya ngobrol casual bahasa Indonesia. Bayangkan kamu lagi chat sama teman yang baru selesai bikin playlist dan kamu mau kasih reaksi/komentar.\n\nAturan WAJIB:\n- Output hanya 1 paragraf, 3-5 kalimat, TANPA baris baru, TANPA bullet, TANPA markdown\n- Hindari topik medis/mental-health dan jangan beri klaim terapi, penyembuhan, atau diagnosis\n- Jangan klaim sebab-akibat absolut (hindari kata seperti "pasti", "dijamin", "menyembuhkan")\n- Cukup komentar ringan soal variasi lagu, vibe, dan kecocokan durasi\n- Gunakan hanya fakta dari data di atas, jangan tambah angka lain\n- Boleh pakai kata seru seperti "wah", "oke sip", "mantap", "asik", dll\n- Sebutkan 1-2 lagu dari daftar teratas jika ada\n- Variasikan cara membuka kalimat agar tidak monoton\n- Keluarkan HANYA teks narasinya saja, tidak ada penjelasan lain`;
 }
 
 function sanitizeNarration(text: string): string {
@@ -82,15 +82,7 @@ function sanitizeNarration(text: string): string {
 }
 
 function looksUnsafeNarration(text: string): boolean {
-  const unsafePatterns = [
-    /menyembuhkan/i,
-    /terapi/i,
-    /depresi/i,
-    /cemas( berlebihan)?/i,
-    /gangguan mental/i,
-    /pasti membuat/i,
-    /dijamin/i,
-  ];
+  const unsafePatterns = [/menyembuhkan/i, /diagnosis/i, /gangguan mental/i, /pasti membuat/i, /dijamin/i];
 
   return unsafePatterns.some((pattern) => pattern.test(text));
 }
@@ -128,8 +120,8 @@ async function generateWithModel(apiKey: string, model: string, prompt: string):
         },
       ],
       generationConfig: {
-        temperature: 1.1,
-        topP: 0.95,
+        temperature: 0.8,
+        topP: 0.9,
         maxOutputTokens: 300,
         ...(model.includes("2.5") ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
       },
@@ -158,11 +150,14 @@ async function generateWithModel(apiKey: string, model: string, prompt: string):
   const payload = (await response.json()) as GeminiResponse;
   const rawText = extractTextFromCandidates(payload.candidates ?? []);
   const narration = sanitizeNarration(rawText);
+  const blockedBySafety = (payload.candidates ?? []).some(
+    (candidate) => (candidate.finishReason ?? "").toUpperCase() === "SAFETY",
+  );
 
   if (!narration || narration.length < 10) {
     return {
       text: null,
-      reason: "empty_output",
+      reason: blockedBySafety ? "unsafe_output_filtered" : "empty_output",
       usedModel: model,
     };
   }
@@ -191,7 +186,14 @@ async function generateWithGemini(body: NlgRequestBody): Promise<GeminiGenerateR
     };
   }
 
-  const candidateModels = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
+  const preferredModel = (process.env.GEMINI_MODEL ?? "").trim();
+  const candidateModels = Array.from(
+    new Set(
+      [preferredModel, "gemini-2.0-flash", "gemini-2.5-flash", "gemini-1.5-flash"].filter(
+        (model) => model.length > 0,
+      ),
+    ),
+  );
   const prompt = buildGeminiPrompt(body);
 
   let lastFailure: GeminiGenerateResult = {
@@ -214,7 +216,9 @@ async function generateWithGemini(body: NlgRequestBody): Promise<GeminiGenerateR
       result.httpStatus === 500 ||
       result.httpStatus === 502 ||
       result.httpStatus === 503 ||
-      result.httpStatus === 504;
+      result.httpStatus === 504 ||
+      result.reason === "empty_output" ||
+      result.reason === "unsafe_output_filtered";
 
     if (!shouldTryNextModel) {
       return result;
@@ -239,7 +243,7 @@ export async function handleNlgGeneratePost(request: Request) {
           ok: false,
           error: "gemini_generation_failed",
           reason: generated.reason ?? "unknown_error",
-          model: generated.usedModel ?? "gemini-1.5-flash",
+          model: generated.usedModel ?? "unknown_model",
         },
         { status: generated.httpStatus ?? 502 },
       );
