@@ -43,7 +43,7 @@ YOUTUBE_CLIENT_ID=isi_google_oauth_client_id
 YOUTUBE_CLIENT_SECRET=isi_google_oauth_client_secret
 YOUTUBE_REDIRECT_URI=http://localhost:3000/api/youtube/callback
 GEMINI_API_KEY=isi_gemini_api_key
-GEMINI_MODEL=gemini-2.0-flash
+GEMINI_MODEL=gemini-2.5-flash
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
@@ -65,11 +65,11 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 - Login menggunakan akun Google.
 - Klik **Create API key** lalu salin key yang dihasilkan.
 - Simpan key tersebut ke `GEMINI_API_KEY` pada `.env.local`.
-- Opsional: ubah model di `GEMINI_MODEL` (default: `gemini-2.0-flash`).
+- Rekomendasi model: `GEMINI_MODEL=gemini-2.5-flash`.
 
 Catatan perilaku sistem NLG:
 - Narasi tetap diambil dari hasil playlist dummy yang sudah ada.
-- Jika Gemini tidak aktif/gagal/kuota habis, sistem otomatis fallback ke template narasi lokal.
+- Jika Gemini tidak aktif/gagal/kuota habis, API akan mengembalikan error eksplisit (`ok:false`) agar penyebab bisa ditangani langsung.
 - NLG hanya mengubah gaya bahasa narasi, tidak mengubah ranking atau hasil EDAS.
 
 ### 3) Jalankan aplikasi
@@ -94,6 +94,93 @@ Catatan:
 - Ini mode eksperimen. Tidak mengubah fitur utama skripsi.
 - Proses add lagu memakai strategi search-and-match, jadi bisa ada sebagian lagu tidak ditemukan.
 - NLG diintegrasikan sebagai lapisan presentasi teks, bukan mesin pemeringkatan lagu.
+
+## Migrasi ke Vercel (Rinci)
+
+Panduan ini fokus untuk migrasi dari deploy Netlify ke Vercel, termasuk OAuth Spotify/YouTube dan Gemini.
+
+### 1) Import project ke Vercel
+
+- Login ke `https://vercel.com`.
+- Klik **Add New... -> Project**.
+- Pilih repo `hklfsyh/EDAS-skripsi`.
+- Saat konfigurasi:
+	- **Framework Preset**: `Next.js`
+	- **Root Directory**: `frontend`
+	- **Build Command**: `npm run build` (default Next.js)
+	- **Install Command**: `npm install`
+
+### 2) Isi Environment Variables di Vercel
+
+Tambahkan variabel berikut di **Project Settings -> Environment Variables**:
+
+- `NEXT_PUBLIC_APP_URL`
+- `SPOTIFY_CLIENT_ID`
+- `SPOTIFY_CLIENT_SECRET`
+- `SPOTIFY_REDIRECT_URI`
+- `YOUTUBE_CLIENT_ID`
+- `YOUTUBE_CLIENT_SECRET`
+- `YOUTUBE_REDIRECT_URI`
+- `GEMINI_API_KEY`
+- `GEMINI_MODEL` (isi: `gemini-2.5-flash`)
+
+Tips:
+- Gunakan nilai yang sama seperti catatan di file `.env.example`, lalu ganti domain URL ke domain Vercel.
+- Untuk produksi, isi semua variable di environment `Production`.
+
+### 3) Dapatkan domain Vercel lalu update URL
+
+Setelah deploy pertama, kamu akan dapat domain seperti:
+- `https://nama-proyek.vercel.app`
+
+Lalu update tiga variabel ini agar pakai domain Vercel:
+- `NEXT_PUBLIC_APP_URL=https://nama-proyek.vercel.app`
+- `SPOTIFY_REDIRECT_URI=https://nama-proyek.vercel.app/api/spotify/callback`
+- `YOUTUBE_REDIRECT_URI=https://nama-proyek.vercel.app/api/youtube/callback`
+
+### 4) Update OAuth Spotify Developer Dashboard
+
+- Buka `https://developer.spotify.com/dashboard`.
+- Pilih app kamu.
+- Tambahkan **Redirect URI** produksi Vercel:
+	- `https://nama-proyek.vercel.app/api/spotify/callback`
+- Simpan perubahan.
+
+### 5) Update OAuth Google Cloud (YouTube)
+
+- Buka `https://console.cloud.google.com/`.
+- Pilih project OAuth yang sama dengan `YOUTUBE_CLIENT_ID`.
+- Masuk ke **APIs & Services -> Credentials -> OAuth 2.0 Client IDs**.
+- Buka client ID web app kamu.
+- Tambahkan **Authorized redirect URI**:
+	- `https://nama-proyek.vercel.app/api/youtube/callback`
+
+Penting:
+- `redirect_uri` harus **exact match** (protocol `https`, domain, path, trailing slash harus konsisten).
+- Jika salah sedikit, Google akan melempar `redirect_uri_mismatch`.
+
+### 6) Verifikasi redirect URI yang dipakai aplikasi
+
+Route login YouTube mendukung debug mode:
+- Buka `https://nama-proyek.vercel.app/api/youtube/login?debug=1`
+- Cek JSON `redirectUri`.
+- Pastikan nilainya identik dengan yang ada di Google Cloud OAuth.
+
+### 7) Strategi model Gemini untuk NLG (sesuai permintaan)
+
+Urutan fallback saat generate narasi:
+1. `gemini-2.5-flash`
+2. `gemini-2.5-pro`
+3. `gemini-2.5-flash-lite`
+
+Jika model pertama gagal/kuota penuh/endpoint error, sistem lanjut ke model berikutnya.
+
+### 8) Checklist pasca migrasi
+
+- `/api/youtube/login?debug=1` menampilkan `redirectUri` Vercel yang benar.
+- Login Spotify berhasil balik ke halaman hasil.
+- Login YouTube tidak lagi `redirect_uri_mismatch`.
+- Endpoint NLG berhasil `ok:true`, atau jika gagal tetap `ok:false` dengan alasan jelas.
 
 ## Learn More
 

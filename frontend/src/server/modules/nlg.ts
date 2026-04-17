@@ -189,7 +189,7 @@ async function generateWithGemini(body: NlgRequestBody): Promise<GeminiGenerateR
   const preferredModel = (process.env.GEMINI_MODEL ?? "").trim();
   const candidateModels = Array.from(
     new Set(
-      [preferredModel, "gemini-2.0-flash", "gemini-2.5-flash", "gemini-1.5-flash"].filter(
+      [preferredModel, "gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.5-flash-lite"].filter(
         (model) => model.length > 0,
       ),
     ),
@@ -254,7 +254,7 @@ export async function handleNlgGeneratePost(request: Request) {
       text: generated.text,
       source: "gemini",
       reason: null,
-      model: generated.usedModel ?? "gemini-2.0-flash",
+      model: generated.usedModel ?? "gemini-2.5-flash",
     });
   } catch {
     return NextResponse.json(
