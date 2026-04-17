@@ -178,11 +178,18 @@ async function generateWithModel(apiKey: string, model: string, prompt: string):
 }
 
 async function generateWithGemini(body: NlgRequestBody): Promise<GeminiGenerateResult> {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = (process.env.GEMINI_API_KEY ?? "").trim().replace(/^['"]|['"]$/g, "");
   if (!apiKey) {
     return {
       text: null,
       reason: "missing_api_key",
+    };
+  }
+
+  if (/^(your_|isi_)/i.test(apiKey)) {
+    return {
+      text: null,
+      reason: "invalid_api_key_config",
     };
   }
 
