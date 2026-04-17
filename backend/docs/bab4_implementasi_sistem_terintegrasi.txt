@@ -1,0 +1,1229 @@
+BAB 4
+IMPLEMENTASI SISTEM
+
+Sistem Rekomendasi Playlist Musik Berbasis Konteks Aktivitas Pengguna Menggunakan Metode EDAS
+
+
+4.1 Pendahuluan Implementasi
+
+Bab ini menjelaskan implementasi sistem secara rinci mulai dari tahap pengolahan data, pemodelan preferensi pengguna, perhitungan metode EDAS, pembentukan playlist berbasis target durasi, integrasi antarmuka web, sampai integrasi layanan pihak ketiga (Spotify, YouTube, dan Gemini untuk narasi). Fokus utama penulisan bab ini adalah menunjukkan jejak yang jelas antara rancangan metodologi pada bab sebelumnya dengan realisasi di kode program.
+
+Implementasi sistem disusun dengan prinsip traceability, yaitu setiap keputusan metodologis memiliki representasi yang eksplisit pada fungsi, modul, dan endpoint yang berjalan. Dengan prinsip ini, sistem tidak hanya bekerja secara fungsional, tetapi juga mudah diaudit untuk kebutuhan akademik: penguji dapat menelusuri bagaimana data dibaca, bagaimana bobot dibentuk, bagaimana skor EDAS dihitung, dan bagaimana hasil akhir ditransformasikan menjadi playlist yang dapat diekspor.
+
+Selain itu, implementasi dilakukan dengan pemisahan concern yang tegas. Lapisan komputasi (preprocessing, preferensi, EDAS, dan playlist builder) ditempatkan terpisah dari lapisan presentasi (UI) serta lapisan integrasi layanan eksternal (OAuth dan API platform musik). Pemisahan ini penting karena menjaga agar kontribusi ilmiah utama penelitian—yaitu mekanisme rekomendasi berbasis EDAS—tetap dapat dievaluasi secara independen dari komponen antarmuka dan infrastruktur.
+
+
+4.2 Gambaran Arsitektur Implementasi
+
+Secara implementatif, arsitektur dibagi menjadi dua area kerja:
+(1) Backend komputasi penelitian di folder `backend/src`, dan
+(2) Frontend + API adapter di folder `frontend/src`.
+
+Pada sisi backend komputasi, file utama terdiri dari:
+- `backend/src/load_data.py` untuk pembacaan dataset,
+- `backend/src/preprocess.py` untuk pembersihan data dan pembentukan decision matrix,
+- `backend/src/preferences.py` untuk konversi kuesioner menjadi bobot dan tipe kriteria,
+- `backend/src/edas.py` untuk kalkulasi EDAS,
+- `backend/src/playlist_builder.py` untuk penyusunan playlist berbasis durasi,
+- `backend/src/main.py` untuk orkestrasi pipeline.
+
+Pada sisi frontend/API, arsitektur menggunakan pola route adapter tipis:
+- Endpoint tetap berada di `frontend/src/app/api/**`,
+- Logika domain dipindahkan ke `frontend/src/server/modules/**`,
+- Utility bersama dipusatkan pada `frontend/src/server/utils/**` dan `frontend/src/lib/**`.
+
+Dengan pola ini, endpoint publik tidak berubah, tetapi struktur kode menjadi lebih modular dan lebih mudah didokumentasikan di bab implementasi.
+
+
+4.3 Implementasi Inti Sistem
+
+4.3.1 Implementasi Data dan Pemodelan Kriteria
+
+Subbab ini menjelaskan bagaimana data mentah dari CSV diubah menjadi data siap hitung untuk EDAS, serta bagaimana jawaban kuesioner dikonversi menjadi parameter preferensi terukur. Pada fase ini, akurasi data menjadi prioritas utama karena kualitas hasil rekomendasi sangat ditentukan oleh kualitas input.
+
+Tahap implementasi dimulai dari validasi keberadaan file, pembacaan data tabular, validasi kolom wajib, normalisasi tipe data numerik, dan normalisasi durasi. Setelah data valid, sistem membentuk decision matrix dengan delapan kriteria audio sebagaimana dirumuskan di metodologi penelitian: `bpm`, `energy`, `danceability`, `happiness`, `popularity`, `acousticness`, `instrumentalness`, dan `speechiness`.
+
+Selanjutnya, preferensi pengguna tidak diperlakukan sebagai data bebas, melainkan dipetakan ke model kriteria yang konsisten. Empat belas butir kuesioner dipetakan ke delapan parameter audio dengan dukungan reverse scoring pada butir tertentu. Hasil agregasi parameter diubah menjadi bobot ter-normalisasi dan label tipe kriteria (`benefit`, `cost`, `neutral`) untuk kebutuhan formula EDAS.
+
+A. Implementasi Pembacaan Dataset
+
+Snippet 4.3.1-1 (`backend/src/load_data.py`):
+```python
+from pathlib import Path
+import pandas as pd
+
+
+def load_dataset(csv_path: str | Path) -> pd.DataFrame:
+    path = Path(csv_path)
+
+    if not path.exists():
+        raise FileNotFoundError(f"File tidak ditemukan: {path}")
+
+    df = pd.read_csv(path)
+    return df
+```
+
+Narasi:
+Implementasi pembacaan data dibuat minimal namun eksplisit. Fungsi `load_dataset` tidak langsung mengasumsikan file tersedia, melainkan memvalidasi path terlebih dahulu. Ini penting untuk menghindari kegagalan tersembunyi ketika jalur data berubah antara lingkungan lokal, deployment, atau pengujian. Setelah validasi lolos, dataset dibaca menjadi `DataFrame` agar tahapan selanjutnya dapat menggunakan operasi tabular yang konsisten.
+
+B. Implementasi Kriteria dan Struktur Hasil Preprocessing
+
+Snippet 4.3.1-2 (`backend/src/preprocess.py`):
+```python
+EDAS_CRITERIA = [
+    "bpm",
+    "energy",
+    "danceability",
+    "happiness",
+    "popularity",
+    "acousticness",
+    "instrumentalness",
+    "speechiness",
+]
+
+
+@dataclass(frozen=True)
+class PreprocessResult:
+    cleaned_df: pd.DataFrame
+    decision_matrix: pd.DataFrame
+```
+
+Narasi:
+Pada implementasi, daftar kriteria ditetapkan sebagai konstanta agar tidak terjadi inkonsistensi urutan kolom antar fungsi. Penggunaan `PreprocessResult` membuat keluaran preprocessing lebih terstruktur: `cleaned_df` untuk data yang sudah dibersihkan dan `decision_matrix` untuk data yang siap langsung dikalkulasi oleh EDAS.
+
+C. Implementasi Normalisasi Durasi
+
+Snippet 4.3.1-3 (`backend/src/preprocess.py`):
+```python
+def parse_duration_to_seconds(duration_text: str) -> int:
+    value = str(duration_text).strip()
+    parts = value.split(":")
+
+    if len(parts) != 2:
+        raise ValueError(f"Format durasi tidak valid: {duration_text}")
+
+    minutes_text, seconds_text = parts
+    minutes = int(minutes_text)
+    seconds = int(seconds_text)
+
+    if minutes < 0 or seconds < 0:
+        raise ValueError(f"Nilai durasi tidak valid: {duration_text}")
+
+    normalized_minutes = minutes + (seconds // 60)
+    normalized_seconds = seconds % 60
+
+    return normalized_minutes * 60 + normalized_seconds
+```
+
+Snippet 4.3.1-4 (`backend/src/preprocess.py`):
+```python
+def _safe_parse_duration_to_seconds(duration_text: str) -> int | None:
+    try:
+        return parse_duration_to_seconds(duration_text)
+    except (TypeError, ValueError):
+        return None
+```
+
+Narasi:
+Implementasi durasi mengantisipasi data scraping yang tidak selalu ideal, misalnya format anomali seperti `2:60`. Dengan normalisasi menit-detik, kasus seperti itu tetap diproses menjadi nilai yang valid (`180` detik) alih-alih langsung menggagalkan seluruh pipeline. Wrapper aman (`_safe_parse_duration_to_seconds`) membuat baris invalid dapat dieliminasi terkontrol di tahap `dropna` tanpa menghentikan proses keseluruhan.
+
+D. Implementasi Validasi Kolom dan Filtering Status
+
+Snippet 4.3.1-5 (`backend/src/preprocess.py`):
+```python
+def _ensure_columns(df: pd.DataFrame, required_columns: Iterable[str]) -> None:
+    missing = [column for column in required_columns if column not in df.columns]
+    if missing:
+        raise KeyError(f"Kolom wajib tidak ditemukan: {missing}")
+```
+
+Snippet 4.3.1-6 (`backend/src/preprocess.py`):
+```python
+required_columns = ["artist", "title", "duration", "status", *EDAS_CRITERIA]
+_ensure_columns(df, required_columns)
+
+working_df = df.copy()
+
+if "status" in working_df.columns:
+    working_df["status"] = working_df["status"].astype(str).str.strip().str.lower()
+    working_df = working_df[working_df["status"] == "ok"].copy()
+```
+
+Narasi:
+Dua pengaman utama diterapkan pada tahap awal: validasi skema kolom dan filter kualitas data berdasarkan `status`. Validasi skema memastikan perubahan struktur CSV dapat terdeteksi cepat. Filter status memastikan hanya data lagu yang lolos tahap pengumpulan awal yang masuk ke perhitungan model, sehingga kualitas decision matrix tetap terjaga.
+
+E. Implementasi Konversi Numerik dan Pembentukan Decision Matrix
+
+Snippet 4.3.1-7 (`backend/src/preprocess.py`):
+```python
+working_df["duration_seconds"] = working_df["duration"].apply(_safe_parse_duration_to_seconds)
+
+for column in EDAS_CRITERIA:
+    working_df[column] = pd.to_numeric(working_df[column], errors="coerce")
+
+working_df = working_df.dropna(subset=[*EDAS_CRITERIA, "duration_seconds"]).copy()
+working_df["duration_seconds"] = working_df["duration_seconds"].astype(int)
+
+decision_matrix = working_df[EDAS_CRITERIA].copy()
+
+if decision_matrix.empty:
+    raise ValueError("Decision matrix kosong setelah preprocessing.")
+```
+
+Narasi:
+Implementasi ini menutup celah data non-numerik pada kolom kriteria. Parameter `errors="coerce"` memaksa nilai invalid menjadi `NaN`, lalu dieliminasi melalui `dropna`. Dengan demikian, tahap komputasi EDAS menerima matriks yang bersih dan homogen. Pemeriksaan `decision_matrix.empty` menjadi guard terakhir untuk mencegah perhitungan pada data kosong.
+
+F. Implementasi Mapping Kuesioner ke Parameter Audio
+
+Snippet 4.3.1-8 (`backend/src/preferences.py`):
+```python
+PARAMETERS = [
+    "bpm",
+    "energy",
+    "danceability",
+    "happiness",
+    "popularity",
+    "acousticness",
+    "instrumentalness",
+    "speechiness",
+]
+
+QUESTIONNAIRE_MAPPING = [
+    QuestionnaireItem(question_id=1, parameter="bpm", positive_toward_higher_value=True),
+    QuestionnaireItem(question_id=2, parameter="bpm", positive_toward_higher_value=False),
+    QuestionnaireItem(question_id=3, parameter="energy", positive_toward_higher_value=True),
+    QuestionnaireItem(question_id=4, parameter="energy", positive_toward_higher_value=False),
+  QuestionnaireItem(question_id=5, parameter="energy", positive_toward_higher_value=True),
+  QuestionnaireItem(question_id=6, parameter="danceability", positive_toward_higher_value=True),
+  QuestionnaireItem(question_id=7, parameter="danceability", positive_toward_higher_value=True),
+  QuestionnaireItem(question_id=8, parameter="happiness", positive_toward_higher_value=True),
+  QuestionnaireItem(question_id=9, parameter="popularity", positive_toward_higher_value=True),
+  QuestionnaireItem(question_id=10, parameter="acousticness", positive_toward_higher_value=True),
+  QuestionnaireItem(question_id=11, parameter="instrumentalness", positive_toward_higher_value=True),
+  QuestionnaireItem(question_id=12, parameter="instrumentalness", positive_toward_higher_value=True),
+  QuestionnaireItem(question_id=13, parameter="speechiness", positive_toward_higher_value=True),
+  QuestionnaireItem(question_id=14, parameter="speechiness", positive_toward_higher_value=False),
+]
+```
+
+Narasi:
+Pemetaan ini menghubungkan instrumen kuesioner ke ruang fitur audio yang dipakai EDAS. Keberadaan atribut `positive_toward_higher_value` memungkinkan sistem membedakan item positif dan item terbalik (reverse item), sehingga skor parameter tidak bias oleh arah kalimat pertanyaan.
+
+G. Implementasi Validasi Jawaban Kuesioner
+
+Snippet 4.3.1-9 (`backend/src/preferences.py`):
+```python
+def _validate_answers(answers: dict[int, int]) -> None:
+    expected_ids = {item.question_id for item in QUESTIONNAIRE_MAPPING}
+    given_ids = set(answers.keys())
+
+    missing = sorted(expected_ids - given_ids)
+    extra = sorted(given_ids - expected_ids)
+
+    if missing:
+        raise ValueError(f"Jawaban belum lengkap. Nomor yang belum diisi: {missing}")
+
+    if extra:
+        raise ValueError(f"Terdapat nomor pertanyaan tidak valid: {extra}")
+
+    for question_id, answer in answers.items():
+        if answer < 1 or answer > 5:
+            raise ValueError(f"Skala Likert harus 1-5. Nilai invalid pada nomor {question_id}: {answer}")
+```
+
+Narasi:
+Validasi jawaban dibuat ketat karena bobot kriteria sangat sensitif terhadap input. Implementasi memastikan tiga hal sekaligus: tidak ada item yang kosong, tidak ada nomor liar di luar kuesioner, dan tidak ada nilai skala di luar rentang Likert. Dengan mekanisme ini, bobot yang dihasilkan dapat dipertanggungjawabkan secara metodologis.
+
+H. Implementasi Reverse Scoring, Normalisasi Bobot, dan Tipe Kriteria
+
+Snippet 4.3.1-10 (`backend/src/preferences.py`):
+```python
+def _normalize_answer(answer: int, positive_toward_higher_value: bool) -> float:
+    if positive_toward_higher_value:
+        return float(answer)
+    return float(6 - answer)
+```
+
+Snippet 4.3.1-11 (`backend/src/preferences.py`):
+```python
+def _classify_criterion(parameter_score: float) -> str:
+    if parameter_score > 3.0:
+        return "benefit"
+    if parameter_score < 3.0:
+        return "cost"
+    return "neutral"
+```
+
+Snippet 4.3.1-12 (`backend/src/preferences.py`):
+```python
+weights = {
+    parameter: score / total_score
+    for parameter, score in parameter_scores.items()
+}
+
+criteria_types = {
+    parameter: _classify_criterion(score)
+    for parameter, score in parameter_scores.items()
+}
+```
+
+Narasi:
+Reverse scoring (`6 - answer`) memastikan item terbalik memiliki arah interpretasi yang sama dengan item biasa. Setelah skor parameter diperoleh, normalisasi bobot dilakukan agar total bobot bernilai 1, sesuai kebutuhan metode MCDM. Klasifikasi `benefit/cost/neutral` menjadi parameter penting karena mempengaruhi arah PDA/NDA saat perhitungan EDAS.
+
+I. Orkestrasi Tahap Data dan Preferensi
+
+Snippet 4.3.1-13 (`backend/src/main.py`):
+```python
+df = load_dataset(csv_path)
+preprocess_result = preprocess_for_edas(df)
+cleaned_df = preprocess_result.cleaned_df
+decision_matrix = preprocess_result.decision_matrix
+
+preference_result = build_preferences_from_questionnaire(demo_answers)
+```
+
+Narasi:
+Pipeline awal dibuat eksplisit di `main.py` agar alur transformasi data dapat dibaca berurutan oleh peneliti maupun penguji: dari dataset mentah menjadi matriks keputusan, lalu dari jawaban kuesioner menjadi bobot serta tipe kriteria. Struktur ini memudahkan reproduksi eksperimen.
+
+
+4.3.2 Implementasi Perhitungan Metode EDAS
+
+Pada subbab ini, implementasi formula EDAS dijelaskan dari tahap inisialisasi hingga ranking akhir. Semua komponen matematis yang dirancang pada metodologi diterjemahkan ke operasi DataFrame/Series agar perhitungan efisien dan transparan.
+
+Implementasi didesain defensif terhadap kasus tepi, khususnya pembagian dengan nol pada nilai rata-rata atau nilai maksimum. Pendekatan ini tidak mengubah konsep metode, namun menjaga kestabilan komputasi agar sistem tetap menghasilkan keluaran valid pada distribusi data yang ekstrem.
+
+A. Struktur Keluaran EDAS
+
+Snippet 4.3.2-1 (`backend/src/edas.py`):
+```python
+@dataclass(frozen=True)
+class EdasResult:
+    average_solution: pd.Series
+    pda: pd.DataFrame
+    nda: pd.DataFrame
+    sp: pd.Series
+    sn: pd.Series
+    nsp: pd.Series
+    nsn: pd.Series
+    appraisal_score: pd.Series
+    ranking: pd.Series
+```
+
+Narasi:
+Seluruh keluaran antara (intermediate result) disimpan dalam `EdasResult`. Strategi ini penting untuk audit akademik karena peneliti dapat menampilkan bukan hanya ranking akhir, melainkan juga nilai AV, PDA, NDA, SP, dan SN ketika menjelaskan proses evaluasi alternatif.
+
+B. Validasi Input Perhitungan
+
+Snippet 4.3.2-2 (`backend/src/edas.py`):
+```python
+if decision_matrix.empty:
+    raise ValueError("Decision matrix kosong.")
+
+criteria = list(decision_matrix.columns)
+missing_weights = [column for column in criteria if column not in weights]
+missing_types = [column for column in criteria if column not in criteria_types]
+
+if missing_weights:
+    raise ValueError(f"Bobot untuk kriteria berikut belum tersedia: {missing_weights}")
+if missing_types:
+    raise ValueError(f"Jenis kriteria untuk kolom berikut belum tersedia: {missing_types}")
+```
+
+Narasi:
+Sebelum menghitung skor, sistem memastikan matriks tidak kosong, semua kriteria memiliki bobot, dan semua kriteria memiliki tipe. Validasi ini mencegah hasil parsial yang sulit ditelusuri penyebabnya.
+
+C. Normalisasi Bobot Operasional
+
+Snippet 4.3.2-3 (`backend/src/edas.py`):
+```python
+weights_series = pd.Series({column: float(weights[column]) for column in criteria})
+total_weight = float(weights_series.sum())
+if total_weight <= 0:
+    raise ValueError("Total bobot harus lebih dari 0.")
+
+weights_series = weights_series / total_weight
+```
+
+Narasi:
+Walaupun bobot dari tahap preferensi sudah ternormalisasi, implementasi melakukan normalisasi ulang di tahap EDAS untuk menjaga robustnes antarmodul. Ini berguna jika di masa depan bobot berasal dari sumber lain.
+
+D. Implementasi Average Solution (AV)
+
+Snippet 4.3.2-4 (`backend/src/edas.py`):
+```python
+matrix = decision_matrix[criteria].astype(float)
+average_solution = matrix.mean(axis=0)
+```
+
+Narasi:
+Rata-rata dihitung per kolom kriteria (`axis=0`). Nilai ini menjadi baseline pembanding setiap alternatif, sesuai rumus AV pada metode EDAS.
+
+E. Implementasi PDA dan NDA untuk Benefit/Cost
+
+Snippet 4.3.2-5 (`backend/src/edas.py`):
+```python
+pda = pd.DataFrame(0.0, index=matrix.index, columns=criteria)
+nda = pd.DataFrame(0.0, index=matrix.index, columns=criteria)
+
+for criterion in criteria:
+    av = average_solution[criterion]
+    values = matrix[criterion]
+    criterion_type = str(criteria_types[criterion]).lower().strip()
+
+    if criterion_type == "cost":
+        pda_column = (av - values).clip(lower=0)
+        nda_column = (values - av).clip(lower=0)
+    else:
+        pda_column = (values - av).clip(lower=0)
+        nda_column = (av - values).clip(lower=0)
+
+    if av == 0:
+        pda[criterion] = 0.0
+        nda[criterion] = 0.0
+    else:
+        pda[criterion] = pda_column / av
+        nda[criterion] = nda_column / av
+```
+
+Narasi:
+Implementasi di atas adalah inti diferensiasi benefit vs cost. Untuk kriteria cost, deviasi positif dihitung ketika nilai alternatif lebih kecil dari AV. Untuk kriteria benefit, deviasi positif dihitung ketika nilai alternatif lebih besar dari AV. Operasi `clip(lower=0)` mewakili operator `max(0, x)` dalam rumus.
+
+F. Implementasi SP dan SN Berbobot
+
+Snippet 4.3.2-6 (`backend/src/edas.py`):
+```python
+weighted_pda = pda.mul(weights_series, axis=1)
+weighted_nda = nda.mul(weights_series, axis=1)
+
+sp = weighted_pda.sum(axis=1)
+sn = weighted_nda.sum(axis=1)
+```
+
+Narasi:
+Setiap nilai deviasi dikalikan bobot kriterianya, lalu dijumlah per alternatif (per baris). Inilah tahap agregasi multi-kriteria yang mengubah informasi per-parameter menjadi skor komposit.
+
+G. Implementasi NSP, NSN, dan Appraisal Score
+
+Snippet 4.3.2-7 (`backend/src/edas.py`):
+```python
+max_sp = float(sp.max())
+max_sn = float(sn.max())
+
+if max_sp == 0:
+    nsp = pd.Series(0.0, index=sp.index)
+else:
+    nsp = sp / max_sp
+
+if max_sn == 0:
+    nsn = pd.Series(1.0, index=sn.index)
+else:
+    nsn = 1 - (sn / max_sn)
+
+appraisal_score = 0.5 * (nsp + nsn)
+ranking = appraisal_score.rank(ascending=False, method="min").astype(int)
+```
+
+Narasi:
+Normalisasi dilakukan agar komponen positif (NSP) dan komponen negatif (NSN) berada pada skala yang sebanding sebelum digabungkan menjadi appraisal score. Penentuan `rank` menggunakan urutan menurun (`ascending=False`) agar alternatif dengan skor tertinggi mendapat peringkat terbaik.
+
+H. Orkestrasi Hasil EDAS ke Tabel Ranking
+
+Snippet 4.3.2-8 (`backend/src/main.py`):
+```python
+edas_result = run_edas(
+    decision_matrix=decision_matrix,
+    weights=preference_result.weights,
+    criteria_types=preference_result.criteria_types,
+)
+
+ranking_df = cleaned_df[["artist", "title", "duration_seconds"]].copy()
+ranking_df["sp"] = edas_result.sp.values
+ranking_df["sn"] = edas_result.sn.values
+ranking_df["appraisal_score"] = edas_result.appraisal_score.values
+ranking_df["rank"] = edas_result.ranking.values
+ranking_df = ranking_df.sort_values(by=["appraisal_score", "rank"], ascending=[False, True])
+```
+
+Narasi:
+Tahap ini menggabungkan hasil numerik EDAS kembali ke metadata lagu (`artist`, `title`, durasi), sehingga hasil perhitungan siap dipakai untuk pembentukan playlist dan visualisasi pada layer berikutnya.
+
+
+4.3.3 Implementasi Pembentukan Playlist Berbasis Durasi
+
+Setelah ranking alternatif dihasilkan, sistem menerapkan strategi seleksi berbasis target durasi. Strategi ini penting karena konteks penggunaan playlist umumnya terkait batas waktu aktivitas pengguna (misalnya sesi belajar, perjalanan, atau olahraga).
+
+Implementasi dilakukan dengan mekanisme greedy berdasarkan urutan appraisal score tertinggi. Lagu ditambahkan satu per satu sampai durasi kumulatif mencapai atau sedikit melampaui target. Pendekatan ini dipilih karena sederhana, deterministik, dan sesuai kebutuhan praktis aplikasi.
+
+A. Struktur Keluaran Playlist Builder
+
+Snippet 4.3.3-1 (`backend/src/playlist_builder.py`):
+```python
+@dataclass(frozen=True)
+class PlaylistBuildResult:
+    playlist_df: pd.DataFrame
+    total_duration_seconds: int
+    target_duration_seconds: int
+    remaining_seconds: int
+    exceeded_seconds: int
+```
+
+Narasi:
+`PlaylistBuildResult` tidak hanya menyimpan daftar lagu, tetapi juga metrik evaluasi durasi. Ini memudahkan pembahasan di skripsi mengenai seberapa dekat hasil playlist terhadap target yang diminta pengguna.
+
+B. Implementasi Seleksi Lagu Berbasis Durasi
+
+Snippet 4.3.3-2 (`backend/src/playlist_builder.py`):
+```python
+def build_playlist_by_duration(
+    ranked_songs: pd.DataFrame,
+    target_duration_minutes: int,
+) -> PlaylistBuildResult:
+  if target_duration_minutes <= 0:
+    empty_df = pd.DataFrame(columns=list(ranked_songs.columns) + ["playlist_order", "cumulative_duration_seconds"])
+    return PlaylistBuildResult(
+      playlist_df=empty_df,
+      total_duration_seconds=0,
+      target_duration_seconds=0,
+      remaining_seconds=0,
+      exceeded_seconds=0,
+    )
+
+  required_columns = {"duration_seconds", "appraisal_score", "rank"}
+  missing_columns = sorted(required_columns - set(ranked_songs.columns))
+  if missing_columns:
+    raise ValueError(f"Kolom wajib untuk pembentukan playlist belum tersedia: {missing_columns}")
+
+    target_duration_seconds = int(target_duration_minutes * 60)
+
+    ordered_df = ranked_songs.sort_values(
+        by=["appraisal_score", "rank"],
+        ascending=[False, True],
+    ).reset_index(drop=True)
+
+    selected_rows: list[dict] = []
+    total_duration_seconds = 0
+
+    for _, row in ordered_df.iterrows():
+        row_duration = int(row["duration_seconds"])
+        row_dict = row.to_dict()
+
+        total_duration_seconds += row_duration
+        row_dict["playlist_order"] = len(selected_rows) + 1
+        row_dict["cumulative_duration_seconds"] = total_duration_seconds
+        selected_rows.append(row_dict)
+
+        if total_duration_seconds >= target_duration_seconds:
+            break
+```
+
+Narasi:
+Urutan ranking dipakai sebagai prioritas utama. Ketika lagu ditambahkan, sistem sekaligus menyimpan urutan playlist (`playlist_order`) dan durasi kumulatif agar proses seleksi dapat diaudit langkah demi langkah.
+
+C. Implementasi Metrik Selisih Durasi
+
+Snippet 4.3.3-3 (`backend/src/playlist_builder.py`):
+```python
+remaining_seconds = max(0, target_duration_seconds - total_duration_seconds)
+exceeded_seconds = max(0, total_duration_seconds - target_duration_seconds)
+```
+
+Narasi:
+Dua metrik ini digunakan untuk mengevaluasi kualitas komposisi waktu playlist. Jika `remaining_seconds` bernilai nol namun `exceeded_seconds` kecil, berarti sistem berhasil memenuhi target dengan deviasi minimal.
+
+D. Integrasi Playlist Builder di Pipeline Utama
+
+Snippet 4.3.3-4 (`backend/src/main.py`):
+```python
+target_duration_minutes = 60
+playlist_result = build_playlist_by_duration(
+    ranked_songs=ranking_df,
+    target_duration_minutes=target_duration_minutes,
+)
+
+playlist_preview = playlist_result.playlist_df[[
+    "playlist_order", "artist", "title", "duration_seconds", "appraisal_score"
+]].head(15)
+```
+
+Narasi:
+Tahap ini menunjukkan transisi dari hasil numerik EDAS ke artefak yang berorientasi pengguna, yaitu urutan playlist. Dengan demikian, metode keputusan tidak berhenti pada skor, tetapi benar-benar menghasilkan rekomendasi operasional.
+
+E. Implementasi Endpoint Playlist Dummy untuk UI
+
+Snippet 4.3.3-5 (`frontend/src/server/modules/dummyPlaylist.ts`):
+```typescript
+async function loadCsvText(): Promise<{ csvText: string; source: string }> {
+  const localCandidates = [
+    path.resolve(process.cwd(), "..", "data", "output.csv"),
+    path.resolve(process.cwd(), "data", "output.csv"),
+    path.resolve(process.cwd(), "public", "output.csv"),
+  ];
+
+  for (const candidate of localCandidates) {
+    try {
+      const csvText = await readFile(candidate, "utf-8");
+      if (csvText.trim().length > 0) {
+        return { csvText, source: candidate };
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  const remoteUrl = process.env.DUMMY_PLAYLIST_CSV_URL ?? DEFAULT_REMOTE_CSV_URL;
+  const response = await fetch(remoteUrl, { cache: "no-store" });
+
+  if (!response.ok) {
+    throw new Error(`Tidak bisa membaca CSV dari lokal maupun remote (${remoteUrl}).`);
+  }
+
+  const csvText = await response.text();
+  if (csvText.trim().length === 0) {
+    throw new Error(`CSV remote kosong (${remoteUrl}).`);
+  }
+
+  return { csvText, source: remoteUrl };
+}
+```
+
+Snippet 4.3.3-6 (`frontend/src/server/modules/dummyPlaylist.ts`):
+```typescript
+function buildPlaylistFromCsv(tracks: CsvTrack[], targetMinutes: number): PlaylistItem[] {
+  const shuffledTracks = shuffleTracks(tracks);
+  const targetSec = Math.max(15, targetMinutes) * 60;
+  const maxItems = Math.min(50, shuffledTracks.length);
+  const items: PlaylistItem[] = [];
+  let totalSec = 0;
+  let index = 0;
+
+  while (index < maxItems && totalSec < targetSec) {
+    const track = shuffledTracks[index];
+    const appraisalScore = Number((Math.max(0, track.popularity) / 100).toFixed(4));
+
+    items.push({
+      rank: index + 1,
+      title: track.title,
+      artist: track.artist,
+      durationSec: track.durationSec,
+      appraisalScore,
+    });
+
+    totalSec += track.durationSec;
+    index += 1;
+  }
+
+  return items;
+}
+```
+
+Snippet 4.3.3-7 (`frontend/src/server/modules/dummyPlaylist.ts`):
+```typescript
+export async function handleDummyPlaylistGet(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const targetMinutes = Number(searchParams.get("targetMinutes") ?? 30);
+  const { csvText, source } = await loadCsvText();
+  const tracks = parseCsvRows(csvText);
+  const playlist = buildPlaylistFromCsv(tracks, Number.isFinite(targetMinutes) ? targetMinutes : 30);
+
+  return NextResponse.json({ source, totalTracks: tracks.length, playlist });
+}
+```
+
+Snippet 4.3.3-8 (`frontend/src/app/api/dummy-playlist/route.ts`):
+```typescript
+import { handleDummyPlaylistGet } from "@/server/modules/dummyPlaylist";
+
+export async function GET(request: Request) {
+  return handleDummyPlaylistGet(request);
+}
+```
+
+Narasi:
+Pada sisi web, playlist dummy disediakan via endpoint API dengan strategi fallback sumber data (lokal lalu remote). Route API dipertahankan tipis dan mendelegasikan logika ke modul server agar struktur tetap bersih serta mudah didokumentasikan.
+
+
+4.3.4 Implementasi Integrasi Sistem Web (Frontend + API)
+
+Subbab ini menjelaskan bagaimana hasil komputasi dan layanan API diikat menjadi alur interaksi pengguna yang utuh. Pengguna mengisi konteks, sistem memproses data, menampilkan hasil playlist, menampilkan narasi, dan menyediakan aksi evaluasi.
+
+Fase integrasi tidak hanya membangun tampilan, tetapi juga merancang state management sederhana berbasis `localStorage` untuk menjaga kontinuitas data antarhalaman (`/`, `/proses`, `/hasil`, `/selesai`). Pendekatan ini dipilih karena ringan, cukup untuk prototipe penelitian, dan mudah direproduksi.
+
+A. Implementasi Alur Proses pada Halaman `/proses`
+
+Snippet 4.3.4-1 (`frontend/src/app/proses/page.tsx`):
+```tsx
+const CONTEXT_STORAGE_KEY = "playlist-context-v1";
+const QUESTIONNAIRE_STORAGE_KEY = "playlist-questionnaire-v1";
+const RESULT_STORAGE_KEY = "playlist-result-v1";
+```
+
+Snippet 4.3.4-2 (`frontend/src/app/proses/page.tsx`):
+```tsx
+async function fetchDummyPlaylist(targetMinutes: number): Promise<PlaylistItem[]> {
+  const response = await fetch(`/api/dummy-playlist?targetMinutes=${targetMinutes}`);
+  if (!response.ok) {
+    throw new Error("Gagal memuat data lagu dari output.csv");
+  }
+  const payload = (await response.json()) as { playlist: PlaylistItem[] };
+  return payload.playlist;
+}
+```
+
+Snippet 4.3.4-3 (`frontend/src/app/proses/page.tsx`):
+```tsx
+const contextRaw = localStorage.getItem(CONTEXT_STORAGE_KEY);
+const answersRaw = localStorage.getItem(QUESTIONNAIRE_STORAGE_KEY);
+
+if (!contextRaw || !answersRaw) {
+  router.replace("/");
+  return;
+}
+```
+
+Narasi:
+Halaman `/proses` berfungsi sebagai orchestrator sisi klien. Data konteks dan kuesioner dibaca dari storage, lalu endpoint playlist dipanggil. Bila data prasyarat tidak ada, pengguna diarahkan kembali ke beranda untuk mencegah state yang tidak konsisten.
+
+B. Implementasi Penyimpanan Hasil Terstruktur
+
+Snippet 4.3.4-4 (`frontend/src/app/proses/page.tsx`):
+```tsx
+const resultPayload = {
+  context,
+  answers,
+  playlist,
+  summary: {
+    targetDurationSec: context.durationMinutes * 60,
+    totalDurationSec: totalSec,
+    selectedSongs: playlist.length,
+  },
+  createdAt: new Date().toISOString(),
+  nlgText,
+};
+
+localStorage.setItem(RESULT_STORAGE_KEY, JSON.stringify(resultPayload));
+```
+
+Narasi:
+Objek hasil disusun dalam bentuk yang siap digunakan oleh halaman hasil. Penyusunan `summary` secara eksplisit memudahkan rendering metrik utama tanpa menghitung ulang di banyak tempat.
+
+C. Implementasi Halaman `/hasil` dan Ringkasan Konteks
+
+Snippet 4.3.4-5 (`frontend/src/app/hasil/page.tsx`):
+```tsx
+const raw = localStorage.getItem(RESULT_STORAGE_KEY);
+if (!raw) return null;
+return JSON.parse(raw) as ResultData;
+```
+
+Snippet 4.3.4-6 (`frontend/src/app/hasil/page.tsx`):
+```tsx
+const overDuration = Math.max(0, result.summary.totalDurationSec - result.summary.targetDurationSec);
+
+<div className={styles.metrics}>
+  <span>Target: {formatDuration(result.summary.targetDurationSec)}</span>
+  <span>Total: {formatDuration(result.summary.totalDurationSec)}</span>
+  <span>Lagu: {result.summary.selectedSongs}</span>
+  <span>Kelebihan: {formatDuration(overDuration)}</span>
+</div>
+```
+
+Narasi:
+Halaman hasil menyajikan ringkasan konteks dan ringkasan durasi agar pengguna dapat langsung menilai kecocokan rekomendasi. Nilai `overDuration` diturunkan langsung dari hasil proses untuk memperlihatkan deviasi terhadap target.
+
+D. Implementasi Rendering Daftar Lagu dan Skor
+
+Snippet 4.3.4-7 (`frontend/src/app/hasil/page.tsx`):
+```tsx
+{result.playlist.map((song) => (
+  <li key={`${song.rank}-${song.title}`}>
+    <div>
+      <strong>#{song.rank} {song.title}</strong>
+      <p>{song.artist}</p>
+    </div>
+    <div className={styles.songMeta}>
+      <span>{formatDuration(song.durationSec)}</span>
+      <span>AS {song.appraisalScore.toFixed(4)}</span>
+    </div>
+  </li>
+))}
+```
+
+Narasi:
+Antarmuka menampilkan atribut yang paling relevan untuk evaluasi pengguna: urutan rank, identitas lagu, durasi, dan appraisal score. Dengan begitu, hasil komputasi EDAS tetap transparan hingga level UI.
+
+E. Implementasi Evaluasi Pengguna
+
+Snippet 4.3.4-8 (`frontend/src/app/hasil/page.tsx`):
+```tsx
+const payload = {
+  usability,
+  understanding,
+  comment,
+  createdAt: new Date().toISOString(),
+};
+
+localStorage.setItem(EVALUATION_STORAGE_KEY, JSON.stringify(payload));
+router.push("/selesai");
+```
+
+Narasi:
+Fitur evaluasi singkat memungkinkan pengumpulan umpan balik usability pada prototipe. Data evaluasi disimpan lokal agar tidak menambah kompleksitas backend pada fase penelitian ini.
+
+F. Implementasi Pola Route Adapter Tipis
+
+Snippet 4.3.4-9 (`frontend/src/app/api/spotify/export/route.ts`):
+```typescript
+import { handleSpotifyExportPost } from "@/server/modules/spotifyExport";
+
+export async function POST(request: Request) {
+  return handleSpotifyExportPost(request);
+}
+```
+
+Snippet 4.3.4-10 (`frontend/src/app/api/youtube/export/route.ts`):
+```typescript
+import { handleYouTubeExportPost } from "@/server/modules/youtubeExport";
+
+export async function POST(request: Request) {
+  return handleYouTubeExportPost(request);
+}
+```
+
+Snippet 4.3.4-11 (`frontend/src/app/api/nlg/generate/route.ts`):
+```typescript
+import { handleNlgGeneratePost } from "@/server/modules/nlg";
+
+export async function POST(request: Request) {
+  return handleNlgGeneratePost(request);
+}
+```
+
+Narasi:
+Refactor arsitektur menerapkan adapter tipis pada route agar endpoint publik tetap stabil. Seluruh logika domain dipusatkan di modul server, sehingga dokumentasi implementasi menjadi lebih rapi: satu endpoint, satu handler domain, dan satu sumber kebenaran logika.
+
+
+4.3.5 Implementasi Integrasi Ekspor Platform dan NLG
+
+Subbab ini menjelaskan integrasi dua kapabilitas tambahan: (1) ekspor playlist ke platform musik nyata, dan (2) pembangkitan narasi rekomendasi berbasis LLM. Kedua komponen ini dirancang sebagai lapisan pelengkap, bukan pengganti mesin keputusan EDAS.
+
+Dengan kata lain, ranking lagu tetap dihasilkan dari perhitungan EDAS. Integrasi platform dan NLG hanya memperluas utilitas hasil: playlist dapat dipakai langsung pengguna, dan hasil dapat dijelaskan dengan bahasa natural yang lebih komunikatif.
+
+A. Integrasi OAuth Spotify
+
+Snippet 4.3.5-1 (`frontend/src/lib/spotify.ts`):
+```typescript
+export function buildSpotifyAuthorizeUrl(state: string): string {
+  const { clientId, redirectUri } = getSpotifyConfig();
+  const params = new URLSearchParams({
+    response_type: "code",
+    client_id: clientId,
+    scope: "playlist-modify-private playlist-modify-public user-read-private",
+    redirect_uri: redirectUri,
+    state,
+  });
+
+  return `https://accounts.spotify.com/authorize?${params.toString()}`;
+}
+```
+
+Snippet 4.3.5-2 (`frontend/src/app/api/spotify/login/route.ts`):
+```typescript
+const state = crypto.randomUUID();
+const authorizeUrl = buildSpotifyAuthorizeUrl(state);
+
+const response = NextResponse.redirect(authorizeUrl);
+response.cookies.set(SPOTIFY_STATE_COOKIE, state, {
+  httpOnly: true,
+  sameSite: "lax",
+  secure: false,
+  path: "/",
+  maxAge: 60 * 10,
+});
+```
+
+Snippet 4.3.5-3 (`frontend/src/app/api/spotify/callback/route.ts`):
+```typescript
+if (!code || !state || !expectedState || state !== expectedState) {
+  return NextResponse.redirect(buildResultUrl("error", "oauth_state_invalid"));
+}
+
+const token = await exchangeSpotifyCode(code);
+response.cookies.set(SPOTIFY_ACCESS_COOKIE, token.access_token, {
+  httpOnly: true,
+  sameSite: "lax",
+  secure: false,
+  path: "/",
+  maxAge: token.expires_in,
+})
+response.cookies.set(SPOTIFY_REFRESH_COOKIE, token.refresh_token, {
+  httpOnly: true,
+  sameSite: "lax",
+  secure: false,
+  path: "/",
+  maxAge: 60 * 60 * 24 * 30,
+})
+response.cookies.set(SPOTIFY_EXPIRES_COOKIE, String(expiresAt), {
+  httpOnly: true,
+  sameSite: "lax",
+  secure: false,
+  path: "/",
+  maxAge: token.expires_in,
+})
+```
+
+Narasi:
+Flow OAuth Spotify menerapkan `state` anti-CSRF, validasi callback, lalu menyimpan token di HTTP-only cookie. Implementasi ini memastikan integrasi aman untuk konteks aplikasi web server-side.
+
+B. Integrasi OAuth YouTube
+
+Snippet 4.3.5-4 (`frontend/src/lib/youtube.ts`):
+```typescript
+export function buildYouTubeAuthorizeUrl(state: string): string {
+  const { clientId, redirectUri } = getYouTubeConfig();
+  const params = new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: redirectUri,
+    response_type: "code",
+    access_type: "offline",
+    prompt: "consent",
+    include_granted_scopes: "true",
+    scope: "https://www.googleapis.com/auth/youtube https://www.googleapis.com/auth/youtube.force-ssl",
+    state,
+  });
+  return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+}
+```
+
+Snippet 4.3.5-5 (`frontend/src/app/api/youtube/callback/route.ts`):
+```typescript
+const expectedState = readCookie(cookieHeader, YOUTUBE_STATE_COOKIE);
+if (!code || !state || !expectedState || state !== expectedState) {
+  return NextResponse.redirect(buildResultUrl("error", "oauth_state_invalid"));
+}
+
+const token = await exchangeYouTubeCode(code);
+response.cookies.set(YOUTUBE_ACCESS_COOKIE, token.access_token, {
+  httpOnly: true,
+  sameSite: "lax",
+  secure: false,
+  path: "/",
+  maxAge: token.expires_in,
+})
+response.cookies.set(YOUTUBE_REFRESH_COOKIE, token.refresh_token, {
+  httpOnly: true,
+  sameSite: "lax",
+  secure: false,
+  path: "/",
+  maxAge: 60 * 60 * 24 * 30,
+})
+```
+
+Narasi:
+Implementasi YouTube mengikuti prinsip yang sama dengan Spotify: state validation, exchange authorization code, dan penyimpanan token aman berbasis cookie.
+
+C. Implementasi Pemeriksaan Koneksi + Refresh Token Otomatis
+
+Snippet 4.3.5-6 (`frontend/src/app/api/spotify/status/route.ts`):
+```typescript
+if (accessToken && expiresAt > Date.now()) {
+  return NextResponse.json({ connected: true });
+}
+
+if (!refreshToken) {
+  return NextResponse.json({ connected: false });
+}
+
+const refreshed = await refreshSpotifyToken(refreshToken);
+```
+
+Snippet 4.3.5-7 (`frontend/src/app/api/youtube/status/route.ts`):
+```typescript
+if (accessToken && expiresAt > Date.now()) {
+  return NextResponse.json({ connected: true });
+}
+
+if (!refreshToken) {
+  return NextResponse.json({ connected: false });
+}
+
+const refreshed = await refreshYouTubeToken(refreshToken);
+```
+
+Narasi:
+Endpoint status berfungsi sebagai health check autentikasi di UI. Jika access token kadaluarsa tetapi refresh token tersedia, sistem memperbarui token secara otomatis sehingga pengalaman pengguna tetap mulus.
+
+D. Implementasi Ekspor Playlist ke Spotify
+
+Snippet 4.3.5-8 (`frontend/src/server/modules/spotifyExport.ts`):
+```typescript
+const MAX_EXPORT_TRACKS = 50;
+const SEARCH_CONCURRENCY = 5;
+
+const sanitizedTracks = body.tracks
+  .filter((track) => track?.title?.trim() && track?.artist?.trim())
+  .slice(0, MAX_EXPORT_TRACKS)
+  .map((track) => ({
+    title: track.title.trim(),
+    artist: track.artist.trim(),
+  }));
+```
+
+Snippet 4.3.5-9 (`frontend/src/server/modules/spotifyExport.ts`):
+```typescript
+const playlist = await spotifyCreatePlaylist(body.playlistName, accessToken);
+const { foundUris, missingTracks } = await resolveTrackUris(sanitizedTracks, accessToken);
+const { addedUris, failedUris } = await spotifyAddTracks(playlist.id, foundUris, accessToken);
+```
+
+Snippet 4.3.5-10 (`frontend/src/server/modules/spotifyExport.ts`):
+```typescript
+if (foundUris.length > 0 && addedUris.length === 0 && failedUris.length > 0) {
+  return NextResponse.json(
+    {
+      error: "spotify_add_tracks_all_failed",
+      hint: "Playlist berhasil dibuat, tapi Spotify menolak penambahan semua lagu. Coba reconnect Spotify agar token + scope segar, lalu ulangi export.",
+      totalResolvedUris: foundUris.length,
+      sampleFailures: failedUris.slice(0, 3),
+    },
+    { status: 403 },
+  );
+}
+```
+
+Narasi:
+Modul ekspor Spotify menerapkan validasi payload, pembatasan jumlah lagu, pencarian URI berlapis, penambahan lagu bertahap, serta diagnostik kegagalan parsial. Informasi kegagalan ini penting untuk debugging karena kondisi API pihak ketiga sering bersifat non-deterministik.
+
+E. Implementasi Ekspor Playlist ke YouTube
+
+Snippet 4.3.5-11 (`frontend/src/server/modules/youtubeExport.ts`):
+```typescript
+const playlist = await youtubeCreatePlaylist(body.playlistName, accessToken);
+const { foundVideoIds, missingTracks } = await resolveVideoIds(sanitizedTracks, accessToken);
+const { addedVideoIds, failedVideoIds } = await youtubeAddVideos(playlist.id, foundVideoIds, accessToken);
+```
+
+Snippet 4.3.5-12 (`frontend/src/server/modules/youtubeExport.ts`):
+```typescript
+const response = NextResponse.json({
+  ok: true,
+  playlistId: playlist.id,
+  playlistUrl: `https://www.youtube.com/playlist?list=${playlist.id}`,
+  totalRequested: sanitizedTracks.length,
+  totalAdded: addedVideoIds.length,
+  totalMissing: missingTracks.length,
+  missingTracks,
+  totalFailedToAdd: failedVideoIds.length,
+  failedToAddSample: failedVideoIds.slice(0, 3),
+  cappedByServer: body.tracks.length > MAX_EXPORT_TRACKS,
+});
+```
+
+Narasi:
+Implementasi YouTube diselaraskan dengan pola Spotify agar konsisten dari sisi UX dan observabilitas. Pengguna menerima metrik `totalAdded`, `totalMissing`, dan sample error sehingga kualitas ekspor dapat dievaluasi transparan.
+
+F. Implementasi Integrasi Tombol Ekspor pada UI
+
+Snippet 4.3.5-13 (`frontend/src/app/hasil/page.tsx`):
+```tsx
+const handleConnectSpotify = () => {
+  window.location.href = "/api/spotify/login";
+};
+
+const handleConnectYoutube = () => {
+  window.location.href = "/api/youtube/login";
+};
+```
+
+Snippet 4.3.5-14 (`frontend/src/app/hasil/page.tsx`):
+```tsx
+const exportResponse = await fetch("/api/spotify/export", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    playlistName: `EDAS Dummy ${new Date().toLocaleDateString("id-ID")}`,
+    tracks: result.playlist.map((song) => ({ title: song.title, artist: song.artist })),
+  }),
+});
+```
+
+Narasi:
+UI tidak langsung memanggil API pihak ketiga, melainkan melalui endpoint internal aplikasi. Pendekatan ini menjaga kerahasiaan token dan menyederhanakan handling error di sisi client.
+
+G. Implementasi NLG Berbasis Gemini
+
+Snippet 4.3.5-15 (`frontend/src/server/modules/nlg.ts`):
+```typescript
+function buildGeminiPrompt(body: NlgRequestBody): string {
+  const activity = body.context?.activity ?? "aktivitas";
+  const timeOfDay = body.context?.timeOfDay ?? "waktu ini";
+  const mood = body.context?.mood ?? "suasana netral";
+  const targetMin = formatMinutes(body.targetDurationSec ?? 0);
+  const totalMin = formatMinutes(body.totalDurationSec ?? 0);
+  const count = body.selectedSongs ?? 0;
+  const topSongs = (body.topSongs ?? []).slice(0, 3);
+  const songList = topSongs.map((song) => `"${song.title}" oleh ${song.artist}`).join(", ");
+
+  return `Kamu adalah teman ngobrol pengguna di aplikasi rekomendasi playlist musik.
+Data playlist yang sudah digenerate:
+- Aktivitas: ${activity}
+- Waktu: ${timeOfDay}
+- Suasana yang diinginkan: ${mood}
+- Jumlah lagu terpilih: ${count} lagu
+- Durasi total: sekitar ${totalMin} menit (target ${targetMin} menit)
+${songList ? `- Beberapa lagu teratas: ${songList}` : ""}`;
+}
+```
+
+Snippet 4.3.5-16 (`frontend/src/server/modules/nlg.ts`):
+```typescript
+function sanitizeNarration(text: string): string {
+  return text
+    .replace(/\*\*/g, "")
+    .replace(/\*/g, "")
+    .replace(/#{1,6}\s/g, "")
+    .replace(/\n+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+```
+
+Snippet 4.3.5-17 (`frontend/src/server/modules/nlg.ts`):
+```typescript
+function looksUnsafeNarration(text: string): boolean {
+  const unsafePatterns = [
+    /menyembuhkan/i,
+    /terapi/i,
+    /depresi/i,
+    /gangguan mental/i,
+    /dijamin/i,
+  ];
+  return unsafePatterns.some((pattern) => pattern.test(text));
+}
+```
+
+Snippet 4.3.5-18 (`frontend/src/server/modules/nlg.ts`):
+```typescript
+const candidateModels = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
+
+for (const model of candidateModels) {
+  const result = await generateWithModel(apiKey, model, prompt);
+  if (result.text) return result;
+
+  const shouldTryNextModel =
+    result.httpStatus === 404 ||
+    result.httpStatus === 429 ||
+    result.httpStatus === 500 ||
+    result.httpStatus === 502 ||
+    result.httpStatus === 503 ||
+    result.httpStatus === 504;
+
+  if (!shouldTryNextModel) return result;
+}
+```
+
+Snippet 4.3.5-19 (`frontend/src/server/modules/nlg.ts`):
+```typescript
+if (!generated.text) {
+  return NextResponse.json(
+    {
+      ok: false,
+      error: "gemini_generation_failed",
+      reason: generated.reason ?? "unknown_error",
+      model: generated.usedModel ?? "gemini-1.5-flash",
+    },
+    { status: generated.httpStatus ?? 502 },
+  );
+}
+```
+
+Narasi:
+Modul NLG dirancang sebagai lapisan penjelasan, bukan mesin pengambilan keputusan. Sistem membangun prompt dari konteks pengguna dan ringkasan playlist, lalu menerapkan sanitasi serta filter konten agar narasi tidak membuat klaim psikologis/medis yang tidak didukung metodologi. Mekanisme fallback model menjaga reliabilitas layanan ketika model utama sedang tidak tersedia.
+
+H. Integrasi NLG pada Alur Proses
+
+Snippet 4.3.5-20 (`frontend/src/app/proses/page.tsx`):
+```tsx
+const response = await fetch("/api/nlg/generate", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    context: {
+      activity: context.activity,
+      timeOfDay: context.timeOfDay,
+      mood: context.mood,
+    },
+    targetDurationSec: context.durationMinutes * 60,
+    totalDurationSec,
+    selectedSongs: playlist.length,
+    topSongs: playlist.slice(0, 5).map((item) => ({
+      title: item.title,
+      artist: item.artist,
+    })),
+  }),
+});
+```
+
+Snippet 4.3.5-21 (`frontend/src/app/proses/page.tsx`):
+```tsx
+if (!response.ok) {
+  const errorPayload = await response.json().catch(() => ({}));
+  const reason = errorPayload.reason || errorPayload.error || "unknown_error";
+  const model = errorPayload.model || "unknown_model";
+  return `${fallback} [NLG API error ${response.status} | ${reason} | model: ${model}]`;
+}
+```
+
+Narasi:
+Integrasi di sisi client tetap defensif. Ketika NLG gagal, sistem tetap menyajikan narasi fallback berbasis template agar halaman hasil tidak kehilangan konteks penjelasan. Dengan demikian, robustnes UX tetap terjaga.
+
+
+4.4 Validasi Implementasi
+
+4.4.1 Validasi Struktural dan Arsitektural
+
+Validasi pertama dilakukan pada struktur implementasi. Endpoint publik tetap dipertahankan pada jalur semula, sementara logika utama dipindahkan ke modul server (`server/modules`). Hasilnya, kontrak API yang dikonsumsi UI tidak berubah, tetapi maintainability meningkat karena logika bisnis terpusat.
+
+Validasi kedua adalah traceability terhadap metodologi. Formula inti EDAS dapat ditelusuri langsung di `backend/src/edas.py`, pembentukan bobot dan tipe kriteria ada di `backend/src/preferences.py`, sedangkan orkestrasi komputasi terdapat di `backend/src/main.py`. Ini membuktikan bahwa implementasi tidak menyimpang dari kerangka penelitian.
+
+4.4.2 Validasi Teknis Frontend
+
+Validasi teknis frontend dijalankan melalui linting dan tidak menunjukkan error pada saat refactor route adapter + server modules diterapkan.
+
+Perintah validasi:
+```powershell
+Set-Location "c:\Users\Haikal\Documents\SKRIPSI\GANTI JUDUL\KODINGNYA\frontend"
+npm run lint
+```
+
+Interpretasi:
+- Tidak ada masalah sintaks/lint pada perubahan struktur API.
+- Integrasi route adapter yang baru tetap konsisten dengan aturan proyek.
+
+4.4.3 Validasi Fungsional End-to-End (Naratif)
+
+Dari sisi alur pengguna, validasi fungsional menunjukkan bahwa:
+1) pengguna dapat melewati alur konteks -> proses -> hasil,
+2) playlist tampil dengan metrik durasi dan skor,
+3) status koneksi Spotify/YouTube dapat dibaca,
+4) proses ekspor memberikan umpan balik kuantitatif (`totalAdded`, `totalMissing`), dan
+5) NLG menampilkan narasi berbasis konteks, dengan fallback jika layanan model gagal.
+
+Dengan hasil tersebut, implementasi telah memenuhi kebutuhan fungsional penelitian sekaligus kebutuhan presentasi hasil pada antarmuka.
+
+
+4.5 Keterkaitan Implementasi dengan Tujuan Penelitian
+
+Tujuan utama penelitian adalah menghasilkan rekomendasi playlist berbasis konteks aktivitas pengguna menggunakan metode EDAS. Pada implementasi, tujuan tersebut terwujud melalui rangkaian pipeline yang jelas: data dibersihkan, preferensi dikonversi menjadi parameter keputusan, skor EDAS dihitung, lalu alternatif terbaik disusun menjadi playlist berdasarkan target durasi.
+
+Komponen tambahan seperti ekspor platform dan NLG tidak mengubah inti keputusan metode. Keduanya berperan sebagai lapisan utilitas: ekspor membuat hasil rekomendasi dapat langsung digunakan di platform riil, sedangkan NLG meningkatkan keterbacaan hasil bagi pengguna non-teknis.
+
+Secara keseluruhan, implementasi telah menunjukkan konsistensi antara teori dan praktik. Rumus-rumus EDAS tidak berhenti pada penjelasan konseptual, tetapi benar-benar dijalankan pada data nyata, menghasilkan ranking, dan diwujudkan menjadi produk fungsional yang dapat diuji dari hulu ke hilir.
+
+
+4.6 Penutup Subbab Implementasi
+
+Berdasarkan uraian pada subbab 4.3 sampai 4.5, dapat disimpulkan bahwa sistem telah diimplementasikan secara komprehensif dengan tiga karakter utama: (1) akurat secara metodologis, (2) robust secara teknis, dan (3) aplikatif dari sisi pengguna. Pemisahan lapisan komputasi, integrasi API, dan antarmuka membuat sistem lebih mudah dikembangkan lanjut tanpa mengorbankan keterlacakan ilmiah.
+
+Kalimat simpulan yang dapat digunakan pada naskah:
+
+"Implementasi sistem berhasil menerjemahkan metode EDAS dari level formula ke level aplikasi yang operasional. Setiap tahap—mulai dari preprocessing data, pembentukan bobot preferensi, kalkulasi appraisal score, penyusunan playlist berbasis durasi, hingga integrasi ekspor dan narasi—terhubung secara konsisten dan dapat ditelusuri langsung pada artefak kode, sehingga valid secara akademik sekaligus relevan secara praktis."

@@ -42,6 +42,8 @@ SPOTIFY_REDIRECT_URI=http://localhost:3000/api/spotify/callback
 YOUTUBE_CLIENT_ID=isi_google_oauth_client_id
 YOUTUBE_CLIENT_SECRET=isi_google_oauth_client_secret
 YOUTUBE_REDIRECT_URI=http://localhost:3000/api/youtube/callback
+GEMINI_API_KEY=isi_gemini_api_key
+GEMINI_MODEL=gemini-2.0-flash
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
@@ -57,6 +59,19 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 	- `https://www.googleapis.com/auth/youtube`
 	- `https://www.googleapis.com/auth/youtube.force-ssl`
 
+### 2c) Siapkan Gemini API untuk NLG (opsional tapi direkomendasikan)
+
+- Buka `https://aistudio.google.com/app/apikey`.
+- Login menggunakan akun Google.
+- Klik **Create API key** lalu salin key yang dihasilkan.
+- Simpan key tersebut ke `GEMINI_API_KEY` pada `.env.local`.
+- Opsional: ubah model di `GEMINI_MODEL` (default: `gemini-2.0-flash`).
+
+Catatan perilaku sistem NLG:
+- Narasi tetap diambil dari hasil playlist dummy yang sudah ada.
+- Jika Gemini tidak aktif/gagal/kuota habis, sistem otomatis fallback ke template narasi lokal.
+- NLG hanya mengubah gaya bahasa narasi, tidak mengubah ranking atau hasil EDAS.
+
 ### 3) Jalankan aplikasi
 
 ```bash
@@ -70,9 +85,15 @@ Lalu buka halaman hasil (`/hasil`), gunakan bagian:
 - `Hubungkan YouTube` (OAuth)
 - `Kirim playlist ke YouTube`
 
+Untuk cek NLG:
+- Jalankan alur sampai halaman `proses` lalu `hasil`.
+- Narasi rekomendasi akan dibuat dari ringkasan hasil dummy playlist.
+- Kalau API key valid, gaya narasi lebih natural; jika tidak, narasi fallback tetap muncul.
+
 Catatan:
 - Ini mode eksperimen. Tidak mengubah fitur utama skripsi.
 - Proses add lagu memakai strategi search-and-match, jadi bisa ada sebagian lagu tidak ditemukan.
+- NLG diintegrasikan sebagai lapisan presentasi teks, bukan mesin pemeringkatan lagu.
 
 ## Learn More
 
