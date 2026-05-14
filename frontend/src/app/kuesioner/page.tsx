@@ -14,19 +14,19 @@ const QUESTIONS_PER_STEP = 4;
 
 const questions = [
   "Saya lebih suka musik yang terasa cepat dan bikin suasana jadi lebih hidup.",
-  "Saya lebih nyaman dengan musik yang santai dan tidak terburu-buru.",
+  "Saya lebih nyaman dengan musik yang terdengar santai dan mengalir pelan.",
   "Saya suka musik yang bisa bikin saya lebih semangat.",
-  "Saya cenderung memilih musik yang tenang dan tidak terlalu kuat.",
-  "Saya menikmati musik yang terasa aktif dan penuh energi.",
-  "Saya suka musik yang bikin saya pengen ikut bergerak.",
+  "Saya lebih suka musik yang terasa tenang dan tidak terlalu kuat.",
+  "Saya menikmati musik yang terasa bersemangat dan penuh energi.",
+  "Saya suka musik yang membuat saya ingin ikut bergerak.",
   "Saya menikmati musik yang ritmenya enak untuk diikuti.",
   "Saya lebih menikmati musik yang terasa ceria dan positif.",
-  "Saya biasanya lebih suka lagu yang sudah familiar di telinga saya.",
-  "Saya suka musik yang terdengar alami seperti dimainkan dengan alat musik.",
-  "Saya lebih suka musik tanpa banyak vokal.",
-  "Saya menikmati musik yang fokus pada instrumen.",
+  "Saya lebih suka lagu yang sudah familiar di telinga saya.",
+  "Saya suka musik yang terdengar alami, seperti petikan gitar atau permainan alat musik akustik.",
+  "Saya lebih suka musik yang vokalnya tidak terlalu dominan.",
+  "Saya menikmati musik yang lebih menonjolkan suara alat musik.",
   "Saya suka musik dengan lirik yang jelas dan menonjol.",
-  "Saya lebih nyaman dengan musik yang tidak terlalu banyak kata-kata.",
+  "Saya nyaman dengan musik yang tidak terlalu banyak kata-kata.",
 ] as const;
 
 const choiceLabels = [
@@ -54,13 +54,13 @@ const defaultContext: ContextData = {
 export default function KuesionerPage() {
   const router = useRouter();
   const [theme, setTheme] = useState<"dark" | "light">(() => {
-    if (typeof window === "undefined") return "dark";
+    if (globalThis.window === undefined) return "dark";
     const saved = localStorage.getItem(THEME_STORAGE_KEY);
     return saved === "light" ? "light" : "dark";
   });
 
   const [contextData] = useState<ContextData>(() => {
-    if (typeof window === "undefined") return defaultContext;
+    if (globalThis.window === undefined) return defaultContext;
     try {
       const saved = localStorage.getItem(CONTEXT_STORAGE_KEY);
       return saved ? JSON.parse(saved) : defaultContext;
@@ -81,9 +81,13 @@ export default function KuesionerPage() {
   }, [step]);
 
   useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
+    document.documentElement.dataset.theme = theme;
     localStorage.setItem(THEME_STORAGE_KEY, theme);
   }, [theme]);
+
+  const handleAnswerSelect = (index: number, value: number) => {
+    setAnswers((prev) => ({ ...prev, [index]: value }));
+  };
 
   const answeredCount = useMemo(
     () => Object.values(answers).filter((v) => v >= 1 && v <= 5).length,
@@ -102,7 +106,7 @@ export default function KuesionerPage() {
     const dur = contextData.durationMinutes > 0
       ? `${contextData.durationMinutes} menit`
       : "durasi yang kamu atur";
-    return `Untuk sesi ${activity} di ${time} dengan suasana ${mood} selama ${dur}, jawab pernyataan berikut sesuai preferensi musikmu.`;
+    return `Bayangkan kamu sedang ${activity} di ${time} dengan suasana saat ini ${mood} selama ${dur}. Jawab pernyataan berikut sesuai preferensi musik yang ingin kamu dengarkan pada aktivitas tersebut.`;
   }, [contextData]);
 
   const handleSave = () => {
@@ -159,9 +163,7 @@ export default function KuesionerPage() {
                         name={`q-${index}`}
                         value={choice.value}
                         checked={answers[index] === choice.value}
-                        onChange={() =>
-                          setAnswers((prev) => ({ ...prev, [index]: choice.value }))
-                        }
+                        onChange={() => handleAnswerSelect(index, choice.value)}
                       />
                       <span>{choice.label}</span>
                     </label>

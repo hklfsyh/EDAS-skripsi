@@ -17,6 +17,11 @@ type NlgRequestBody = {
   totalDurationSec?: number;
   selectedSongs?: number;
   topSongs?: NlgTopSong[];
+  preferenceSummary?: {
+    primary?: string[];
+    secondary?: string[];
+    avoid?: string[];
+  };
 };
 
 type GeminiPart = {
@@ -44,6 +49,15 @@ type GeminiGenerateResult = {
   reason: string | null;
   httpStatus?: number;
   usedModel?: string;
+  attempts?: GeminiAttempt[];
+};
+
+type GeminiAttempt = {
+  model: string;
+  status: "success" | "timeout" | "failed";
+  reason?: string | null;
+  httpStatus?: number;
+  durationMs: number;
 };
 
 function formatMinutes(totalSec: number): number {
@@ -51,14 +65,6 @@ function formatMinutes(totalSec: number): number {
 }
 
 function buildGeminiPrompt(body: NlgRequestBody): string {
-  const styleModes = [
-    "hangat dan suportif seperti teman yang excited ngomongin musik",
-    "ringan dan asik, kayak teman chat yang antusias",
-    "playful dengan humor tipis tapi tetap nyambung",
-    "santai dan relatable, kayak teman yang ngerti vibe kamu",
-  ];
-  const pickedStyle = styleModes[Math.floor(Math.random() * styleModes.length)];
-
   const activity = body.context?.activity ?? "aktivitas";
   const timeOfDay = body.context?.timeOfDay ?? "waktu ini";
   const mood = body.context?.mood ?? "suasana netral";
@@ -67,17 +73,49 @@ function buildGeminiPrompt(body: NlgRequestBody): string {
   const count = body.selectedSongs ?? 0;
   const topSongs = (body.topSongs ?? []).slice(0, 3);
   const songList = topSongs.map((song) => `"${song.title}" oleh ${song.artist}`).join(", ");
+  const summary = body.preferenceSummary ?? {};
+  const primary = (summary.primary ?? []).slice(0, 2).join(", ");
+  const secondary = (summary.secondary ?? []).slice(0, 2).join(", ");
+  const avoid = (summary.avoid ?? []).slice(0, 2).join(", ");
 
-  return `Kamu adalah teman ngobrol pengguna di aplikasi rekomendasi playlist musik. Gaya kamu: ${pickedStyle}.\n\nData playlist yang sudah digenerate:\n- Aktivitas: ${activity}\n- Waktu: ${timeOfDay}\n- Suasana yang diinginkan: ${mood}\n- Jumlah lagu terpilih: ${count} lagu\n- Durasi total: sekitar ${totalMin} menit (target ${targetMin} menit)\n${songList ? `- Beberapa lagu teratas: ${songList}` : ""}\n\nTugasmu: Komentari hasil playlist ini dengan gaya ngobrol casual bahasa Indonesia. Bayangkan kamu lagi chat sama teman yang baru selesai bikin playlist dan kamu mau kasih reaksi/komentar.\n\nAturan WAJIB:\n- Output hanya 1 paragraf, 3-5 kalimat, TANPA baris baru, TANPA bullet, TANPA markdown\n- Hindari topik medis/mental-health dan jangan beri klaim terapi, penyembuhan, atau diagnosis\n- Jangan klaim sebab-akibat absolut (hindari kata seperti "pasti", "dijamin", "menyembuhkan")\n- Cukup komentar ringan soal variasi lagu, vibe, dan kecocokan durasi\n- Gunakan hanya fakta dari data di atas, jangan tambah angka lain\n- Boleh pakai kata seru seperti "wah", "oke sip", "mantap", "asik", dll\n- Sebutkan 1-2 lagu dari daftar teratas jika ada\n- Variasikan cara membuka kalimat agar tidak monoton\n- Keluarkan HANYA teks narasinya saja, tidak ada penjelasan lain`;
+  return `Peran kamu: penjelas rekomendasi playlist di aplikasi skripsi. Tugas kamu hanya menjelaskan hasil rekomendasi, bukan menghitung ranking atau memberi saran medis/psikologis.
+
+Data sesi:
+- Aktivitas: ${activity}
+- Waktu: ${timeOfDay}
+- Suasana saat ini: ${mood}
+- Target durasi: ${targetMin} menit
+- Durasi total playlist: ${totalMin} menit
+- Jumlah lagu terpilih: ${count} lagu
+${songList ? `- Lagu teratas: ${songList}` : ""}
+${primary ? `- Kecenderungan utama: ${primary}` : ""}
+${secondary ? `- Kecenderungan tambahan: ${secondary}` : ""}
+${avoid ? `- Tidak terlalu diprioritaskan: ${avoid}` : ""}
+
+Instruksi output:
+- Tulis 1 paragraf bahasa Indonesia, 4 kalimat, tanpa bullet dan tanpa markdown
+- Gaya bahasa harus natural, hangat, dan enak dibaca
+- Jangan terlalu formal seperti laporan
+- Jangan terlalu santai, jangan sok asik, jangan norak
+- Awali dengan penjelasan bahwa dari jawaban kuesioner yang diisi, sesi ini terlihat lebih cocok dengan karakter musik tertentu
+- Jelaskan bahwa playlist kemudian lebih memprioritaskan lagu-lagu yang paling selaras / paling cocok dengan karakter tersebut
+- Jelaskan bahwa hasilnya bukan sekadar dipilih acak, tetapi disusun dari lagu yang tingkat kecocokannya lebih tinggi dibanding kandidat lain
+- Sebutkan 1-2 lagu teratas jika ada, hanya sebagai contoh pendukung
+- Tutup dengan kalimat ringan yang menekankan bahwa playlist ini dibuat agar tetap nyambung untuk sesi yang dipilih
+- Jangan gunakan frasa seperti "preferensi kuat", "dirancang agar", "membuat lebih nyaman", "lebih teratur", atau frasa lain yang terdengar terlalu administratif atau menjanjikan efek
+- Jangan menyebut EDAS, appraisal score, bobot, ranking, decision matrix, atau istilah teknis lain
+- Jangan membuat klaim medis, psikologis, atau klaim hasil yang terlalu pasti
+- Wajib gunakan frasa "suasana saat ini"
+- Keluaran hanya teks narasi utama`;
 }
 
 function sanitizeNarration(text: string): string {
   return text
-    .replace(/\*\*/g, "")
-    .replace(/\*/g, "")
-    .replace(/#{1,6}\s/g, "")
-    .replace(/\n+/g, " ")
-    .replace(/\s+/g, " ")
+    .replaceAll("**", "")
+    .replaceAll("*", "")
+    .replaceAll(/#{1,6}\s/g, "")
+    .replaceAll(/\n+/g, " ")
+    .replaceAll(/\s+/g, " ")
     .trim();
 }
 
@@ -104,81 +142,101 @@ function extractTextFromCandidates(candidates: GeminiCandidate[]): string {
   return "";
 }
 
-async function generateWithModel(apiKey: string, model: string, prompt: string): Promise<GeminiGenerateResult> {
+async function generateWithModel(
+  apiKey: string,
+  model: string,
+  prompt: string,
+  timeoutMs: number,
+): Promise<GeminiGenerateResult> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: prompt }],
-        },
-      ],
-      generationConfig: {
-        temperature: 0.8,
-        topP: 0.9,
-        maxOutputTokens: 300,
-        ...(model.includes("2.5") ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
       },
-    }),
-  });
+      signal: controller.signal,
+      body: JSON.stringify({
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: prompt }],
+          },
+        ],
+        generationConfig: {
+          temperature: 0.8,
+          topP: 0.9,
+          maxOutputTokens: 300,
+          ...(model.includes("2.5") ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
+        },
+      }),
+    });
 
-  if (!response.ok) {
-    let reason = `gemini_http_${response.status}`;
-    try {
-      const failedPayload = (await response.json()) as GeminiResponse;
-      const message = failedPayload.error?.message?.trim() ?? "";
-      if (message) reason = `${reason}:${message.slice(0, 200)}`;
-    } catch {
-      const raw = await response.text().catch(() => "");
-      if (raw) reason = `${reason}:${raw.slice(0, 200)}`;
+    if (!response.ok) {
+      let reason = `gemini_http_${response.status}`;
+      try {
+        const failedPayload = (await response.json()) as GeminiResponse;
+        const message = failedPayload.error?.message?.trim() ?? "";
+        if (message) reason = `${reason}:${message.slice(0, 200)}`;
+      } catch {
+        const raw = await response.text().catch(() => "");
+        if (raw) reason = `${reason}:${raw.slice(0, 200)}`;
+      }
+
+      return {
+        text: null,
+        reason,
+        httpStatus: response.status,
+        usedModel: model,
+      };
+    }
+
+    const payload = (await response.json()) as GeminiResponse;
+    const rawText = extractTextFromCandidates(payload.candidates ?? []);
+    const narration = sanitizeNarration(rawText);
+    const blockedBySafety = (payload.candidates ?? []).some(
+      (candidate) => (candidate.finishReason ?? "").toUpperCase() === "SAFETY",
+    );
+
+    if (!narration || narration.length < 10) {
+      return {
+        text: null,
+        reason: blockedBySafety ? "unsafe_output_filtered" : "empty_output",
+        usedModel: model,
+      };
+    }
+
+    if (looksUnsafeNarration(narration)) {
+      return {
+        text: null,
+        reason: "unsafe_output_filtered",
+        usedModel: model,
+      };
     }
 
     return {
-      text: null,
-      reason,
-      httpStatus: response.status,
+      text: narration,
+      reason: null,
       usedModel: model,
     };
-  }
-
-  const payload = (await response.json()) as GeminiResponse;
-  const rawText = extractTextFromCandidates(payload.candidates ?? []);
-  const narration = sanitizeNarration(rawText);
-  const blockedBySafety = (payload.candidates ?? []).some(
-    (candidate) => (candidate.finishReason ?? "").toUpperCase() === "SAFETY",
-  );
-
-  if (!narration || narration.length < 10) {
+  } catch (error) {
+    const isAbort = error instanceof DOMException && error.name === "AbortError";
     return {
       text: null,
-      reason: blockedBySafety ? "unsafe_output_filtered" : "empty_output",
+      reason: isAbort ? "timeout" : "network_or_unexpected",
+      httpStatus: isAbort ? 408 : undefined,
       usedModel: model,
     };
+  } finally {
+    clearTimeout(timeoutId);
   }
-
-  if (looksUnsafeNarration(narration)) {
-    return {
-      text: null,
-      reason: "unsafe_output_filtered",
-      usedModel: model,
-    };
-  }
-
-  return {
-    text: narration,
-    reason: null,
-    usedModel: model,
-  };
 }
 
 async function generateWithGemini(body: NlgRequestBody): Promise<GeminiGenerateResult> {
-  const apiKey = (process.env.GEMINI_API_KEY ?? "").trim().replace(/^['"]|['"]$/g, "");
+  const apiKey = (process.env.GEMINI_API_KEY ?? "").trim().replaceAll(/^['"]|['"]$/g, "");
   if (!apiKey) {
     return {
       text: null,
@@ -193,30 +251,39 @@ async function generateWithGemini(body: NlgRequestBody): Promise<GeminiGenerateR
     };
   }
 
-  const preferredModel = (process.env.GEMINI_MODEL ?? "").trim();
-  const strictFallbackOrder = ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.5-flash-lite"];
-  const candidateModels = Array.from(
-    new Set(
-      [
-        ...strictFallbackOrder,
-        ...(preferredModel.length > 0 && !strictFallbackOrder.includes(preferredModel)
-          ? [preferredModel]
-          : []),
-      ].filter((model) => model.length > 0),
-    ),
-  );
+  const candidateModels: Array<{ model: string; timeoutMs: number }> = [
+    { model: "gemini-3.1-flash-lite", timeoutMs: 12000 },
+    { model: "gemini-2.5-flash-lite", timeoutMs: 10000 },
+    { model: "gemini-2.5-flash", timeoutMs: 10000 },
+    { model: "gemini-3-flash-preview", timeoutMs: 10000 },
+  ];
   const prompt = buildGeminiPrompt(body);
+  const attempts: GeminiAttempt[] = [];
 
   let lastFailure: GeminiGenerateResult = {
     text: null,
     reason: "gemini_call_failed",
-    usedModel: candidateModels[candidateModels.length - 1],
+    usedModel: candidateModels.at(-1)?.model,
   };
 
-  for (const model of candidateModels) {
-    const result = await generateWithModel(apiKey, model, prompt);
+  for (const entry of candidateModels) {
+    const startedAt = Date.now();
+    const result = await generateWithModel(apiKey, entry.model, prompt, entry.timeoutMs);
+    const durationMs = Math.max(0, Date.now() - startedAt);
+    const attemptStatus: GeminiAttempt["status"] = result.text
+      ? "success"
+      : result.reason === "timeout"
+        ? "timeout"
+        : "failed";
+    attempts.push({
+      model: entry.model,
+      status: attemptStatus,
+      reason: result.reason,
+      httpStatus: result.httpStatus,
+      durationMs,
+    });
     if (result.text) {
-      return result;
+      return { ...result, attempts };
     }
 
     lastFailure = result;
@@ -233,14 +300,16 @@ async function generateWithGemini(body: NlgRequestBody): Promise<GeminiGenerateR
       result.httpStatus === 504 ||
       isLocationUnsupported ||
       result.reason === "empty_output" ||
-      result.reason === "unsafe_output_filtered";
+      result.reason === "unsafe_output_filtered" ||
+      result.reason === "timeout" ||
+      result.reason === "network_or_unexpected";
 
     if (!shouldTryNextModel) {
-      return result;
+      return { ...result, attempts };
     }
   }
 
-  return lastFailure;
+  return { ...lastFailure, attempts };
 }
 
 export async function handleNlgGeneratePost(request: Request) {
@@ -256,9 +325,13 @@ export async function handleNlgGeneratePost(request: Request) {
       return NextResponse.json(
         {
           ok: false,
-          error: "gemini_generation_failed",
-          reason: generated.reason ?? "unknown_error",
-          model: generated.usedModel ?? "unknown_model",
+          text: null,
+          meta: {
+            source: "gemini",
+            model: generated.usedModel ?? "unknown_model",
+            reason: generated.reason ?? "unknown_error",
+            attempts: generated.attempts ?? [],
+          },
         },
         { status: generated.httpStatus ?? 502 },
       );
@@ -267,9 +340,12 @@ export async function handleNlgGeneratePost(request: Request) {
     return NextResponse.json({
       ok: true,
       text: generated.text,
-      source: "gemini",
-      reason: null,
-      model: generated.usedModel ?? "gemini-2.5-flash",
+      meta: {
+        source: "gemini",
+        model: generated.usedModel ?? "gemini-3.1-flash-lite",
+        reason: null,
+        attempts: generated.attempts ?? [],
+      },
     });
   } catch {
     return NextResponse.json(

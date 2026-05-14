@@ -95,6 +95,15 @@ Catatan:
 - Proses add lagu memakai strategi search-and-match, jadi bisa ada sebagian lagu tidak ditemukan.
 - NLG diintegrasikan sebagai lapisan presentasi teks, bukan mesin pemeringkatan lagu.
 
+## Preference & EDAS Demo (Server-side)
+
+Gunakan script ini untuk mengecek mapping preferensi dan EDAS core secara terpisah:
+
+```bash
+npm run preferences:demo
+npm run edas:demo
+```
+
 ## Migrasi ke Vercel (Rinci)
 
 Panduan ini fokus untuk migrasi dari deploy Netlify ke Vercel, termasuk OAuth Spotify/YouTube dan Gemini.

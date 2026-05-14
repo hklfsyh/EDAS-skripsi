@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "preferences:demo": "tsx scripts/preview-preferences.ts",
+    "edas:demo": "tsx scripts/preview-edas.ts"
   },
   "dependencies": {
     "next": "16.2.3",
@@ -19,6 +21,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.3",
+    "tsx": "^4.19.2",
     "typescript": "^5"
   }
 }

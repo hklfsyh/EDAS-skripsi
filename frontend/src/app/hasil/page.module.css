@@ -171,6 +171,22 @@
   font-size: 0.92rem;
 }
 
+.nlgMeta {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.75rem;
+  color: var(--subtle-color);
+}
+
+.nlgBadge {
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--chip-border);
+  background: var(--chip-bg);
+}
+
 .experimentText {
   margin-bottom: 10px !important;
   color: var(--subtle-color) !important;
@@ -223,6 +239,168 @@
   margin-top: 10px !important;
   font-size: 0.86rem;
   color: var(--text-color) !important;
+}
+
+.historyList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.historyItem {
+  border: 1px solid var(--list-item-border);
+  background: var(--list-item-bg);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: grid;
+  gap: 6px;
+}
+
+.historyButton {
+  border: none;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.historyTitle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--song-title-color);
+  font-size: 0.92rem;
+}
+
+.historyAction {
+  font-size: 0.82rem;
+  color: var(--badge-color);
+  font-weight: 700;
+}
+
+.historyItem strong {
+  color: var(--song-title-color);
+}
+
+.historyMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: var(--subtle-color);
+}
+
+.historyPreview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: var(--text-color);
+}
+
+.historyOverlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  z-index: 20;
+  backdrop-filter: blur(8px);
+}
+
+.historyBackdrop {
+  position: absolute;
+  inset: 0;
+  border: none;
+  background: rgba(7, 10, 20, 0.72);
+  cursor: pointer;
+}
+
+.historyModal {
+  width: min(720px, 100%);
+  max-height: min(80vh, 720px);
+  border-radius: 18px;
+  border: 1.5px solid var(--surface-border);
+  background: var(--surface-bg);
+  box-shadow: var(--surface-shadow);
+  display: grid;
+  grid-template-rows: auto 1fr;
+  padding: 0;
+  margin: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.historyModalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid var(--surface-border);
+}
+
+.historyModalHeader h3 {
+  margin: 0;
+  color: var(--title-color);
+}
+
+.historyCloseButton {
+  border: none;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-weight: 700;
+  cursor: pointer;
+  color: #0d0d14;
+  background: linear-gradient(135deg, #1ed760, #00c3ff);
+}
+
+.historyModalBody {
+  padding: 14px 18px 18px;
+  display: grid;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.historyContext {
+  margin: 0;
+  color: var(--text-color);
+}
+
+.historyModalMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: var(--subtle-color);
+}
+
+.historyModalList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+  overflow-y: auto;
+  max-height: 100%;
+}
+
+.historyModalList li {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--list-item-border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-color);
 }
 
 .form {

@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./ContextFormCard.module.css";
 
@@ -16,7 +16,7 @@ export function ContextFormCard() {
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [isIncomplete, setIsIncomplete] = useState(false);
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit: React.ComponentProps<"form">["onSubmit"] = (event) => {
     event.preventDefault();
 
     if (!activity || !timeOfDay || !mood || durationMinutes === "") {
@@ -48,33 +48,31 @@ export function ContextFormCard() {
 
       <form className={styles.form} onSubmit={handleSubmit}>
         <label className={styles.field}>
-          <span>Lagi ngapain?</span>
+          <span>Mau ngapain?</span>
           <select value={activity} onChange={(event) => setActivity(event.target.value)}>
             <option value="" disabled>
               Pilih aktivitas
             </option>
             <option value="belajar">Belajar</option>
-            <option value="bekerja">Bekerja</option>
             <option value="olahraga">Olahraga</option>
             <option value="relaksasi">Relaksasi</option>
           </select>
         </label>
 
         <label className={styles.field}>
-          <span>Jam berapa vibe-nya?</span>
+          <span>Waktu aktivitasnya?</span>
           <select value={timeOfDay} onChange={(event) => setTimeOfDay(event.target.value)}>
             <option value="" disabled>
               Pilih waktu
             </option>
             <option value="pagi">Pagi</option>
             <option value="siang">Siang</option>
-            <option value="sore">Sore</option>
             <option value="malam">Malam</option>
           </select>
         </label>
 
         <label className={styles.field}>
-          <span>Suasana yang kamu inginkan?</span>
+          <span>Suasana saat ini?</span>
           <select value={mood} onChange={(event) => setMood(event.target.value)}>
             <option value="" disabled>
               Pilih suasana
@@ -121,7 +119,7 @@ export function ContextFormCard() {
               <strong>Waktu:</strong> {timeOfDay}
             </li>
             <li>
-              <strong>Mood:</strong> {mood}
+              <strong>Suasana saat ini:</strong> {mood}
             </li>
             <li>
               <strong>Durasi:</strong> {durationMinutes} menit
