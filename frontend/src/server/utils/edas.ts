@@ -38,6 +38,7 @@ type ScoreRow = {
   appraisalScore: number;
 };
 
+// Daftar parameter audio untuk perhitungan EDAS
 const PARAMETERS: PreferenceParameter[] = [
   "tempo",
   "energy",
@@ -56,6 +57,7 @@ function normalizeValue(value: number | null): number {
   return Math.max(0, value ?? 0);
 }
 
+// Hitung average solution dan average deviation
 function calculateCriterionStats(candidates: SongCandidate[]): Record<PreferenceParameter, CriterionStats> {
   const stats = {} as Record<PreferenceParameter, CriterionStats>;
 
@@ -75,6 +77,7 @@ function calculateCriterionStats(candidates: SongCandidate[]): Record<Preference
   return stats;
 }
 
+// Perhitungan PDA dan NDA untuk benefit/cost
 function computePdaNda(
   value: number,
   average: number,
@@ -97,6 +100,7 @@ function computePdaNda(
   };
 }
 
+// Perhitungan PDA/NDA untuk kriteria netral
 function computeNeutralPdaNda(value: number, averageDeviation: number, average: number) {
   const deviation = Math.abs(value - average);
   if (!Number.isFinite(averageDeviation) || averageDeviation === 0) {
@@ -109,6 +113,7 @@ function computeNeutralPdaNda(value: number, averageDeviation: number, average: 
   };
 }
 
+// Normalisasi SP dan SN
 function normalizeSpSn(spValues: number[], snValues: number[]) {
   const maxSp = Math.max(...spValues);
   const maxSn = Math.max(...snValues);
@@ -123,6 +128,7 @@ export function runEdasRanking(
   candidates: SongCandidate[],
   preferences: PreferenceResult,
 ): ScoreRow[] {
+  // Perhitungan appraisal score dan ranking EDAS
   if (candidates.length === 0) {
     return [];
   }
@@ -134,6 +140,7 @@ export function runEdasRanking(
     let sn = 0;
 
     for (const parameter of PARAMETERS) {
+      // Agregasi PDA/NDA berbobot
       const weight = preferences.weights[parameter] ?? 0;
       const criterion = preferences.criteria[parameter] ?? "neutral";
       const value = normalizeValue(candidate[parameter]);
@@ -169,6 +176,7 @@ export function runEdasRanking(
 
   return rows
     .map((row, index) => {
+      // Appraisal score final
       const nsp = nspList[index];
       const nsn = nsnList[index];
       const appraisalScore = Number(((nsp + nsn) / 2).toFixed(6));
@@ -186,6 +194,7 @@ export function buildPlaylistFromRanking(
   ranked: ScoreRow[],
   targetMinutes: number,
 ): EdasRankedSong[] {
+  // Pembentukan playlist berdasarkan target durasi
   const targetSec = Math.max(15, targetMinutes) * 60;
   const items: EdasRankedSong[] = [];
   let totalSec = 0;

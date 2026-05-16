@@ -21,6 +21,7 @@ class CaseConfig:
 
 
 def _build_case_configs() -> list[CaseConfig]:
+    # Definisi studi kasus untuk evaluasi
     return [
         CaseConfig(
             name="Kasus 1 - Strict Popularity",
@@ -95,6 +96,7 @@ def _format_series(series: pd.Series, decimals: int = 6) -> str:
 
 
 def _build_case_report(case: CaseConfig, cleaned_df: pd.DataFrame, decision_matrix: pd.DataFrame) -> str:
+    # Jalankan preferensi -> EDAS -> ranking -> playlist
     preference = build_preferences_from_questionnaire(case.answers)
     edas_result = run_edas(
         decision_matrix=decision_matrix,

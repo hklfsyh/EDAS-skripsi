@@ -31,8 +31,13 @@ export function MusicCursorTrail() {
   const particles = useRef<Particle[]>([]);
   const mouse = useRef({ x: -999, y: -999, px: -999, py: -999, speed: 0 });
   const raf = useRef<number>(0);
+  const isDrawing = useRef(false);
 
   useEffect(() => {
+    // Skip heavy cursor effects for reduced-motion users
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReducedMotion) return;
+
     const canvas = canvasRef.current!;
     const ctx = canvas.getContext("2d")!;
     let W = window.innerWidth, H = window.innerHeight;
@@ -67,7 +72,13 @@ export function MusicCursorTrail() {
       dot.style.left = mx + "px";
       dot.style.top = my + "px";
 
+      // Spawn particles based on cursor velocity
       spawnParticles(mx, my, mouse.current.speed);
+
+      if (!isDrawing.current) {
+        isDrawing.current = true;
+        raf.current = requestAnimationFrame(draw);
+      }
     };
 
     function spawnParticles(x: number, y: number, speed: number) {
@@ -127,6 +138,7 @@ export function MusicCursorTrail() {
       }
     }
 
+    // Render particles only while there is active trail
     function draw() {
       const now = performance.now();
       ctx.clearRect(0, 0, W, H);
@@ -204,11 +216,14 @@ export function MusicCursorTrail() {
         return true;
       });
 
-      raf.current = requestAnimationFrame(draw);
+      if (particles.current.length > 0) {
+        raf.current = requestAnimationFrame(draw);
+      } else {
+        isDrawing.current = false;
+      }
     }
 
     window.addEventListener("mousemove", onMove);
-    raf.current = requestAnimationFrame(draw);
 
     return () => {
       window.removeEventListener("mousemove", onMove);

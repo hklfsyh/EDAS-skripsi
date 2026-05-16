@@ -64,6 +64,7 @@ function formatMinutes(totalSec: number): number {
   return Math.max(0, Math.round(totalSec / 60));
 }
 
+// Bangun prompt NLG berbasis konteks sesi
 function buildGeminiPrompt(body: NlgRequestBody): string {
   const activity = body.context?.activity ?? "aktivitas";
   const timeOfDay = body.context?.timeOfDay ?? "waktu ini";
@@ -109,6 +110,7 @@ Instruksi output:
 - Keluaran hanya teks narasi utama`;
 }
 
+// Sanitasi output NLG dari format tidak diinginkan
 function sanitizeNarration(text: string): string {
   return text
     .replaceAll("**", "")
@@ -119,6 +121,7 @@ function sanitizeNarration(text: string): string {
     .trim();
 }
 
+// Filter keamanan sederhana untuk narasi berisiko
 function looksUnsafeNarration(text: string): boolean {
   const unsafePatterns = [/menyembuhkan/i, /diagnosis/i, /gangguan mental/i, /pasti membuat/i, /dijamin/i];
 
@@ -142,6 +145,7 @@ function extractTextFromCandidates(candidates: GeminiCandidate[]): string {
   return "";
 }
 
+// Generate narasi NLG dengan Gemini (per model, timeout per model)
 async function generateWithModel(
   apiKey: string,
   model: string,
@@ -235,6 +239,7 @@ async function generateWithModel(
   }
 }
 
+// Retry chain model Gemini berurutan
 async function generateWithGemini(body: NlgRequestBody): Promise<GeminiGenerateResult> {
   const apiKey = (process.env.GEMINI_API_KEY ?? "").trim().replaceAll(/^['"]|['"]$/g, "");
   if (!apiKey) {
@@ -312,6 +317,7 @@ async function generateWithGemini(body: NlgRequestBody): Promise<GeminiGenerateR
   return { ...lastFailure, attempts };
 }
 
+// Endpoint API untuk generate narasi NLG
 export async function handleNlgGeneratePost(request: Request) {
   try {
     const body = (await request.json()) as NlgRequestBody;

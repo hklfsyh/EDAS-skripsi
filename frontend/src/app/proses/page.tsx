@@ -289,6 +289,7 @@ const PREFERENCE_LABELS: Record<PreferenceParameter, { high: string; low: string
     return payload.playlist;
   }
 
+// Simpan hasil rekomendasi ke database
 async function saveRecommendation(
   clientId: string,
   context: ContextData,
@@ -366,10 +367,12 @@ export default function ProsesPage() {
     const preferenceSummary = buildPreferenceSummary(answers);
     const requestKey = `${context.durationMinutes}::${answersRaw}`;
 
+    // Orkestrasi proses rekomendasi + NLG
     const runFlow = async () => {
       try {
         setCurrentStep(0);
         setProgress(12);
+        // Generate playlist rekomendasi dari API
         const playlistPromise =
           inflightRef.current?.key === requestKey
             ? inflightRef.current.promise
@@ -386,6 +389,7 @@ export default function ProsesPage() {
         setCurrentStep(3);
         setProgress(55);
         const totalSec = playlist.reduce((sum, item) => sum + item.durationSec, 0);
+        // Fallback narasi lokal sementara NLG diproses
         const fallbackNarration = buildFallbackNarration(context, playlist, preferenceSummary);
         const fallbackMeta: NlgMeta = {
           source: "fallback-local",
@@ -411,6 +415,7 @@ export default function ProsesPage() {
         setCurrentStep(4);
         setProgress(68);
 
+        // Simpan rekomendasi ke database tanpa blok UI
         void saveRecommendation(getOrCreateClientId(), context, answers, playlist).catch(() => undefined);
 
         setCurrentStep(4);
@@ -420,6 +425,7 @@ export default function ProsesPage() {
           if (!isMountedRef.current || runId !== runIdRef.current) return;
           setNlgStatusText("Masih mencoba menyusun narasi terbaik...");
         }, 15000);
+        // Generate narasi rekomendasi (NLG)
         const nlgResult = await generateNlgText(context, playlist, preferenceSummary);
         if (!isMountedRef.current || runId !== runIdRef.current) return;
         if (nlgStatusTimer) clearTimeout(nlgStatusTimer);
@@ -434,6 +440,7 @@ export default function ProsesPage() {
         setCurrentStep(5);
         setProgress(100);
 
+        // Redirect ke halaman hasil setelah final siap
         redirectTimer = setTimeout(() => {
           router.replace("/hasil");
         }, 500);

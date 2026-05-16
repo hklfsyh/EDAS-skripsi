@@ -29,6 +29,7 @@ class PreferenceResult:
     criteria_types: dict[str, str]
 
 
+# Mapping kuesioner ke parameter audio
 QUESTIONNAIRE_MAPPING = [
     QuestionnaireItem(question_id=1, parameter="bpm", positive_toward_higher_value=True),
     QuestionnaireItem(question_id=2, parameter="bpm", positive_toward_higher_value=False),
@@ -48,6 +49,7 @@ QUESTIONNAIRE_MAPPING = [
 
 
 def _validate_answers(answers: dict[int, int]) -> None:
+    # Validasi jawaban kuesioner
     expected_ids = {item.question_id for item in QUESTIONNAIRE_MAPPING}
     given_ids = set(answers.keys())
 
@@ -66,6 +68,7 @@ def _validate_answers(answers: dict[int, int]) -> None:
 
 
 def _normalize_answer(answer: int, positive_toward_higher_value: bool) -> float:
+    # Reverse scoring untuk butir terbalik
     if positive_toward_higher_value:
         return float(answer)
 
@@ -73,6 +76,7 @@ def _normalize_answer(answer: int, positive_toward_higher_value: bool) -> float:
 
 
 def _classify_criterion(parameter_score: float) -> str:
+    # Klasifikasi benefit / cost / neutral
     if parameter_score > 3.0:
         return "benefit"
     if parameter_score < 3.0:
@@ -81,6 +85,7 @@ def _classify_criterion(parameter_score: float) -> str:
 
 
 def build_preferences_from_questionnaire(answers: dict[int, int]) -> PreferenceResult:
+    # Konversi jawaban ke skor parameter + bobot
     _validate_answers(answers)
 
     score_bucket: dict[str, list[float]] = {parameter: [] for parameter in PARAMETERS}

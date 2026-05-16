@@ -5,6 +5,7 @@ from typing import List, Tuple
 
 
 def normalize_duration(value: str) -> Tuple[str, bool]:
+    # Normalisasi durasi yang tidak valid
     if not value or ":" not in value:
         return value, False
 
@@ -36,6 +37,7 @@ class FixResult:
 
 
 def fix_csv(input_path: str, output_path: str, report_path: str) -> int:
+    # Perbaiki durasi dan tulis laporan
     fixes: List[FixResult] = []
 
     with open(input_path, "r", encoding="utf-8") as input_file:

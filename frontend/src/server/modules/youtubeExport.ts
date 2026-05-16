@@ -34,6 +34,7 @@ async function getResponseTextSafe(response: Response): Promise<string> {
   }
 }
 
+// Ambil/refresh token YouTube dari cookie
 async function getValidAccessToken(request: Request): Promise<{
   accessToken: string;
   setCookies?: Array<{ name: string; value: string; maxAge: number }>;
@@ -80,6 +81,7 @@ async function getValidAccessToken(request: Request): Promise<{
   };
 }
 
+// Buat playlist baru di YouTube
 async function youtubeCreatePlaylist(playlistName: string, accessToken: string): Promise<{ id: string }> {
   const response = await fetch("https://www.googleapis.com/youtube/v3/playlists?part=snippet,status", {
     method: "POST",
@@ -106,6 +108,7 @@ async function youtubeCreatePlaylist(playlistName: string, accessToken: string):
   return (await response.json()) as { id: string };
 }
 
+// Cari video YouTube berdasarkan judul + artis
 async function youtubeSearchVideoId(track: ExportTrack, accessToken: string): Promise<string | null> {
   const queries = [`${track.title} ${track.artist}`, `${track.title}`];
 

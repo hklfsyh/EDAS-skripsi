@@ -18,6 +18,7 @@ def build_playlist_by_duration(
     ranked_songs: pd.DataFrame,
     target_duration_minutes: int,
 ) -> PlaylistBuildResult:
+    # Pembentukan playlist berdasarkan target durasi
     if target_duration_minutes <= 0:
         empty_df = pd.DataFrame(columns=list(ranked_songs.columns) + ["playlist_order", "cumulative_duration_seconds"])
         return PlaylistBuildResult(
@@ -35,6 +36,7 @@ def build_playlist_by_duration(
 
     target_duration_seconds = int(target_duration_minutes * 60)
 
+    # Urutkan lagu berdasarkan appraisal score dan ranking
     ordered_df = ranked_songs.sort_values(
         by=["appraisal_score", "rank"],
         ascending=[False, True],
@@ -44,6 +46,7 @@ def build_playlist_by_duration(
     total_duration_seconds = 0
 
     for _, row in ordered_df.iterrows():
+        # Tambahkan lagu hingga memenuhi durasi
         row_duration = int(row["duration_seconds"])
         row_dict = row.to_dict()
 

@@ -10,11 +10,13 @@ const EVALUATION_STORAGE_KEY = "playlist-evaluation-v1";
 const THEME_STORAGE_KEY = "playlist-theme-v1";
 
 export default function SelesaiPage() {
+  // Terapkan tema dari localStorage
   useEffect(() => {
     const saved = localStorage.getItem(THEME_STORAGE_KEY);
     document.documentElement.setAttribute("data-theme", saved === "light" ? "light" : "dark");
   }, []);
 
+  // Ambil hasil evaluasi usability dari localStorage
   const evaluation = useMemo(() => {
     if (typeof window === "undefined") return null;
     const raw = localStorage.getItem(EVALUATION_STORAGE_KEY);
@@ -34,6 +36,7 @@ export default function SelesaiPage() {
         </p>
 
         {evaluation && (
+          // Render ringkasan evaluasi
           <div className={styles.summary}>
             <h2>Ringkasan evaluasi kamu</h2>
             <ul>

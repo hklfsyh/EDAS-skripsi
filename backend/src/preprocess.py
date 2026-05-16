@@ -25,6 +25,7 @@ class PreprocessResult:
 
 
 def parse_duration_to_seconds(duration_text: str) -> int:
+    # Parsing durasi mm:ss ke detik
     value = str(duration_text).strip()
     parts = value.split(":")
 
@@ -45,6 +46,7 @@ def parse_duration_to_seconds(duration_text: str) -> int:
 
 
 def _safe_parse_duration_to_seconds(duration_text: str) -> int | None:
+    # Parsing durasi aman dengan fallback None
     try:
         return parse_duration_to_seconds(duration_text)
     except (TypeError, ValueError):
@@ -58,15 +60,18 @@ def _ensure_columns(df: pd.DataFrame, required_columns: Iterable[str]) -> None:
 
 
 def preprocess_for_edas(df: pd.DataFrame) -> PreprocessResult:
+    # Preprocessing data sebelum masuk EDAS
     required_columns = ["artist", "title", "duration", "status", *EDAS_CRITERIA]
     _ensure_columns(df, required_columns)
 
     working_df = df.copy()
 
+    # Filter data dengan status valid
     if "status" in working_df.columns:
         working_df["status"] = working_df["status"].astype(str).str.strip().str.lower()
         working_df = working_df[working_df["status"] == "ok"].copy()
 
+    # Konversi durasi ke detik
     working_df["duration_seconds"] = working_df["duration"].apply(_safe_parse_duration_to_seconds)
 
     for column in EDAS_CRITERIA:
@@ -75,6 +80,7 @@ def preprocess_for_edas(df: pd.DataFrame) -> PreprocessResult:
     working_df = working_df.dropna(subset=[*EDAS_CRITERIA, "duration_seconds"]).copy()
     working_df["duration_seconds"] = working_df["duration_seconds"].astype(int)
 
+    # Bentuk decision matrix untuk EDAS
     decision_matrix = working_df[EDAS_CRITERIA].copy()
 
     if decision_matrix.empty:

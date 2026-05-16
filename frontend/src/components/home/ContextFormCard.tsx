@@ -16,6 +16,7 @@ export function ContextFormCard() {
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [isIncomplete, setIsIncomplete] = useState(false);
 
+  // Simpan konteks aktivitas ke localStorage
   const handleSubmit: React.ComponentProps<"form">["onSubmit"] = (event) => {
     event.preventDefault();
 

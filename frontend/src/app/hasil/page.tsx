@@ -63,6 +63,7 @@ type HistorySession = {
   songs: HistorySong[];
 };
 
+// Format durasi ke mm:ss
 function formatDuration(sec: number): string {
   const m = Math.floor(sec / 60);
   const s = sec % 60;
@@ -115,11 +116,13 @@ export default function HasilPage() {
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [selectedSessionId, setSelectedSessionId] = useState<number | null>(null);
 
+  // Ambil hasil rekomendasi dari localStorage
   useEffect(() => {
     const saved = localStorage.getItem(THEME_STORAGE_KEY);
     document.documentElement.dataset.theme = saved === "light" ? "light" : "dark";
   }, []);
 
+  // Ambil status koneksi Spotify/YouTube dan riwayat rekomendasi
   useEffect(() => {
     const clientId = getOrCreateClientId();
     void fetch(`/api/recommendations/history?clientId=${encodeURIComponent(clientId)}`)
@@ -189,6 +192,7 @@ export default function HasilPage() {
     globalThis.location.href = "/api/spotify/login";
   };
 
+  // Export playlist ke Spotify
   const handleExportSpotify = async () => {
     setSpotifyLoading(true);
     setSpotifyMessage("Sedang membuat playlist di Spotify...");
@@ -240,6 +244,7 @@ export default function HasilPage() {
     globalThis.location.href = "/api/youtube/login";
   };
 
+  // Export playlist ke YouTube
   const handleExportYoutube = async () => {
     setYoutubeLoading(true);
     setYoutubeMessage("Sedang membuat playlist di YouTube...");

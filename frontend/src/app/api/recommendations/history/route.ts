@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import sql from "@/server/db";
 
+// Ambil riwayat rekomendasi berdasarkan client_id
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -47,6 +48,7 @@ export async function GET(request: Request) {
       order by rs.id_session desc, rs.rank_order asc
     `;
 
+    // Mapping lagu ke sesi rekomendasi
     const songMap = new Map<number, (typeof songs)[number][]>();
     for (const song of songs) {
       const existing = songMap.get(song.id_session);

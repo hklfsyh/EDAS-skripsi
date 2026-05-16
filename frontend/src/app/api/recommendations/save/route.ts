@@ -33,6 +33,7 @@ type FingerprintInput = {
   }>;
 };
 
+// Normalisasi jawaban kuesioner untuk penyimpanan
 function normalizeAnswers(raw?: number[] | Record<number, number>) {
   if (!raw) return [];
   if (Array.isArray(raw)) {
@@ -45,11 +46,13 @@ function normalizeAnswers(raw?: number[] | Record<number, number>) {
     .map((key) => Number(raw[key]));
 }
 
+// Fingerprint sesi rekomendasi (anti-duplikasi)
 function computeFingerprint(input: FingerprintInput) {
   const payload = JSON.stringify(input);
   return createHash("sha256").update(payload).digest("hex");
 }
 
+// Simpan hasil rekomendasi ke database
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as SaveRequest;

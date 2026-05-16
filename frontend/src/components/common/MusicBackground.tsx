@@ -38,20 +38,31 @@ export function MusicBackground() {
   const containerRef = useRef<HTMLDivElement>(null);
   const mouse = useRef<Pos>({ x: 0.5, y: 0.5 });
   const raf = useRef<number>(0);
+  const isScheduled = useRef(false);
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
+
+    // Cache node references to avoid querySelector on every frame
+    const cards = Array.from(container.querySelectorAll<HTMLElement>("[data-depth]"));
+    const mesh = container.querySelector<HTMLElement>("[data-mesh]");
 
     const onMove = (e: MouseEvent) => {
       mouse.current = {
         x: e.clientX / window.innerWidth,
         y: e.clientY / window.innerHeight,
       };
+
+      if (!isScheduled.current) {
+        isScheduled.current = true;
+        raf.current = requestAnimationFrame(tick);
+      }
     };
 
+    // Parallax update for floating albums + mesh gradient
     const tick = () => {
-      const cards = container.querySelectorAll<HTMLElement>("[data-depth]");
+      isScheduled.current = false;
       cards.forEach((card) => {
         const depth = parseFloat(card.dataset.depth ?? "0.2");
         const dx = (mouse.current.x - 0.5) * depth * 180;
@@ -61,7 +72,6 @@ export function MusicBackground() {
       });
 
       // mesh gradient follows mouse more aggressively
-      const mesh = container.querySelector<HTMLElement>("[data-mesh]");
       if (mesh) {
         const px = mouse.current.x * 100;
         const py = mouse.current.y * 100;
@@ -72,8 +82,6 @@ export function MusicBackground() {
           radial-gradient(ellipse 55% 40% at ${100-py}% ${100-px}%, rgba(30,215,96,0.15), transparent 60%)
         `;
       }
-
-      raf.current = requestAnimationFrame(tick);
     };
 
     window.addEventListener("mousemove", onMove);

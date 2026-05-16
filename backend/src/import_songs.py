@@ -7,6 +7,7 @@ from typing import Dict, Iterable, List, Optional, Tuple
 
 
 def load_database_url() -> Optional[str]:
+    # Ambil DATABASE_URL dari env / .env.local
     database_url = os.environ.get("DATABASE_URL")
     if database_url:
         return database_url
@@ -29,6 +30,7 @@ def load_database_url() -> Optional[str]:
 
 
 def parse_duration_to_ms(value: str) -> Optional[int]:
+    # Parsing durasi mm:ss ke milidetik
     if not value:
         return None
     match = re.match(r"^(\d{1,2}):(\d{2})$", value.strip())
@@ -132,6 +134,7 @@ def record_invalid(
 
 
 def validate_feature_ranges(features: Dict[str, Optional[float]]) -> Optional[str]:
+    # Validasi rentang fitur audio (0-100)
     for field_name, value in features.items():
         if not validate_range(value, 0, 100):
             return f"{field_name}_out_of_range"
@@ -177,6 +180,7 @@ def get_invalid_reason(
     features: Dict[str, Optional[float]],
     popularity: Optional[int],
 ) -> Optional[str]:
+    # Filter row invalid berdasarkan status dan fitur
     checks = [
         ("status_not_ok", status != "ok"),
         ("missing_title_or_artist", not title or not artist),

@@ -29,6 +29,7 @@ type QuestionMapping = {
   questions: Array<{ index: number; reverse: boolean }>;
 };
 
+// Mapping butir kuesioner ke parameter audio
 const QUESTION_MAPPINGS: QuestionMapping[] = [
   {
     parameter: "tempo",
@@ -92,6 +93,7 @@ function toAnswerArray(answers: Record<number, number> | number[]): number[] {
   return values;
 }
 
+// Validasi jawaban kuesioner 1-5
 function validateAnswers(values: number[]): void {
   if (values.length < 14) {
     throw new Error("Jawaban kuesioner harus berisi 14 butir.");
@@ -104,6 +106,7 @@ function validateAnswers(values: number[]): void {
   });
 }
 
+// Reverse scoring untuk butir terbalik
 function adjustLikert(value: number, reverse: boolean): number {
   return reverse ? 6 - value : value;
 }
@@ -113,6 +116,7 @@ function likertToScore(value: number): number {
   return Number((normalized * 100).toFixed(2));
 }
 
+// Klasifikasi benefit / cost / neutral
 function classifyCriterion(meanLikert: number): CriterionType {
   if (meanLikert > 3) return "benefit";
   if (meanLikert < 3) return "cost";
@@ -122,6 +126,7 @@ function classifyCriterion(meanLikert: number): CriterionType {
 export function mapQuestionnaireToPreferences(
   answers: Record<number, number> | number[],
 ): PreferenceResult {
+  // Konversi jawaban kuesioner ke preferensi parameter
   const values = toAnswerArray(answers);
   validateAnswers(values);
 
@@ -129,6 +134,7 @@ export function mapQuestionnaireToPreferences(
   let scoreSum = 0;
 
   for (const mapping of QUESTION_MAPPINGS) {
+    // Agregasi nilai Likert per parameter
     const adjustedValues = mapping.questions.map(({ index, reverse }) => {
       const raw = values[index - 1];
       return adjustLikert(raw, reverse);
@@ -155,6 +161,7 @@ export function mapQuestionnaireToPreferences(
 
   const fallbackWeight = Number((1 / QUESTION_MAPPINGS.length).toFixed(6));
 
+  // Normalisasi bobot parameter
   for (const mapping of QUESTION_MAPPINGS) {
     const parameter = mapping.parameter;
     const score = parameters[parameter].score;

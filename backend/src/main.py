@@ -9,6 +9,7 @@ from preferences import build_preferences_from_questionnaire
 
 def main() -> None:
     csv_path = Path(__file__).resolve().parent.parent.parent / "data" / "output.csv"
+    # Load dataset dan preprocessing
     df = load_dataset(csv_path)
     preprocess_result = preprocess_for_edas(df)
     cleaned_df = preprocess_result.cleaned_df
@@ -46,6 +47,7 @@ def main() -> None:
         13: 2,
         14: 4,
     }
+    # Konversi jawaban kuesioner ke preferensi
     preference_result = build_preferences_from_questionnaire(demo_answers)
 
     print("Skor parameter (1-5):")
@@ -65,6 +67,7 @@ def main() -> None:
 
     print()
     print("=== LEVEL 3: PERHITUNGAN EDAS ===")
+    # Perhitungan EDAS (PDA/NDA, SP/SN, appraisal score)
     edas_result = run_edas(
         decision_matrix=decision_matrix,
         weights=preference_result.weights,
@@ -95,6 +98,7 @@ def main() -> None:
     print()
     print("=== LEVEL 4: PEMBENTUKAN PLAYLIST ===")
     target_duration_minutes = 60
+    # Pembentukan playlist berdasarkan target durasi
     playlist_result = build_playlist_by_duration(
         ranked_songs=ranking_df,
         target_duration_minutes=target_duration_minutes,

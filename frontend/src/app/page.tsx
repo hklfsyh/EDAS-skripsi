@@ -10,12 +10,14 @@ import styles from "./page.module.css";
 const THEME_STORAGE_KEY = "playlist-theme-v1";
 
 export default function Home() {
+  // Ambil preferensi tema dari localStorage
   const [theme, setTheme] = useState<"dark" | "light">(() => {
     if (typeof window === "undefined") return "dark";
     const saved = localStorage.getItem(THEME_STORAGE_KEY);
     return saved === "light" ? "light" : "dark";
   });
 
+  // Simpan tema ke localStorage
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
     localStorage.setItem(THEME_STORAGE_KEY, theme);
@@ -41,6 +43,7 @@ export default function Home() {
           </button>
         </header>
 
+        {/* Render hero dan form konteks */}
         <HeroCard />
         <ContextFormCard />
 

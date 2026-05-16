@@ -35,6 +35,7 @@ def run_edas(
     weights: dict[str, float],
     criteria_types: dict[str, str],
 ) -> EdasResult:
+    # Validasi input dan bobot kriteria
     if decision_matrix.empty:
         raise ValueError("Decision matrix kosong.")
 
@@ -53,15 +54,18 @@ def run_edas(
     if total_weight <= 0:
         raise ValueError("Total bobot harus lebih dari 0.")
 
+    # Normalisasi bobot kriteria
     weights_series = weights_series / total_weight
 
     matrix = decision_matrix[criteria].astype(float)
+    # Average solution untuk tiap kriteria
     average_solution = matrix.mean(axis=0)
 
     pda = pd.DataFrame(0.0, index=matrix.index, columns=criteria)
     nda = pd.DataFrame(0.0, index=matrix.index, columns=criteria)
 
     for criterion in criteria:
+        # Perhitungan PDA dan NDA per kriteria
         av = average_solution[criterion]
         values = matrix[criterion]
         criterion_type = str(criteria_types[criterion]).lower().strip()
@@ -80,6 +84,7 @@ def run_edas(
             pda[criterion] = pda_column / av
             nda[criterion] = nda_column / av
 
+    # Agregasi berbobot PDA dan NDA
     weighted_pda = pda.mul(weights_series, axis=1)
     weighted_nda = nda.mul(weights_series, axis=1)
 
@@ -89,6 +94,7 @@ def run_edas(
     max_sp = float(sp.max())
     max_sn = float(sn.max())
 
+    # Normalisasi SP dan SN
     if max_sp == 0:
         nsp = pd.Series(0.0, index=sp.index)
     else:
@@ -99,6 +105,7 @@ def run_edas(
     else:
         nsn = 1 - (sn / max_sn)
 
+    # Appraisal score dan ranking akhir
     appraisal_score = 0.5 * (nsp + nsn)
     ranking = appraisal_score.rank(ascending=False, method="min").astype(int)
 

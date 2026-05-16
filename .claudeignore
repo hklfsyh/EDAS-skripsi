@@ -1,0 +1,20 @@
+# Folder sistem & library (WAJIB di-ignore biar hemat)
+node_modules/
+venv/
+.venv/
+env/
+__pycache__/
+.git/
+.vscode/
+
+# File data besar (kalau ada)
+*.csv
+*.xlsx
+*.json
+*.pdf
+*.zip
+
+# File log dan temporary
+*.log
+*.tmp
+.DS_Store

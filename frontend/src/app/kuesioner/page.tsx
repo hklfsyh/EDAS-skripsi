@@ -53,12 +53,14 @@ const defaultContext: ContextData = {
 
 export default function KuesionerPage() {
   const router = useRouter();
+  // Ambil preferensi tema dari localStorage
   const [theme, setTheme] = useState<"dark" | "light">(() => {
     if (globalThis.window === undefined) return "dark";
     const saved = localStorage.getItem(THEME_STORAGE_KEY);
     return saved === "light" ? "light" : "dark";
   });
 
+  // Ambil konteks aktivitas dari localStorage
   const [contextData] = useState<ContextData>(() => {
     if (globalThis.window === undefined) return defaultContext;
     try {
@@ -73,6 +75,7 @@ export default function KuesionerPage() {
 
   const totalSteps = Math.ceil(questions.length / QUESTIONS_PER_STEP);
 
+  // Render subset pertanyaan per step
   const currentQuestions = useMemo(() => {
     const start = (step - 1) * QUESTIONS_PER_STEP;
     return questions
@@ -99,6 +102,7 @@ export default function KuesionerPage() {
     return v >= 1 && v <= 5;
   });
 
+  // Narasi konteks untuk pengantar kuesioner
   const contextNarrative = useMemo(() => {
     const activity = contextData.activity || "aktivitas pilihanmu";
     const time = contextData.timeOfDay || "waktu yang kamu tentukan";
@@ -109,12 +113,14 @@ export default function KuesionerPage() {
     return `Bayangkan kamu sedang ${activity} di ${time} dengan suasana saat ini ${mood} selama ${dur}. Jawab pernyataan berikut sesuai preferensi musik yang ingin kamu dengarkan pada aktivitas tersebut.`;
   }, [contextData]);
 
+  // Simpan jawaban kuesioner ke localStorage
   const handleSave = () => {
     if (answeredCount !== questions.length) return;
     localStorage.setItem("playlist-questionnaire-v1", JSON.stringify(answers));
     setIsSaved(true);
   };
 
+  // Lanjut ke proses rekomendasi
   const handleContinueToProcess = () => {
     router.push("/proses");
   };

@@ -34,6 +34,7 @@ async function getResponseTextSafe(response: Response): Promise<string> {
   }
 }
 
+// Ambil/refresh token Spotify dari cookie
 async function getValidAccessToken(request: Request): Promise<{
   accessToken: string;
   setCookies?: Array<{ name: string; value: string; maxAge: number }>;
@@ -80,6 +81,7 @@ async function getValidAccessToken(request: Request): Promise<{
   };
 }
 
+// Buat playlist baru di Spotify
 async function spotifyCreatePlaylist(playlistName: string, accessToken: string): Promise<{ id: string; external_urls?: { spotify?: string } }> {
   const response = await fetch("https://api.spotify.com/v1/me/playlists", {
     method: "POST",
@@ -102,6 +104,7 @@ async function spotifyCreatePlaylist(playlistName: string, accessToken: string):
   return (await response.json()) as { id: string; external_urls?: { spotify?: string } };
 }
 
+// Cari URI track Spotify berdasarkan judul + artis
 async function spotifySearchTrackUri(track: ExportTrack, accessToken: string): Promise<string | null> {
   const queries = [
     `track:"${track.title}" artist:"${track.artist}"`,
@@ -137,6 +140,7 @@ async function spotifySearchTrackUri(track: ExportTrack, accessToken: string): P
   return null;
 }
 
+// Tambahkan track ke playlist Spotify
 async function spotifyAddTracks(
   playlistId: string,
   uris: string[],
@@ -193,6 +197,7 @@ async function spotifyAddTracks(
   return { addedUris, failedUris };
 }
 
+// Resolusi URI untuk seluruh track yang akan diexport
 async function resolveTrackUris(
   tracks: ExportTrack[],
   accessToken: string,

@@ -4,6 +4,7 @@ import sql from "@/server/db";
 import { mapQuestionnaireToPreferences } from "@/server/utils/preferenceMapping";
 import { buildPlaylistFromRanking, runEdasRanking, type SongCandidate } from "@/server/utils/edas";
 
+// Normalisasi input jawaban kuesioner
 function normalizeAnswers(raw?: string | string[] | null): number[] | null {
   if (!raw) return null;
 
@@ -27,6 +28,7 @@ function normalizeAnswers(raw?: string | string[] | null): number[] | null {
   return parts;
 }
 
+// Ambil daftar lagu dari database
 async function loadTracksFromDatabase(): Promise<{ tracks: SongCandidate[]; source: string }> {
   const rows = await sql<SongCandidate[]>`
     select
@@ -64,6 +66,7 @@ async function loadTracksFromDatabase(): Promise<{ tracks: SongCandidate[]; sour
   return { tracks, source: "songs (database)" };
 }
 
+// Jalankan EDAS lalu bentuk playlist berdasarkan durasi target
 function buildEdasPlaylist(tracks: SongCandidate[], answers: number[], targetMinutes: number) {
   const preferences = mapQuestionnaireToPreferences(answers);
   const ranked = runEdasRanking(tracks, preferences);
@@ -72,6 +75,7 @@ function buildEdasPlaylist(tracks: SongCandidate[], answers: number[], targetMin
   return { playlist, preferences };
 }
 
+// API dummy playlist (GET)
 export async function handleDummyPlaylistGet(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -98,6 +102,7 @@ export async function handleDummyPlaylistGet(request: Request) {
   }
 }
 
+// API dummy playlist (POST)
 export async function handleDummyPlaylistPost(request: Request) {
   try {
     const body = (await request.json()) as {
