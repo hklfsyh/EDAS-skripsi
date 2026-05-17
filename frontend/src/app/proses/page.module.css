@@ -1,129 +1,96 @@
 .page {
-  --surface-bg: rgba(10, 10, 18, 0.9);
-  --surface-border: rgba(255, 255, 255, 0.3);
-  --surface-shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
-  --title-color: #f5f5ff;
-  --text-color: #d3d3ea;
-  --progress-track: rgba(255, 255, 255, 0.2);
-  --step-border: rgba(255, 255, 255, 0.22);
-  --step-done-bg: rgba(30, 215, 96, 0.16);
-  --step-done-text: #d5ffe5;
-  --step-idle-bg: rgba(255, 255, 255, 0.1);
-  --step-idle-text: #e2e2f6;
-  --note-color: #f1f1ff;
-  --subtle-color: #cfcfe8;
-  --accent1: #1ed760;
-  --accent2: #00c3ff;
-  --accent3: #9747ff;
-  --percent-color: #1ed760;
-
-  min-height: 100svh;
-  display: grid;
-  place-items: center;
-  padding: 20px;
-  position: relative;
-}
-
-:global(html[data-theme="light"]) .page {
-  --surface-bg: #FFFDFC;
-  --surface-border: #DDD6CE;
-  --surface-shadow: 0 14px 34px rgba(46, 36, 51, 0.08);
-  --title-color: #2E2433;
-  --text-color: #6B5E6D;
-  --progress-track: #E7DED6;
-  --step-border: #DDD6CE;
-  --step-done-bg: #E7F1E8;
-  --step-done-text: #4F7A59;
-  --step-idle-bg: #F5F1EC;
-  --step-idle-text: #6B5E6D;
-  --note-color: #8C8190;
-  --subtle-color: #8C8190;
-  --accent1: #6FA37B;
-  --accent2: #8D7AAE;
-  --accent3: #8C8190;
-  --percent-color: #6FA37B;
+  display: flex;
+  align-items: flex-start;
+  overflow: hidden;
 }
 
 .card {
-  position: relative;
-  z-index: 1;
-  width: min(760px, 100%);
+  width: min(820px, 100%);
+  margin-top: 10vh;
   border-radius: 22px;
   border: 1.5px solid var(--surface-border);
-  background: var(--surface-bg);
+  background: var(--surface-strong);
   backdrop-filter: blur(14px);
   box-shadow: var(--surface-shadow);
-  padding: 24px;
+  padding: 28px;
 }
 
 .card h1 {
-  margin: 0 0 8px;
-  font-size: clamp(1.2rem, 3vw, 1.8rem);
-  color: var(--title-color);
+  margin: 0 0 10px;
+  font-size: clamp(1.35rem, 3vw, 1.95rem);
+  color: var(--foreground);
+  letter-spacing: -0.02em;
 }
 
 .card p {
   margin: 0;
-  color: var(--text-color);
-  line-height: 1.6;
+  color: var(--muted-foreground);
+  line-height: 1.7;
+  max-width: 68ch;
 }
 
 .progressWrap {
-  margin-top: 16px;
+  margin-top: 18px;
   height: 8px;
   border-radius: 999px;
-  background: var(--progress-track);
+  background: color-mix(in srgb, var(--foreground) 12%, transparent);
   overflow: hidden;
 }
 
 .progressFill {
   height: 100%;
-  background: linear-gradient(90deg, var(--accent1), var(--accent2), var(--accent3));
+  background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary), var(--accent-tertiary));
   transition: width 180ms linear;
 }
 
 .percentLabel {
-  margin-top: 8px;
+  margin-top: 10px;
   display: inline-block;
-  font-weight: 700;
-  color: var(--percent-color);
+  font-weight: 800;
+  color: var(--accent-primary);
 }
 
 .stepList {
-  margin: 14px 0 0;
+  margin: 18px 0 0;
   padding: 0;
   list-style: none;
   display: grid;
-  gap: 8px;
+  gap: 10px;
 }
 
 .stepDone,
 .stepIdle {
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid var(--step-border);
-  font-size: 0.92rem;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--surface-border);
+  font-size: 0.93rem;
 }
 
 .stepDone {
-  background: var(--step-done-bg);
-  color: var(--step-done-text);
+  background: var(--success-soft);
+  color: var(--foreground);
 }
 
 .stepIdle {
-  background: var(--step-idle-bg);
-  color: var(--step-idle-text);
+  background: var(--surface-subtle);
+  color: var(--muted-foreground);
 }
 
 .note {
-  margin-top: 14px !important;
+  margin-top: 16px !important;
   font-size: 0.9rem;
-  color: var(--note-color) !important;
+  color: var(--foreground) !important;
 }
 
 .previewTime {
-  margin-top: 4px !important;
-  font-size: 0.82rem;
-  color: var(--subtle-color) !important;
-  opacity: 1;
+  margin-top: 6px !important;
+  font-size: 0.84rem;
+  color: var(--muted-foreground) !important;
+}
+
+@media (max-width: 640px) {
+  .card {
+    margin-top: 4vh;
+    padding: 18px;
+  }
 }

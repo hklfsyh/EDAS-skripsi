@@ -1,67 +1,42 @@
 .page {
-  min-height: 100svh;
-  display: flex;
-  justify-content: center;
-  padding: 24px;
-  position: relative;
   overflow: hidden;
   font-family: var(--font-figtree), 'Figtree', system-ui, sans-serif;
 
-  --text-primary:        #f0f0ff;
-  --text-secondary:      #a0a0c0;
-  --surface:             rgba(18, 18, 30, 0.72);
-  --surface-border:      rgba(255, 255, 255, 0.10);
-  --chip-bg:             rgba(255, 255, 255, 0.06);
-  --chip-hover-border:   rgba(30, 215, 96, 0.35);
-  --chip-active-bg:      rgba(30, 215, 96, 0.18);
-  --chip-active-border:  rgba(30, 215, 96, 0.55);
-  --chip-active-text:    #1ed760;
-  --button-bg:           linear-gradient(135deg, #1ed760 0%, #00c3ff 100%);
-  --button-text:         #0d0d14;
-  --button-hover-shadow: rgba(30, 215, 96, 0.3);
-  --ghost-hover-border:  rgba(30, 215, 96, 0.4);
-  --accent1:             #1ed760;
-  --accent2:             #00c3ff;
-  --accent3:             #9747ff;
-  --progress-track:      rgba(255, 255, 255, 0.08);
-  --context-glow:        rgba(151, 71, 255, 0.22);
-  --toggle-hover-border: #1ed760;
-  --back-hover-color:    #1ed760;
-  --saved-badge-color:   #1ed760;
-  --surface-shadow:      0 12px 30px rgba(0, 0, 0, 0.25);
-  --button-shadow:       rgba(30, 215, 96, 0.2);
+  --text-primary: var(--foreground);
+  --text-secondary: var(--muted-foreground);
+  --surface-card: var(--surface);
+  --surface-card-border: var(--surface-border);
+  --chip-bg: rgba(255, 255, 255, 0.06);
+  --chip-border: var(--surface-border);
+  --chip-text: var(--muted-foreground);
+  --chip-hover-bg: rgba(255, 255, 255, 0.08);
+  --chip-hover-border: color-mix(in srgb, var(--accent-primary) 38%, transparent);
+  --chip-active-bg: color-mix(in srgb, var(--accent-primary) 16%, transparent);
+  --chip-active-border: color-mix(in srgb, var(--accent-primary) 52%, transparent);
+  --chip-active-text: var(--accent-primary);
+  --button-bg: var(--button-bg);
+  --button-hover-bg: var(--button-bg-hover);
+  --button-text: var(--button-text);
+  --button-hover-shadow: rgba(30, 215, 96, 0.28);
+  --ghost-hover-border: var(--accent-primary);
+  --progress-track: rgba(255, 255, 255, 0.08);
+  --context-glow: rgba(151, 71, 255, 0.22);
+  --saved-badge-color: var(--accent-primary);
 }
 
 .page[data-theme="light"] {
-  --text-primary:        #2E2433;
-  --text-secondary:      #6B5E6D;
-  --surface:             #FFFDFC;
-  --surface-border:      #DDD6CE;
-  --chip-bg:             #F5F1EC;
-  --chip-border:         #D8D0C8;
-  --chip-text:           #5B4E5E;
-  --chip-hover-bg:       #F0EAE4;
-  --chip-active-bg:      #E7F1E8;
-  --chip-active-border:  #6FA37B;
-  --chip-active-text:    #4F7A59;
-  --button-bg:           #6FA37B;
-  --button-text:         #FFFFFF;
-  --button-hover-bg:     #5E926A;
-  --button-hover-shadow: rgba(111, 163, 123, 0.25);
-  --ghost-hover-border:  #6FA37B;
-  --accent1:             #6FA37B;
-  --accent2:             #8D7AAE;
-  --accent3:             #8C8190;
-  --progress-track:      #E7DED6;
-  --context-glow:        rgba(111, 163, 123, 0.12);
-  --toggle-hover-border: #6FA37B;
-  --back-hover-color:    #6FA37B;
-  --saved-badge-color:   #6FA37B;
-  --surface-shadow:      0 1px 4px rgba(46, 36, 51, 0.06);
-  --button-shadow:       rgba(111, 163, 123, 0.20);
+  --chip-bg: #f5efe8;
+  --chip-border: #ddd3ca;
+  --chip-text: #665a68;
+  --chip-hover-bg: #efe6de;
+  --chip-active-bg: #edf4ec;
+  --chip-active-border: #8fb297;
+  --chip-active-text: #466e50;
+  --button-hover-shadow: rgba(93, 143, 104, 0.22);
+  --progress-track: #e8dfd7;
+  --context-glow: rgba(93, 143, 104, 0.14);
 }
 
-/* ── top bar ── */
 .topBar {
   display: flex;
   justify-content: space-between;
@@ -77,12 +52,12 @@
 }
 
 .backLink:hover {
-  color: var(--back-hover-color);
+  color: var(--accent-primary);
 }
 
 .themeToggle {
-  border: 1.5px solid var(--surface-border);
-  background: var(--surface);
+  border: 1.5px solid var(--surface-card-border);
+  background: var(--surface-card);
   color: var(--text-primary);
   border-radius: 999px;
   padding: 9px 18px;
@@ -91,31 +66,33 @@
   cursor: none;
   backdrop-filter: blur(12px);
   font-family: inherit;
-  transition: border-color 0.18s, transform 0.18s;
+  transition: border-color 0.18s, transform 0.18s, background 0.18s;
 }
 
 .themeToggle:hover {
-  border-color: var(--toggle-hover-border);
+  border-color: var(--accent-primary);
   transform: translateY(-2px);
+  background: var(--surface-subtle);
 }
 
-/* ── layout ── */
 .layout {
-  position: relative;
-  z-index: 1;
-  width: min(720px, 100%);
+  width: min(860px, 100%);
   display: grid;
-  gap: 14px;
+  gap: 16px;
+  padding-block: 16px 28px;
 }
 
-/* ── context card ── */
-.contextCard {
-  background: var(--surface);
-  border: 1.5px solid var(--surface-border);
+.contextCard,
+.formCard {
+  background: var(--surface-card);
+  border: 1.5px solid var(--surface-card-border);
   border-radius: 20px;
   backdrop-filter: blur(14px);
   box-shadow: var(--surface-shadow);
-  padding: 22px 26px;
+}
+
+.contextCard {
+  padding: 24px 28px;
   position: relative;
   overflow: hidden;
 }
@@ -123,8 +100,10 @@
 .contextCard::before {
   content: "";
   position: absolute;
-  top: -30px; right: -30px;
-  width: 140px; height: 140px;
+  top: -30px;
+  right: -30px;
+  width: 140px;
+  height: 140px;
   border-radius: 50%;
   background: radial-gradient(circle, var(--context-glow), transparent 70%);
   pointer-events: none;
@@ -140,32 +119,26 @@
 
 .contextCard p {
   margin: 0;
+  max-width: 68ch;
   color: var(--text-secondary);
   line-height: 1.65;
-  font-size: 0.92rem;
+  font-size: 0.94rem;
 }
 
-/* ── form card ── */
 .formCard {
-  background: var(--surface);
-  border: 1.5px solid var(--surface-border);
-  border-radius: 20px;
-  backdrop-filter: blur(14px);
-  box-shadow: var(--surface-shadow);
-  padding: 22px 26px;
+  padding: 24px 28px;
 }
 
 .descriptionText {
-  margin: 0 0 14px;
+  margin: 0 0 16px;
   color: var(--text-secondary);
-  font-size: 0.9rem;
-  line-height: 1.65;
+  font-size: 0.93rem;
+  line-height: 1.7;
 }
 
-/* ── progress bar ── */
 .progressBarWrap {
-  margin: 0 0 18px;
-  height: 6px;
+  margin: 0 0 20px;
+  height: 8px;
   border-radius: 999px;
   background: var(--progress-track);
   overflow: hidden;
@@ -174,12 +147,11 @@
 .progressBarFill {
   height: 100%;
   width: 0;
-  background: linear-gradient(90deg, var(--accent1, #1ed760), var(--accent2, #00c3ff), var(--accent3, #9747ff));
+  background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary), var(--accent-tertiary));
   transition: width 280ms ease;
   border-radius: 999px;
 }
 
-/* ── question list ── */
 .questionList {
   margin: 0;
   padding-left: 0;
@@ -190,29 +162,27 @@
 
 .questionItem {
   color: var(--text-primary);
-  counter-increment: question;
 }
 
 .questionItem p {
   margin: 0 0 10px;
-  font-size: 0.97rem;
-  line-height: 1.55;
-  font-weight: 500;
+  font-size: 0.98rem;
+  line-height: 1.6;
+  font-weight: 600;
 }
 
-/* ── choice chips ── */
 .choiceRow {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 6px;
+  gap: 8px;
 }
 
 .choiceChip {
-  border: 1.5px solid var(--chip-border, var(--surface-border));
+  border: 1.5px solid var(--chip-border);
   background: var(--chip-bg);
-  border-radius: 10px;
-  color: var(--chip-text, var(--text-secondary));
-  padding: 8px 4px;
+  border-radius: 12px;
+  color: var(--chip-text);
+  padding: 10px 8px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -224,11 +194,11 @@
   font-family: inherit;
   transition: border-color 0.15s, background 0.15s, color 0.15s, transform 0.12s;
   text-align: center;
-  line-height: 1.2;
+  line-height: 1.25;
 }
 
 .choiceChip:hover {
-  background: var(--chip-hover-bg, transparent);
+  background: var(--chip-hover-bg);
   border-color: var(--chip-hover-border);
   transform: translateY(-1px);
 }
@@ -245,14 +215,13 @@
   display: none;
 }
 
-/* ── action row ── */
 .actionRow {
-  margin-top: 20px;
+  margin-top: 22px;
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
 }
 
 .saveButton {
@@ -265,13 +234,13 @@
   cursor: none;
   color: var(--button-text);
   background: var(--button-bg);
-  box-shadow: 0 2px 10px var(--button-shadow);
-  transition: transform 0.18s, box-shadow 0.18s;
+  box-shadow: 0 2px 10px rgba(93, 143, 104, 0.16);
+  transition: transform 0.18s, box-shadow 0.18s, background 0.18s;
 }
 
 .saveButton:hover:not(:disabled) {
   transform: translateY(-2px);
-  background: var(--button-hover-bg, var(--button-bg));
+  background: var(--button-hover-bg);
   box-shadow: 0 8px 28px var(--button-hover-shadow);
 }
 
@@ -281,7 +250,7 @@
 }
 
 .ghostButton {
-  border: 1.5px solid var(--chip-border, var(--surface-border));
+  border: 1.5px solid var(--chip-border);
   border-radius: 12px;
   padding: 12px 22px;
   background: transparent;
@@ -294,32 +263,43 @@
 }
 
 .ghostButton:hover {
-  background: var(--chip-hover-bg, transparent);
+  background: var(--chip-hover-bg);
   border-color: var(--ghost-hover-border);
   transform: translateY(-1px);
-}
-
-/* ── secondary chip (violet) ── */
-:global(html[data-theme="light"]) .secondaryChip {
-  background: #EEE8F7;
-  border-color: #D8D0C8;
-  color: #8D7AAE;
-}
-
-:global(html[data-theme="light"]) .secondaryChip:hover {
-  background: #E8DEF2;
-  border-color: #8D7AAE;
 }
 
 .savedBadge {
   color: var(--saved-badge-color);
   font-weight: 700;
   font-size: 0.9rem;
+  margin-right: auto;
 }
 
 @media (max-width: 680px) {
-  .page { padding: 14px; }
-  .topBar { flex-direction: column; align-items: flex-start; }
-  .choiceRow { grid-template-columns: repeat(3, 1fr); }
-  .contextCard, .formCard { padding: 16px; }
+  .layout {
+    gap: 14px;
+    padding-block: 6px 18px;
+  }
+
+  .topBar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .choiceRow {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .contextCard,
+  .formCard {
+    padding: 18px;
+  }
+
+  .actionRow {
+    justify-content: flex-start;
+  }
+
+  .savedBadge {
+    width: 100%;
+  }
 }

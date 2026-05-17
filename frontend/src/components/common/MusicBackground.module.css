@@ -16,7 +16,7 @@
 .grain {
   position: absolute;
   inset: 0;
-  opacity: 0.035;
+  opacity: 0.045;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-size: 200px 200px;
 }
@@ -30,7 +30,7 @@
   align-items: flex-end;
   gap: 3px;
   height: 80px;
-  opacity: 0.07;
+  opacity: 0.14;
 }
 
 .eqBar {
@@ -54,15 +54,15 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0.55;
+  opacity: 0.82;
   will-change: transform;
-  box-shadow: 0 0 0 1px rgba(255,255,255,0.08), 0 8px 32px rgba(0,0,0,0.5);
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.14), 0 16px 44px rgba(0,0,0,0.42);
   overflow: hidden;
 }
 
 :global(html[data-theme="light"]) .album {
-  opacity: 0.20;
-  box-shadow: 0 0 0 1px rgba(46, 36, 51, 0.06), 0 8px 32px rgba(46, 36, 51, 0.08);
+  opacity: 0.92;
+  box-shadow: 0 0 0 1px rgba(120, 133, 255, 0.22), 0 14px 36px rgba(103, 88, 196, 0.18);
 }
 
 .album::before {
@@ -73,7 +73,7 @@
 }
 
 :global(html[data-theme="light"]) .album::before {
-  background: linear-gradient(135deg, rgba(255,255,255,0.40) 0%, transparent 60%);
+  background: linear-gradient(135deg, rgba(255,255,255,0.28) 0%, transparent 60%);
 }
 
 .album::after {
@@ -85,18 +85,18 @@
 }
 
 :global(html[data-theme="light"]) .album::after {
-  background: rgba(46, 36, 51, 0.04);
+  background: rgba(52, 35, 118, 0.16);
 }
 
 .albumSymbol {
   position: relative;
   z-index: 1;
   font-size: 1.6em;
-  opacity: 0.85;
+  opacity: 0.92;
   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
 }
 
 :global(html[data-theme="light"]) .albumSymbol {
-  opacity: 0.40;
-  filter: drop-shadow(0 2px 4px rgba(46, 36, 51, 0.10));
+  opacity: 0.74;
+  filter: drop-shadow(0 2px 5px rgba(55, 42, 114, 0.22));
 }

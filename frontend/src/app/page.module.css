@@ -1,56 +1,35 @@
 .page {
-  position: relative;
   overflow: hidden;
-  min-height: 100svh;
-  display: flex;
-  justify-content: center;
-  padding: 24px;
   font-family: var(--font-figtree), 'Figtree', system-ui, sans-serif;
 
-  /* component-level tokens */
-  --text-primary:    #f0f0ff;
-  --text-secondary:  #a0a0c0;
-  --surface:         rgba(18, 18, 30, 0.72);
-  --surface-border:  rgba(255, 255, 255, 0.10);
-  --surface-hover:   rgba(255, 255, 255, 0.05);
-  --button-bg:       linear-gradient(135deg, #1ed760 0%, #00c3ff 100%);
-  --button-text:     #0d0d14;
-  --accent:          #1ed760;
-  --accent2:         #9747ff;
+  --text-primary: var(--foreground);
+  --text-secondary: var(--muted-foreground);
+  --surface-card: var(--surface);
+  --surface-card-border: var(--surface-border);
+  --surface-hover: rgba(255, 255, 255, 0.05);
+  --button-fill: var(--button-bg);
+  --button-text-fill: var(--button-text);
+  --accent: var(--accent-primary);
 }
 
 .page[data-theme="light"] {
-  --text-primary:    #2E2433;
-  --text-secondary:  #6B5E6D;
-  --surface:         #FFFDFC;
-  --surface-border:  #DDD6CE;
-  --surface-hover:   #F2EDE7;
-  --button-bg:       #6FA37B;
-  --button-text:     #FFFFFF;
-  --accent:          #6FA37B;
-  --accent2:         #8D7AAE;
-
-  background: var(--background);
+  --surface-hover: #efe8e0;
 }
 
-/* ── layout ── */
 .main {
-  position: relative;
-  z-index: 1;
   display: flex;
   width: 100%;
-  max-width: 960px;
   flex-direction: column;
-  gap: 18px;
-  margin: 20px 0;
+  gap: 20px;
+  padding-block: 16px 28px;
 }
 
-/* ── top bar ── */
 .topBar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  padding-inline: 2px;
 }
 
 .logo {
@@ -68,8 +47,8 @@
 }
 
 .themeToggle {
-  border: 1.5px solid var(--surface-border);
-  background: var(--surface);
+  border: 1.5px solid var(--surface-card-border);
+  background: var(--surface-card);
   color: var(--text-primary);
   border-radius: 999px;
   padding: 9px 18px;
@@ -77,23 +56,23 @@
   font-size: 0.88rem;
   cursor: none;
   backdrop-filter: blur(12px);
-  transition: transform 0.18s, filter 0.18s, border-color 0.18s;
+  transition: transform 0.18s, background 0.18s, border-color 0.18s;
   font-family: inherit;
 }
 
 .themeToggle:hover {
   transform: translateY(-2px);
   border-color: var(--accent);
-  filter: brightness(1.08);
+  background: var(--surface-hover);
 }
 
-/* ── note card ── */
 .note {
-  background: var(--surface);
-  border: 1.5px solid var(--surface-border);
+  background: var(--surface-card);
+  border: 1.5px solid var(--surface-card-border);
   border-radius: 18px;
-  padding: 18px 22px;
+  padding: 20px 24px;
   backdrop-filter: blur(14px);
+  box-shadow: var(--surface-shadow);
 }
 
 .note h3 {
@@ -107,11 +86,18 @@
   margin: 0;
   color: var(--text-secondary);
   line-height: 1.65;
-  font-size: 0.9rem;
+  font-size: 0.92rem;
+  max-width: 72ch;
 }
 
 @media (max-width: 600px) {
-  .page { padding: 14px; }
-  .main { margin: 0; gap: 12px; }
-  .topBar { flex-direction: column; align-items: flex-start; }
+  .main {
+    gap: 14px;
+    padding-block: 6px 18px;
+  }
+
+  .topBar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }

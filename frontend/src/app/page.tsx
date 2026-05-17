@@ -10,25 +10,37 @@ import styles from "./page.module.css";
 const THEME_STORAGE_KEY = "playlist-theme-v1";
 
 export default function Home() {
-  // Ambil preferensi tema dari localStorage
-  const [theme, setTheme] = useState<"dark" | "light">(() => {
+  const applyTheme = (nextTheme: "dark" | "light") => {
+    document.documentElement.setAttribute("data-theme", nextTheme);
+    localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+  };
+
+  // Ambil preferensi tema dari localStorage dan langsung sinkronkan ke html
+  const [theme, setThemeState] = useState<"dark" | "light">(() => {
     if (typeof window === "undefined") return "dark";
     const saved = localStorage.getItem(THEME_STORAGE_KEY);
-    return saved === "light" ? "light" : "dark";
+    const nextTheme = saved === "light" ? "light" : "dark";
+    applyTheme(nextTheme);
+    return nextTheme;
   });
 
-  // Simpan tema ke localStorage
+  const setTheme = (updater: "dark" | "light" | ((prev: "dark" | "light") => "dark" | "light")) => {
+    const nextTheme = typeof updater === "function" ? updater(theme) : updater;
+    applyTheme(nextTheme);
+    setThemeState(nextTheme);
+  };
+
+  // Jaga agar html theme tetap sinkron
   useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem(THEME_STORAGE_KEY, theme);
+    applyTheme(theme);
   }, [theme]);
 
   return (
-    <div className={styles.page} data-theme={theme}>
+    <div className={`app-shell ${styles.page}`} data-theme={theme}>
       <MusicBackground />
       <MusicCursorTrail />
 
-      <main className={styles.main}>
+      <main className={`app-container ${styles.main}`}>
         <header className={styles.topBar}>
           <span className={styles.logo}>
             <span className={styles.logoIcon}>🎧</span>

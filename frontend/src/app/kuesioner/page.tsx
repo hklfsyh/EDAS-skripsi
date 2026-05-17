@@ -134,11 +134,11 @@ export default function KuesionerPage() {
   };
 
   return (
-    <main className={styles.page} data-theme={theme}>
+    <main className={`app-shell ${styles.page}`} data-theme={theme}>
       <MusicBackground />
       <MusicCursorTrail />
 
-      <section className={styles.layout}>
+      <section className={`app-container ${styles.layout}`}>
         <header className={styles.topBar}>
           <Link href="/" className={styles.backLink}>← Kembali</Link>
           <button

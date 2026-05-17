@@ -11,6 +11,7 @@ import styles from "./page.module.css";
 const RESULT_STORAGE_KEY = "playlist-result-v1";
 const THEME_STORAGE_KEY = "playlist-theme-v1";
 const EXT_PREFIX = "ext-url-v2";
+const EXCLUDED_STORAGE_KEY = "playlist-excluded-ids-v1";
 
 type ContextData = {
   activity: string;
@@ -93,6 +94,11 @@ export default function HasilPage() {
   const [historyLoading, setHistoryLoading] = useState(true);
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [selectedSessionId, setSelectedSessionId] = useState<number | null>(null);
+  const [playlist, setPlaylist] = useState<PlaylistItem[]>([]);
+  const [selectedSongIds, setSelectedSongIds] = useState<Set<number>>(new Set());
+  const [excludedSongIds, setExcludedSongIds] = useState<Set<number>>(new Set());
+  const [isReplacing, setIsReplacing] = useState(false);
+  const [replaceMessage, setReplaceMessage] = useState<string | null>(null);
 
   // Ambil hasil rekomendasi dari localStorage
   useEffect(() => {
@@ -137,6 +143,28 @@ export default function HasilPage() {
   const showNlgDebug =
     process.env.NEXT_PUBLIC_NLG_DEBUG === "true" || process.env.NODE_ENV !== "production";
 
+  // Inisialisasi playlist dari hasil
+  useEffect(() => {
+    if (result) {
+      setPlaylist(result.playlist);
+    }
+  }, [result]);
+
+  // Muat daftar lagu yang sudah pernah dibuang dari localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem(EXCLUDED_STORAGE_KEY);
+    if (saved) {
+      try {
+        const ids = JSON.parse(saved) as number[];
+        if (Array.isArray(ids)) {
+          setExcludedSongIds(new Set(ids));
+        }
+      } catch {
+        // abaikan
+      }
+    }
+  }, []);
+
   if (!result) {
     return (
       <main className={styles.fallback}>
@@ -147,9 +175,10 @@ export default function HasilPage() {
     );
   }
 
-  const overDuration = Math.max(0, result.summary.totalDurationSec - result.summary.targetDurationSec);
+  const currentTotalSec = useMemo(() => playlist.reduce((sum, s) => sum + s.durationSec, 0), [playlist]);
+  const overDuration = Math.max(0, currentTotalSec - result.summary.targetDurationSec);
 
-  const fp = useMemo(() => playlistFingerprint(result.playlist), [result.playlist]);
+  const fp = useMemo(() => playlistFingerprint(playlist), [playlist]);
   const extKeySpotify = `${EXT_PREFIX}-spotify-${fp}`;
   const extKeyYoutube = `${EXT_PREFIX}-youtube-${fp}`;
 
@@ -179,7 +208,7 @@ export default function HasilPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           playlistName,
-          tracks: result.playlist.map((s) => ({ title: s.title, artist: s.artist })),
+          tracks: playlist.map((s) => ({ title: s.title, artist: s.artist })),
         }),
       });
       const data = await res.json();
@@ -212,12 +241,112 @@ export default function HasilPage() {
     setSelectedSessionId(null);
   };
 
+  const toggleSelectSong = (id: number | undefined) => {
+    if (id === undefined) return;
+    setSelectedSongIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handleBatchReplace = async () => {
+    const songsToRemove = playlist.filter((s) => s.id_song !== undefined && selectedSongIds.has(s.id_song!));
+    if (songsToRemove.length === 0) return;
+
+    setIsReplacing(true);
+    setReplaceMessage(null);
+
+    const gapDurationSec = songsToRemove.reduce((sum, s) => sum + s.durationSec, 0);
+    const removedIds = songsToRemove.map((s) => s.id_song!).filter(Boolean);
+    const currentIds = playlist.map((s) => s.id_song!).filter(Boolean);
+    const allExcluded = [...new Set([...excludedSongIds, ...removedIds])];
+
+    const answersRaw = localStorage.getItem("playlist-questionnaire-v1");
+
+    try {
+      const res = await fetch("/api/recommendations/replace", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          excludedIds: allExcluded,
+          answers: answersRaw ? JSON.parse(answersRaw) : [],
+          currentPlaylistSongIds: currentIds,
+          gapDurationSec,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || data.error) {
+        setReplaceMessage(data.error || "Gagal mencari pengganti.");
+        setIsReplacing(false);
+        return;
+      }
+
+      const replacements: PlaylistItem[] = (data.replacements ?? []).map(
+        (r: PlaylistItem, idx: number) => ({
+          ...r,
+          rank: 0,
+        }),
+      );
+
+      if (replacements.length === 0) {
+        setReplaceMessage("Tidak ada lagu pengganti yang cocok ditemukan.");
+        setIsReplacing(false);
+        return;
+      }
+
+      const keptPlaylist = playlist.filter(
+        (s) => !(s.id_song !== undefined && selectedSongIds.has(s.id_song)),
+      );
+
+      const merged = [...keptPlaylist, ...replacements].sort(
+        (a, b) => b.appraisalScore - a.appraisalScore,
+      );
+
+      const reRanked = merged.map((item, idx) => ({ ...item, rank: idx + 1 }));
+
+      const newTotalSec = reRanked.reduce((sum, s) => sum + s.durationSec, 0);
+      const updatedResult: ResultData = {
+        ...result!,
+        playlist: reRanked,
+        summary: {
+          ...result!.summary,
+          totalDurationSec: newTotalSec,
+          selectedSongs: reRanked.length,
+        },
+      };
+
+      localStorage.setItem(RESULT_STORAGE_KEY, JSON.stringify(updatedResult));
+      localStorage.setItem(
+        EXCLUDED_STORAGE_KEY,
+        JSON.stringify(allExcluded),
+      );
+
+      setPlaylist(reRanked);
+      setExcludedSongIds(new Set(allExcluded));
+      setSelectedSongIds(new Set());
+      setReplaceMessage(
+        `${songsToRemove.length} lagu diganti dengan ${replacements.length} lagu baru (${(data.replacedDurationSec / 60).toFixed(0)} menit).`,
+      );
+    } catch {
+      setReplaceMessage("Gagal memproses penggantian lagu.");
+    } finally {
+      setIsReplacing(false);
+    }
+  };
+
   return (
-    <main className={styles.page}>
+    <main className={`app-shell ${styles.page}`}>
       <MusicBackground />
       <MusicCursorTrail />
 
-      <section className={styles.layout}>
+      <section className={`app-container ${styles.layout}`}>
         <header className={styles.topBar}>
           <Link href="/" className={styles.backLink}>← Kembali ke beranda</Link>
           <span className={styles.badge}>Hasil Rekomendasi</span>
@@ -231,27 +360,72 @@ export default function HasilPage() {
 
           <div className={styles.metrics}>
             <span>Target: {formatDuration(result.summary.targetDurationSec)}</span>
-            <span>Total: {formatDuration(result.summary.totalDurationSec)}</span>
-            <span>Lagu: {result.summary.selectedSongs}</span>
+            <span>Total: {formatDuration(currentTotalSec)}</span>
+            <span>Lagu: {playlist.length}</span>
             <span>Kelebihan: {formatDuration(overDuration)}</span>
           </div>
         </section>
 
         <section className={styles.card}>
           <h2>Top playlist (ranking EDAS)</h2>
+          {selectedSongIds.size > 0 && (
+            <div className={styles.batchBar}>
+              <span className={styles.batchInfo}>
+                {selectedSongIds.size} lagu dipilih
+              </span>
+              <button
+                type="button"
+                className={styles.batchButton}
+                onClick={handleBatchReplace}
+                disabled={isReplacing}
+              >
+                {isReplacing && <span className={styles.spinner} />}
+                {isReplacing ? "Memproses..." : "Ganti lagu terpilih"}
+              </button>
+            </div>
+          )}
+          {replaceMessage && (
+            <p className={styles.replaceMessage}>{replaceMessage}</p>
+          )}
           <ul className={styles.songList}>
-            {result.playlist.map((song) => (
-              <li key={`${song.rank}-${song.title}`}>
-                <div>
-                  <strong>#{song.rank} {song.title}</strong>
-                  <p>{song.artist}</p>
-                </div>
-                <div className={styles.songMeta}>
-                  <span>{formatDuration(song.durationSec)}</span>
-                  <span>AS {song.appraisalScore.toFixed(4)}</span>
-                </div>
-              </li>
-            ))}
+            {playlist.map((song) => {
+              const songId = song.id_song;
+              const isSelected = songId !== undefined && selectedSongIds.has(songId);
+              return (
+                <li
+                  key={`${song.rank}-${song.title}-${songId ?? song.durationSec}`}
+                  className={isSelected ? styles.songSelected : undefined}
+                  onClick={() => {
+                    if (!isReplacing && songId !== undefined) {
+                      toggleSelectSong(songId);
+                    }
+                  }}
+                  role="option"
+                  aria-selected={isSelected}
+                >
+                  <div className={styles.songCheck}>
+                    <input
+                      type="checkbox"
+                      className={styles.checkbox}
+                      checked={isSelected}
+                      onChange={() => {
+                        if (!isReplacing) toggleSelectSong(songId);
+                      }}
+                      disabled={isReplacing}
+                      id={`chk-${song.rank}-${songId}`}
+                    />
+                  </div>
+                  <div>
+                    <strong>#{song.rank} {song.title}</strong>
+                    <p>{song.artist}</p>
+                  </div>
+                  <div className={styles.songMeta}>
+                    <span>{formatDuration(song.durationSec)}</span>
+                    <span>AS {song.appraisalScore.toFixed(4)}</span>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         </section>
 

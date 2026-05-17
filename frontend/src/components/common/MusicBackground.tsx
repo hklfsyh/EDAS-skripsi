@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, CSSProperties } from "react";
+import { CSSProperties, useEffect, useRef } from "react";
 import styles from "./MusicBackground.module.css";
 
 const ALBUMS_DARK = [
@@ -10,41 +10,41 @@ const ALBUMS_DARK = [
   ["#ffb800", "#ff5f5f", "♬", 0.35],
   ["#00c3ff", "#9747ff", "♩", 0.08],
   ["#ff5f5f", "#ff2d78", "🎶", 0.22],
-  ["#b5ff2d", "#1ed760", "♪", 0.30],
+  ["#b5ff2d", "#1ed760", "♪", 0.3],
   ["#ff2d78", "#9747ff", "♫", 0.14],
-  ["#00c3ff", "#1ed760", "♬", 0.40],
-  ["#ffb800", "#b5ff2d", "♩", 0.20],
+  ["#00c3ff", "#1ed760", "♬", 0.4],
+  ["#ffb800", "#b5ff2d", "♩", 0.2],
   ["#9747ff", "#ff5f5f", "🎵", 0.09],
   ["#1ed760", "#00c3ff", "♪", 0.33],
 ] as const;
 
 const ALBUMS_LIGHT = [
-  ["#C9A56A", "#D8A0A8", "♪", 0.06],
-  ["#8FAFD1", "#C9A56A", "♫", 0.10],
-  ["#D8A0A8", "#8FAFD1", "🎵", 0.08],
-  ["#C9A56A", "#8FAFD1", "♬", 0.12],
-  ["#6FA37B", "#C9A56A", "♩", 0.06],
-  ["#D8A0A8", "#C9A56A", "🎶", 0.09],
-  ["#8FAFD1", "#D8A0A8", "♪", 0.10],
-  ["#C9A56A", "#6FA37B", "♫", 0.07],
-  ["#8FAFD1", "#C9A56A", "♬", 0.11],
-  ["#D8A0A8", "#8FAFD1", "♩", 0.08],
-  ["#6FA37B", "#D8A0A8", "🎵", 0.06],
-  ["#C9A56A", "#8FAFD1", "♪", 0.10],
+  ["#ff8a1d", "#ff4f81", "♪", 0.08],
+  ["#00a6ff", "#8b5cf6", "♫", 0.12],
+  ["#15c96f", "#00b8ff", "🎵", 0.1],
+  ["#ffb300", "#ff6a47", "♬", 0.14],
+  ["#8b5cf6", "#00a6ff", "♩", 0.08],
+  ["#ff5a9d", "#ff8a1d", "🎶", 0.11],
+  ["#00b8ff", "#15c96f", "♪", 0.12],
+  ["#ff8a1d", "#8b5cf6", "♫", 0.09],
+  ["#00a6ff", "#ffb300", "♬", 0.13],
+  ["#ff4f81", "#00b8ff", "♩", 0.1],
+  ["#15c96f", "#ff8a1d", "🎵", 0.08],
+  ["#8b5cf6", "#ff5a9d", "♪", 0.12],
 ] as const;
 
 const BLOBS_DARK = [
-  { depth: "0.4", bg: "radial-gradient(ellipse 70% 60% at center, rgba(151,71,255,0.30), transparent 65%)", w: "70%", h: "60%", l: "15%", t: "20%" },
-  { depth: "0.3", bg: "radial-gradient(ellipse 60% 55% at center, rgba(0,195,255,0.22), transparent 60%)", w: "60%", h: "55%", r: "5%", b: "5%" },
-  { depth: "0.25", bg: "radial-gradient(ellipse 50% 50% at center, rgba(255,45,120,0.18), transparent 55%)", w: "50%", h: "50%", l: "30%", t: "40%" },
-  { depth: "0.35", bg: "radial-gradient(ellipse 55% 45% at center, rgba(30,215,96,0.15), transparent 55%)", w: "55%", h: "45%", r: "20%", t: "15%" },
+  { depth: "0.4", bg: "radial-gradient(ellipse 70% 60% at center, rgba(151,71,255,0.34), transparent 65%)", w: "70%", h: "60%", l: "15%", t: "20%" },
+  { depth: "0.3", bg: "radial-gradient(ellipse 60% 55% at center, rgba(0,195,255,0.26), transparent 60%)", w: "60%", h: "55%", r: "5%", b: "5%" },
+  { depth: "0.25", bg: "radial-gradient(ellipse 50% 50% at center, rgba(255,45,120,0.22), transparent 55%)", w: "50%", h: "50%", l: "30%", t: "40%" },
+  { depth: "0.35", bg: "radial-gradient(ellipse 55% 45% at center, rgba(30,215,96,0.18), transparent 55%)", w: "55%", h: "45%", r: "20%", t: "15%" },
 ];
 
 const BLOBS_LIGHT = [
-  { depth: "0.4", bg: "radial-gradient(ellipse 70% 60% at center, rgba(111,163,123,0.06), transparent 65%)", w: "70%", h: "60%", l: "15%", t: "20%" },
-  { depth: "0.3", bg: "radial-gradient(ellipse 60% 55% at center, rgba(141,122,174,0.05), transparent 60%)", w: "60%", h: "55%", r: "5%", b: "5%" },
-  { depth: "0.25", bg: "radial-gradient(ellipse 50% 50% at center, rgba(216,160,168,0.04), transparent 55%)", w: "50%", h: "50%", l: "30%", t: "40%" },
-  { depth: "0.35", bg: "radial-gradient(ellipse 55% 45% at center, rgba(143,175,209,0.04), transparent 55%)", w: "55%", h: "45%", r: "20%", t: "15%" },
+  { depth: "0.4", bg: "radial-gradient(ellipse 70% 60% at center, rgba(255,138,29,0.26), transparent 65%)", w: "70%", h: "60%", l: "15%", t: "20%" },
+  { depth: "0.3", bg: "radial-gradient(ellipse 60% 55% at center, rgba(139,92,246,0.2), transparent 60%)", w: "60%", h: "55%", r: "5%", b: "5%" },
+  { depth: "0.25", bg: "radial-gradient(ellipse 50% 50% at center, rgba(255,90,157,0.18), transparent 55%)", w: "50%", h: "50%", l: "30%", t: "40%" },
+  { depth: "0.35", bg: "radial-gradient(ellipse 55% 45% at center, rgba(0,166,255,0.2), transparent 55%)", w: "55%", h: "45%", r: "20%", t: "15%" },
 ];
 
 function sr(seed: number, off = 0): number {
@@ -71,8 +71,8 @@ export function MusicBackground() {
     const blobs = Array.from(container.querySelectorAll<HTMLElement>("[data-blob]"));
     startTime.current = performance.now();
 
-    const onMove = (e: MouseEvent) => {
-      mouse.current = { x: e.clientX / window.innerWidth, y: e.clientY / window.innerHeight };
+    const onMove = (event: MouseEvent) => {
+      mouse.current = { x: event.clientX / window.innerWidth, y: event.clientY / window.innerHeight };
     };
 
     const tick = () => {
@@ -104,6 +104,7 @@ export function MusicBackground() {
 
     raf.current = requestAnimationFrame(tick);
     window.addEventListener("mousemove", onMove);
+
     return () => {
       window.removeEventListener("mousemove", onMove);
       cancelAnimationFrame(raf.current);
@@ -115,9 +116,9 @@ export function MusicBackground() {
 
   return (
     <div ref={containerRef} className={styles.root} aria-hidden>
-      {blobs.map((blob, i) => (
+      {blobs.map((blob, index) => (
         <div
-          key={i}
+          key={index}
           className={styles.blob}
           data-blob
           data-blob-depth={blob.depth}
@@ -134,19 +135,19 @@ export function MusicBackground() {
       ))}
       <div className={styles.grain} />
       <div className={styles.eqBars}>
-        {Array.from({ length: 20 }, (_, i) => (
-          <span key={i} className={styles.eqBar} style={{ "--i": i } as CSSProperties} />
+        {Array.from({ length: 20 }, (_, index) => (
+          <span key={index} className={styles.eqBar} style={{ "--i": index } as CSSProperties} />
         ))}
       </div>
-      {albums.map(([from, to, symbol, depth], i) => {
-        const bx = 3 + sr(i, 1) * 92;
-        const by = 2 + sr(i, 2) * 90;
-        const size = 52 + sr(i, 3) * 64;
-        const floatOff = sr(i, 7) * Math.PI * 2;
+      {albums.map(([from, to, symbol, depth], index) => {
+        const bx = 3 + sr(index, 1) * 92;
+        const by = 2 + sr(index, 2) * 90;
+        const size = 52 + sr(index, 3) * 64;
+        const floatOff = sr(index, 7) * Math.PI * 2;
 
         return (
           <div
-            key={i}
+            key={index}
             data-depth={depth}
             data-float-off={floatOff}
             className={styles.album}

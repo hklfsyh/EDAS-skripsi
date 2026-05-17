@@ -462,11 +462,11 @@ export default function ProsesPage() {
   }, [router, steps]);
 
   return (
-    <main className={styles.page}>
+    <main className={`app-shell ${styles.page}`}>
       <MusicBackground />
       <MusicCursorTrail />
 
-      <section className={styles.card}>
+      <section className={`app-container ${styles.card}`}>
         <h1>Menyusun playlist terbaik untukmu</h1>
         <p>
           Sistem sedang menganalisis preferensi musikmu, memeringkat lagu dengan metode EDAS, dan menyiapkan penjelasan rekomendasi.
