@@ -93,3 +93,21 @@ export async function refreshSpotifyToken(refreshToken: string): Promise<Spotify
 
   return (await response.json()) as SpotifyTokenResponse;
 }
+
+// === PROJECT ACCOUNT (server-side, kalskripdas@gmail.com) ===
+
+// Baca refresh token project dari env
+export function getSpotifyProjectRefreshToken(): string {
+  const token = process.env.SPOTIFY_PROJECT_REFRESH_TOKEN ?? "";
+  if (!token) {
+    throw new Error("SPOTIFY_PROJECT_REFRESH_TOKEN belum diisi di environment.");
+  }
+  return token;
+}
+
+// Dapatkan access token valid untuk akun project
+export async function getSpotifyProjectAccessToken(): Promise<string> {
+  const refreshToken = getSpotifyProjectRefreshToken();
+  const refreshed = await refreshSpotifyToken(refreshToken);
+  return refreshed.access_token;
+}

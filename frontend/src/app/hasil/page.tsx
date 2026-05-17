@@ -9,7 +9,7 @@ import { getOrCreateClientId } from "@/lib/clientId";
 import styles from "./page.module.css";
 
 const RESULT_STORAGE_KEY = "playlist-result-v1";
-const EVALUATION_STORAGE_KEY = "playlist-evaluation-v1";
+
 const THEME_STORAGE_KEY = "playlist-theme-v1";
 
 type ContextData = {
@@ -72,45 +72,8 @@ function formatDuration(sec: number): string {
 
 export default function HasilPage() {
   const router = useRouter();
-  const [usability, setUsability] = useState(4);
-  const [understanding, setUnderstanding] = useState(4);
-  const [comment, setComment] = useState("");
-  const [spotifyConnected, setSpotifyConnected] = useState(false);
   const [spotifyLoading, setSpotifyLoading] = useState(false);
-  const [spotifyMessage, setSpotifyMessage] = useState<string | null>(() => {
-    const params = new URLSearchParams(globalThis.location?.search ?? "");
-    const spotifyStatus = params.get("spotify");
-    const reason = params.get("reason");
-
-    if (spotifyStatus === "success") {
-      return "Spotify berhasil terhubung.";
-    }
-
-    if (spotifyStatus === "error") {
-      const reasonText = reason ? ` (${reason})` : "";
-      return `Gagal menghubungkan Spotify${reasonText}.`;
-    }
-
-    return null;
-  });
-  const [youtubeConnected, setYoutubeConnected] = useState(false);
   const [youtubeLoading, setYoutubeLoading] = useState(false);
-  const [youtubeMessage, setYoutubeMessage] = useState<string | null>(() => {
-    const params = new URLSearchParams(globalThis.location?.search ?? "");
-    const youtubeStatus = params.get("youtube");
-    const youtubeReason = params.get("yt_reason");
-
-    if (youtubeStatus === "success") {
-      return "YouTube berhasil terhubung.";
-    }
-
-    if (youtubeStatus === "error") {
-      const reasonText = youtubeReason ? ` (${youtubeReason})` : "";
-      return `Gagal menghubungkan YouTube${reasonText}.`;
-    }
-
-    return null;
-  });
   const [historyItems, setHistoryItems] = useState<HistorySession[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [historyError, setHistoryError] = useState<string | null>(null);
@@ -141,25 +104,8 @@ export default function HasilPage() {
       });
   }, []);
 
-  useEffect(() => {
-    void fetch("/api/spotify/status")
-      .then((response) => response.json() as Promise<{ connected: boolean }>)
-      .then((payload) => {
-        setSpotifyConnected(Boolean(payload.connected));
-      })
-      .catch(() => {
-        setSpotifyConnected(false);
-      });
-
-    void fetch("/api/youtube/status")
-      .then((response) => response.json() as Promise<{ connected: boolean }>)
-      .then((payload) => {
-        setYoutubeConnected(Boolean(payload.connected));
-      })
-      .catch(() => {
-        setYoutubeConnected(false);
-      });
-  }, []);
+  // Status koneksi Spotify/YouTube tidak perlu dicek —
+  // server menggunakan token project akun tetap (kalskripdas@gmail.com).
 
   const result = useMemo(() => {
     if (globalThis.window === undefined) return null;
@@ -188,121 +134,56 @@ export default function HasilPage() {
 
   const overDuration = Math.max(0, result.summary.totalDurationSec - result.summary.targetDurationSec);
 
-  const handleConnectSpotify = () => {
-    globalThis.location.href = "/api/spotify/login";
-  };
-
-  // Export playlist ke Spotify
+  // Export playlist ke Spotify via project account server-side
   const handleExportSpotify = async () => {
     setSpotifyLoading(true);
-    setSpotifyMessage("Sedang membuat playlist di Spotify...");
-
     try {
-      const exportResponse = await fetch("/api/spotify/export", {
+      const res = await fetch("/api/spotify/project-export", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          playlistName: `EDAS Dummy ${new Date().toLocaleDateString("id-ID")}`,
-          tracks: result.playlist.map((song) => ({
-            title: song.title,
-            artist: song.artist,
-          })),
+          tracks: result.playlist.map((s) => ({ title: s.title, artist: s.artist })),
         }),
       });
-
-      const payload = (await exportResponse.json()) as {
-        playlistUrl?: string | null;
-        totalAdded?: number;
-        totalRequested?: number;
-        error?: string;
-      };
-
-      if (!exportResponse.ok) {
-        throw new Error(payload.error ?? "Export ke Spotify gagal.");
-      }
-
-      const added = payload.totalAdded ?? 0;
-      const requested = payload.totalRequested ?? 0;
-
-      if (payload.playlistUrl) {
-        setSpotifyMessage(`Berhasil! ${added}/${requested} lagu ditambahkan. Membuka playlist Spotify...`);
-        globalThis.open(payload.playlistUrl, "_blank", "noopener,noreferrer");
+      const data = await res.json();
+      if (data.status === "success" && data.publicUrl) {
+        globalThis.open(data.publicUrl, "_blank", "noopener,noreferrer");
       } else {
-        setSpotifyMessage(`Berhasil membuat playlist. Lagu ditambahkan: ${added}/${requested}.`);
+        alert(data.error || "Gagal export ke Spotify.");
       }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Export ke Spotify gagal.";
-      setSpotifyMessage(message);
+    } catch {
+      alert("Gagal export ke Spotify.");
     } finally {
       setSpotifyLoading(false);
     }
   };
 
-  const handleConnectYoutube = () => {
-    globalThis.location.href = "/api/youtube/login";
-  };
-
-  // Export playlist ke YouTube
+  // Export playlist ke YouTube via project account server-side
   const handleExportYoutube = async () => {
     setYoutubeLoading(true);
-    setYoutubeMessage("Sedang membuat playlist di YouTube...");
-
     try {
-      const exportResponse = await fetch("/api/youtube/export", {
+      const res = await fetch("/api/youtube/project-export", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          playlistName: `EDAS Dummy ${new Date().toLocaleDateString("id-ID")}`,
-          tracks: result.playlist.map((song) => ({
-            title: song.title,
-            artist: song.artist,
-          })),
+          tracks: result.playlist.map((s) => ({ title: s.title, artist: s.artist })),
         }),
       });
-
-      const payload = (await exportResponse.json()) as {
-        playlistUrl?: string | null;
-        totalAdded?: number;
-        totalRequested?: number;
-        error?: string;
-      };
-
-      if (!exportResponse.ok) {
-        throw new Error(payload.error ?? "Export ke YouTube gagal.");
-      }
-
-      const added = payload.totalAdded ?? 0;
-      const requested = payload.totalRequested ?? 0;
-
-      if (payload.playlistUrl) {
-        setYoutubeMessage(`Berhasil! ${added}/${requested} video ditambahkan. Membuka playlist YouTube...`);
-        globalThis.open(payload.playlistUrl, "_blank", "noopener,noreferrer");
+      const data = await res.json();
+      if (data.status === "success" && data.publicUrl) {
+        globalThis.open(data.publicUrl, "_blank", "noopener,noreferrer");
       } else {
-        setYoutubeMessage(`Berhasil membuat playlist YouTube. Video ditambahkan: ${added}/${requested}.`);
+        alert(data.error || "Gagal export ke YouTube.");
       }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Export ke YouTube gagal.";
-      setYoutubeMessage(message);
+    } catch {
+      alert("Gagal export ke YouTube.");
     } finally {
       setYoutubeLoading(false);
     }
   };
 
-  const handleSubmit: React.ComponentProps<"form">["onSubmit"] = (event) => {
-    event.preventDefault();
-    const payload = {
-      usability,
-      understanding,
-      comment,
-      createdAt: new Date().toISOString(),
-    };
-
-    localStorage.setItem(EVALUATION_STORAGE_KEY, JSON.stringify(payload));
-    router.push("/selesai");
+  const handleSelesai = () => {
+    router.push("/");
   };
 
   const handleOpenHistory = (sessionId: number) => {
@@ -454,104 +335,48 @@ export default function HasilPage() {
         )}
 
         <section className={styles.card}>
-          <h2>Putar di platform eksternal (opsional)</h2>
-          <p className={styles.experimentText}>
-            Fitur ini membantu membuka playlist di platform eksternal tanpa mengubah alur utama skripsi.
-          </p>
+          <h2>Buka playlist di platform eksternal</h2>
 
           <div className={styles.platformBlock}>
             <h3>Spotify</h3>
             <div className={styles.experimentActions}>
-              {spotifyConnected ? (
-                <button
-                  type="button"
-                  className={styles.primaryButton}
-                  onClick={handleExportSpotify}
-                  disabled={spotifyLoading}
-                >
-                  {spotifyLoading ? "Memproses..." : "Buka playlist di Spotify"}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className={styles.secondaryButton}
-                  onClick={handleConnectSpotify}
-                >
-                  Aktifkan akses Spotify
-                </button>
-              )}
+              <button
+                type="button"
+                className={styles.primaryButton}
+                onClick={handleExportSpotify}
+                disabled={spotifyLoading}
+              >
+                {spotifyLoading ? "Membuka playlist..." : "Buka playlist di Spotify"}
+              </button>
             </div>
-            {spotifyMessage && (
-              <p className={styles.experimentMessage}>{spotifyMessage}</p>
-            )}
           </div>
 
           <div className={styles.platformBlock}>
             <h3>YouTube</h3>
             <div className={styles.experimentActions}>
-              {youtubeConnected ? (
-                <button
-                  type="button"
-                  className={styles.primaryButton}
-                  onClick={handleExportYoutube}
-                  disabled={youtubeLoading}
-                >
-                  {youtubeLoading ? "Memproses..." : "Buka playlist di YouTube"}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className={styles.secondaryButton}
-                  onClick={handleConnectYoutube}
-                >
-                  Aktifkan akses YouTube
-                </button>
-              )}
+              <button
+                type="button"
+                className={styles.primaryButton}
+                onClick={handleExportYoutube}
+                disabled={youtubeLoading}
+              >
+                {youtubeLoading ? "Membuka playlist..." : "Buka playlist di YouTube"}
+              </button>
             </div>
-            {youtubeMessage && (
-              <p className={styles.experimentMessage}>{youtubeMessage}</p>
-            )}
           </div>
         </section>
 
         <section className={styles.card}>
-          <h2>Evaluasi singkat</h2>
-          <form className={styles.form} onSubmit={handleSubmit}>
-            <label>
-              Seberapa mudah UI digunakan? ({usability}/5)
-              <input
-                type="range"
-                min={1}
-                max={5}
-                value={usability}
-                onChange={(e) => setUsability(Number(e.target.value))}
-              />
-            </label>
-
-            <label>
-              Seberapa jelas penjelasan rekomendasinya? ({understanding}/5)
-              <input
-                type="range"
-                min={1}
-                max={5}
-                value={understanding}
-                onChange={(e) => setUnderstanding(Number(e.target.value))}
-              />
-            </label>
-
-            <label htmlFor="evaluation-comment">
-              Komentar tambahan
-            </label>
-            <textarea
-              id="evaluation-comment"
-              rows={3}
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              placeholder="Tulis masukan untuk iterasi berikutnya..."
-            />
-
-            <button type="submit">Selesai & Simpan Evaluasi</button>
-          </form>
+          <h2>Selesai</h2>
+          <p>Kembali ke beranda untuk memulai rekomendasi baru.</p>
+          <button
+            type="button"
+            className={styles.primaryButton}
+            onClick={handleSelesai}
+            style={{ marginTop: 8 }}
+          >
+            Kembali ke beranda
+          </button>
         </section>
       </section>
     </main>

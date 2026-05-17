@@ -153,3 +153,21 @@ export async function refreshYouTubeToken(refreshToken: string): Promise<YouTube
 
   return (await response.json()) as YouTubeTokenResponse;
 }
+
+// === PROJECT ACCOUNT (server-side, kalskripdas@gmail.com) ===
+
+// Baca refresh token project dari env
+export function getYouTubeProjectRefreshToken(): string {
+  const token = (process.env.YOUTUBE_PROJECT_REFRESH_TOKEN ?? "").trim();
+  if (!token) {
+    throw new Error("YOUTUBE_PROJECT_REFRESH_TOKEN belum diisi di environment.");
+  }
+  return token;
+}
+
+// Dapatkan access token valid untuk akun project
+export async function getYouTubeProjectAccessToken(): Promise<string> {
+  const refreshToken = getYouTubeProjectRefreshToken();
+  const refreshed = await refreshYouTubeToken(refreshToken);
+  return refreshed.access_token;
+}

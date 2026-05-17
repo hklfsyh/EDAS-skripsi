@@ -4,6 +4,7 @@ import {
   YOUTUBE_ACCESS_COOKIE,
   YOUTUBE_EXPIRES_COOKIE,
   YOUTUBE_REFRESH_COOKIE,
+  getYouTubeProjectAccessToken,
 } from "@/lib/youtube";
 import { readCookie } from "@/server/utils/cookies";
 
@@ -295,5 +296,113 @@ export async function handleYouTubeExportPost(request: Request) {
     }
 
     return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+// ============================================================
+// PROJECT ACCOUNT EXPORT (server-side, kalskripdas@gmail.com)
+// Tidak menggunakan cookie/user token — token dari env.
+// ============================================================
+
+function formatPlaylistTitle(): string {
+  const now = new Date();
+  const dd = String(now.getDate()).padStart(2, "0");
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const yyyy = now.getFullYear();
+  return `Rekomendasi Playlist - ${dd}/${mm}/${yyyy}`;
+}
+
+// Buat playlist publik di akun project YouTube
+async function youtubeCreatePublicPlaylist(playlistName: string, accessToken: string): Promise<{ id: string }> {
+  const response = await fetch("https://www.googleapis.com/youtube/v3/playlists?part=snippet,status", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      snippet: {
+        title: playlistName,
+        description: "Playlist rekomendasi hasil metode EDAS.",
+      },
+      status: {
+        privacyStatus: "public",
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const detail = await getResponseTextSafe(response);
+    throw new Error(`youtube_create_playlist_failed:${response.status}:${detail}`);
+  }
+
+  return (await response.json()) as { id: string };
+}
+
+export async function handleYouTubeProjectExport(request: Request): Promise<Response> {
+  try {
+    const body = (await request.json()) as ExportRequestBody;
+    if (!Array.isArray(body.tracks) || body.tracks.length === 0) {
+      return NextResponse.json(
+        { status: "error", platform: "youtube", title: null, publicUrl: null, error: "Payload export YouTube tidak valid." },
+        { status: 400 },
+      );
+    }
+
+    const sanitizedTracks = body.tracks
+      .filter((t) => t?.title?.trim() && t?.artist?.trim())
+      .slice(0, MAX_EXPORT_TRACKS)
+      .map((t) => ({ title: t.title.trim(), artist: t.artist.trim() }));
+
+    if (sanitizedTracks.length === 0) {
+      return NextResponse.json(
+        { status: "error", platform: "youtube", title: null, publicUrl: null, error: "Daftar lagu kosong setelah validasi." },
+        { status: 400 },
+      );
+    }
+
+    const accessToken = await getYouTubeProjectAccessToken();
+    const playlistName = body.playlistName?.trim() || formatPlaylistTitle();
+    const playlist = await youtubeCreatePublicPlaylist(playlistName, accessToken);
+
+    const { foundVideoIds } = await resolveVideoIds(sanitizedTracks, accessToken);
+
+    const addResult = foundVideoIds.length > 0
+      ? await youtubeAddVideos(playlist.id, foundVideoIds, accessToken)
+      : { addedVideoIds: [] as string[], failedVideoIds: [] as AddVideoFailure[] };
+    const { addedVideoIds } = addResult;
+
+    const publicUrl = `https://www.youtube.com/playlist?list=${playlist.id}`;
+
+    return NextResponse.json({
+      status: "success",
+      platform: "youtube",
+      title: playlistName,
+      publicUrl,
+      error: null,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "unknown_error";
+
+    const youtubeStatusMatch = /youtube_[^:]+_failed:(\d+):/.exec(message);
+    if (youtubeStatusMatch) {
+      const status = Number(youtubeStatusMatch[1]);
+      return NextResponse.json(
+        { status: "error", platform: "youtube", title: null, publicUrl: null, error: message },
+        { status: Number.isFinite(status) ? status : 500 },
+      );
+    }
+
+    if (message.includes("YOUTUBE_PROJECT_REFRESH_TOKEN")) {
+      return NextResponse.json(
+        { status: "error", platform: "youtube", title: null, publicUrl: null, error: "Token project YouTube belum dikonfigurasi." },
+        { status: 500 },
+      );
+    }
+
+    return NextResponse.json(
+      { status: "error", platform: "youtube", title: null, publicUrl: null, error: message },
+      { status: 500 },
+    );
   }
 }

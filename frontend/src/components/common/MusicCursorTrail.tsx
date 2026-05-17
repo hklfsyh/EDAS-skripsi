@@ -8,9 +8,9 @@ type Particle = {
   y: number;
   vx: number;
   vy: number;
-  life: number;       // 0..1
-  maxLife: number;    // ms
-  born: number;       // timestamp
+  life: number;
+  maxLife: number;
+  born: number;
   type: "dot" | "ring" | "note" | "spark";
   color: string;
   size: number;
@@ -34,12 +34,33 @@ export function MusicCursorTrail() {
   const isDrawing = useRef(false);
 
   useEffect(() => {
-    // Skip heavy cursor effects for reduced-motion users
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (prefersReducedMotion) return;
+
+    const dot = document.createElement("div");
+    dot.id = "custom-cursor-dot";
+    dot.style.cssText = [
+      "position:fixed",
+      "top:0",
+      "left:0",
+      "width:10px",
+      "height:10px",
+      "border-radius:50%",
+      "background:#1ed760",
+      "box-shadow:0 0 14px 4px rgba(30,215,96,.7)",
+      "pointer-events:none",
+      "z-index:99999",
+      "transform:translate(-50%,-50%)",
+      "will-change:transform",
+    ].join(";") + ";";
+    document.body.appendChild(dot);
+
+    const updateDot = (mx: number, my: number) => {
+      dot.style.transform = `translate(${mx}px, ${my}px) translate(-50%, -50%)`;
+    };
 
     const canvas = canvasRef.current!;
     const ctx = canvas.getContext("2d")!;
+
     let W = window.innerWidth, H = window.innerHeight;
 
     const resize = () => {
@@ -49,18 +70,6 @@ export function MusicCursorTrail() {
     resize();
     window.addEventListener("resize", resize);
 
-    /* cursor dot element */
-    const dot = document.createElement("div");
-    dot.style.cssText = `
-      position:fixed;top:0;left:0;width:10px;height:10px;
-      border-radius:50%;background:#1ed760;
-      box-shadow:0 0 14px 4px rgba(30,215,96,.7);
-      pointer-events:none;z-index:99999;
-      transition:background 0.15s,box-shadow 0.15s;
-      transform:translate(-50%,-50%);
-    `;
-    document.body.appendChild(dot);
-
     const onMove = (e: MouseEvent) => {
       const mx = e.clientX, my = e.clientY;
       const dx = mx - mouse.current.x, dy = my - mouse.current.y;
@@ -69,10 +78,7 @@ export function MusicCursorTrail() {
       mouse.current.py = mouse.current.y;
       mouse.current.x = mx; mouse.current.y = my;
 
-      dot.style.left = mx + "px";
-      dot.style.top = my + "px";
-
-      // Spawn particles based on cursor velocity
+      updateDot(mx, my);
       spawnParticles(mx, my, mouse.current.speed);
 
       if (!isDrawing.current) {
@@ -85,7 +91,6 @@ export function MusicCursorTrail() {
       const now = performance.now();
       const color = COLORS[Math.floor(Math.random() * COLORS.length)];
 
-      // always spawn a trailing dot
       particles.current.push({
         id: nextId++, x, y,
         vx: (Math.random() - 0.5) * 1.5,
@@ -94,7 +99,8 @@ export function MusicCursorTrail() {
         type: "dot", color, size: 4 + Math.random() * 4,
       });
 
-      // medium speed → note
+      if (prefersReducedMotion) return;
+
       if (speed > 8 && Math.random() < 0.35) {
         particles.current.push({
           id: nextId++, x: x + (Math.random()-0.5)*24, y: y + (Math.random()-0.5)*24,
@@ -106,7 +112,6 @@ export function MusicCursorTrail() {
         });
       }
 
-      // fast → expanding ring
       if (speed > 18 && Math.random() < 0.4) {
         particles.current.push({
           id: nextId++, x, y,
@@ -116,7 +121,6 @@ export function MusicCursorTrail() {
         });
       }
 
-      // very fast → sparks
       if (speed > 30) {
         const count = 2 + Math.floor(speed / 18);
         for (let k = 0; k < count; k++) {
@@ -132,13 +136,11 @@ export function MusicCursorTrail() {
         }
       }
 
-      // keep array sane
       if (particles.current.length > 300) {
         particles.current = particles.current.slice(-300);
       }
     }
 
-    // Render particles only while there is active trail
     function draw() {
       const now = performance.now();
       ctx.clearRect(0, 0, W, H);
@@ -152,7 +154,6 @@ export function MusicCursorTrail() {
 
         switch (p.type) {
           case "dot": {
-            // slight gravity
             p.vy += 0.04;
             p.x += p.vx; p.y += p.vy;
             ctx.save();
@@ -229,7 +230,7 @@ export function MusicCursorTrail() {
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("resize", resize);
       cancelAnimationFrame(raf.current);
-      dot.remove();
+      if (dot.parentNode) dot.remove();
     };
   }, []);
 

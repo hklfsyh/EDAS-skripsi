@@ -4,6 +4,7 @@ import {
   SPOTIFY_ACCESS_COOKIE,
   SPOTIFY_EXPIRES_COOKIE,
   SPOTIFY_REFRESH_COOKIE,
+  getSpotifyProjectAccessToken,
 } from "@/lib/spotify";
 import { readCookie } from "@/server/utils/cookies";
 
@@ -317,5 +318,117 @@ export async function handleSpotifyExportPost(request: Request) {
     }
 
     return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+// ============================================================
+// PROJECT ACCOUNT EXPORT (server-side, kalskripdas@gmail.com)
+// Tidak menggunakan cookie/user token — token dari env.
+// ============================================================
+
+function formatPlaylistTitle(): string {
+  const now = new Date();
+  const dd = String(now.getDate()).padStart(2, "0");
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const yyyy = now.getFullYear();
+  return `Rekomendasi Playlist - ${dd}/${mm}/${yyyy}`;
+}
+
+export type ProjectExportResponse = {
+  status: "success" | "error";
+  platform: "spotify" | "youtube";
+  title: string | null;
+  publicUrl: string | null;
+  error: string | null;
+};
+
+// Buat playlist publik di akun project Spotify
+async function spotifyCreatePublicPlaylist(playlistName: string, accessToken: string): Promise<{ id: string; external_urls?: { spotify?: string } }> {
+  const response = await fetch("https://api.spotify.com/v1/me/playlists", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      name: playlistName,
+      description: "Playlist rekomendasi hasil metode EDAS.",
+      public: true,
+    }),
+  });
+
+  if (!response.ok) {
+    const detail = await getResponseTextSafe(response);
+    throw new Error(`spotify_create_playlist_failed:${response.status}:${detail}`);
+  }
+
+  return (await response.json()) as { id: string; external_urls?: { spotify?: string } };
+}
+
+export async function handleSpotifyProjectExport(request: Request): Promise<Response> {
+  try {
+    const body = (await request.json()) as ExportRequestBody;
+    if (!Array.isArray(body.tracks) || body.tracks.length === 0) {
+      return NextResponse.json(
+        { status: "error", platform: "spotify", title: null, publicUrl: null, error: "Payload export tidak valid." },
+        { status: 400 },
+      );
+    }
+
+    const sanitizedTracks = body.tracks
+      .filter((t) => t?.title?.trim() && t?.artist?.trim())
+      .slice(0, MAX_EXPORT_TRACKS)
+      .map((t) => ({ title: t.title.trim(), artist: t.artist.trim() }));
+
+    if (sanitizedTracks.length === 0) {
+      return NextResponse.json(
+        { status: "error", platform: "spotify", title: null, publicUrl: null, error: "Daftar lagu kosong setelah validasi." },
+        { status: 400 },
+      );
+    }
+
+    const accessToken = await getSpotifyProjectAccessToken();
+    const playlistName = body.playlistName?.trim() || formatPlaylistTitle();
+    const playlist = await spotifyCreatePublicPlaylist(playlistName, accessToken);
+
+    const { foundUris, missingTracks } = await resolveTrackUris(sanitizedTracks, accessToken);
+
+    const addResult = foundUris.length > 0
+      ? await spotifyAddTracks(playlist.id, foundUris, accessToken)
+      : { addedUris: [] as string[], failedUris: [] as AddTrackFailure[] };
+    const { addedUris } = addResult;
+
+    const publicUrl = playlist.external_urls?.spotify ?? null;
+
+    return NextResponse.json({
+      status: "success",
+      platform: "spotify",
+      title: playlistName,
+      publicUrl,
+      error: null,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "unknown_error";
+
+    const spotifyStatusMatch = /spotify_[^:]+_failed:(\d+):/.exec(message);
+    if (spotifyStatusMatch) {
+      const status = Number(spotifyStatusMatch[1]);
+      return NextResponse.json(
+        { status: "error", platform: "spotify", title: null, publicUrl: null, error: message },
+        { status: Number.isFinite(status) ? status : 500 },
+      );
+    }
+
+    if (message.includes("SPOTIFY_PROJECT_REFRESH_TOKEN")) {
+      return NextResponse.json(
+        { status: "error", platform: "spotify", title: null, publicUrl: null, error: "Token project Spotify belum dikonfigurasi." },
+        { status: 500 },
+      );
+    }
+
+    return NextResponse.json(
+      { status: "error", platform: "spotify", title: null, publicUrl: null, error: message },
+      { status: 500 },
+    );
   }
 }
