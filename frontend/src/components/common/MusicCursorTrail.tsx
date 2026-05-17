@@ -17,10 +17,20 @@ type Particle = {
   char?: string;
 };
 
-const COLORS = [
+const COLORS_DARK = [
   "#1ed760", "#ff2d78", "#00c3ff", "#9747ff",
   "#ffb800", "#b5ff2d", "#ff5f5f", "#ff6b35",
 ];
+
+const COLORS_LIGHT = [
+  "#6FA37B", "#8D7AAE", "#C9A56A", "#D8A0A8",
+  "#8FAFD1", "#6FA37B", "#C9A56A", "#8D7AAE",
+];
+
+function getColors(): string[] {
+  if (typeof window === "undefined") return COLORS_DARK;
+  return document.documentElement.dataset.theme === "light" ? COLORS_LIGHT : COLORS_DARK;
+}
 
 const NOTES = ["♪", "♫", "♩", "♬", "🎵", "🎶"];
 
@@ -38,6 +48,8 @@ export function MusicCursorTrail() {
 
     const dot = document.createElement("div");
     dot.id = "custom-cursor-dot";
+    const isDarkMode = document.documentElement.dataset.theme !== "light";
+    const dotColor = isDarkMode ? "#1ed760" : "#6FA37B";
     dot.style.cssText = [
       "position:fixed",
       "top:0",
@@ -45,8 +57,8 @@ export function MusicCursorTrail() {
       "width:10px",
       "height:10px",
       "border-radius:50%",
-      "background:#1ed760",
-      "box-shadow:0 0 14px 4px rgba(30,215,96,.7)",
+      `background:${dotColor}`,
+      `box-shadow:0 0 14px 4px ${isDarkMode ? "rgba(30,215,96,.7)" : "rgba(111,163,123,.5)"}`,
       "pointer-events:none",
       "z-index:99999",
       "transform:translate(-50%,-50%)",
@@ -89,7 +101,7 @@ export function MusicCursorTrail() {
 
     function spawnParticles(x: number, y: number, speed: number) {
       const now = performance.now();
-      const color = COLORS[Math.floor(Math.random() * COLORS.length)];
+      const color = getColors()[Math.floor(Math.random() * getColors().length)];
 
       particles.current.push({
         id: nextId++, x, y,
@@ -145,6 +157,10 @@ export function MusicCursorTrail() {
       const now = performance.now();
       ctx.clearRect(0, 0, W, H);
 
+      const isLight = document.documentElement.dataset.theme === "light";
+      const alphaMul = isLight ? 0.45 : 1.0;
+      const blurMul = isLight ? 0.35 : 1.0;
+
       particles.current = particles.current.filter((p) => {
         const age = now - p.born;
         p.life = 1 - age / p.maxLife;
@@ -157,12 +173,12 @@ export function MusicCursorTrail() {
             p.vy += 0.04;
             p.x += p.vx; p.y += p.vy;
             ctx.save();
-            ctx.globalAlpha = alpha * 0.9;
+            ctx.globalAlpha = alpha * 0.9 * alphaMul;
             ctx.beginPath();
             ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
             ctx.fillStyle = p.color;
             ctx.shadowColor = p.color;
-            ctx.shadowBlur = 10;
+            ctx.shadowBlur = 10 * blurMul;
             ctx.fill();
             ctx.restore();
             break;
@@ -170,11 +186,11 @@ export function MusicCursorTrail() {
           case "ring": {
             const r = p.size + (1 - p.life) * 38;
             ctx.save();
-            ctx.globalAlpha = alpha * 0.7;
+            ctx.globalAlpha = alpha * 0.7 * alphaMul;
             ctx.strokeStyle = p.color;
             ctx.lineWidth = 2;
             ctx.shadowColor = p.color;
-            ctx.shadowBlur = 12;
+            ctx.shadowBlur = 12 * blurMul;
             ctx.beginPath();
             ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
             ctx.stroke();
@@ -185,11 +201,11 @@ export function MusicCursorTrail() {
             p.x += p.vx; p.y += p.vy;
             p.vx *= 0.97;
             ctx.save();
-            ctx.globalAlpha = alpha;
+            ctx.globalAlpha = alpha * alphaMul;
             ctx.fillStyle = p.color;
             ctx.font = `${p.size}px serif`;
             ctx.shadowColor = p.color;
-            ctx.shadowBlur = 14;
+            ctx.shadowBlur = 14 * blurMul;
             ctx.fillText(p.char ?? "♪", p.x, p.y);
             ctx.restore();
             break;
@@ -199,11 +215,11 @@ export function MusicCursorTrail() {
             p.vy += 0.15;
             p.x += p.vx; p.y += p.vy;
             ctx.save();
-            ctx.globalAlpha = alpha;
+            ctx.globalAlpha = alpha * alphaMul;
             ctx.strokeStyle = p.color;
             ctx.lineWidth = p.size;
             ctx.shadowColor = p.color;
-            ctx.shadowBlur = 8;
+            ctx.shadowBlur = 8 * blurMul;
             ctx.lineCap = "round";
             ctx.beginPath();
             ctx.moveTo(p.x, p.y);

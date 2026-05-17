@@ -6,26 +6,21 @@
   z-index: 0;
 }
 
-/* ── mesh gradient ── */
-.mesh {
+.blob {
   position: absolute;
-  inset: 0;
-  transition: background 80ms linear;
-  background:
-    radial-gradient(ellipse 60% 55% at 50% 50%, rgba(151,71,255,0.28), transparent 65%),
-    radial-gradient(ellipse 50% 50% at 50% 50%, rgba(0,195,255,0.22), transparent 60%);
+  border-radius: 50%;
+  will-change: transform;
+  pointer-events: none;
 }
 
-/* ── noise grain ── */
 .grain {
   position: absolute;
   inset: 0;
   opacity: 0.035;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-size: 200px 200px;
 }
 
-/* ── equalizer decoration ── */
 .eqBars {
   position: absolute;
   bottom: 0;
@@ -42,34 +37,32 @@
   display: block;
   width: 4px;
   border-radius: 3px 3px 0 0;
-  background: var(--accent-green);
+  background: var(--eq-color, var(--accent-green));
   animation: eqPulse calc(0.6s + calc(var(--i) * 0.07s)) ease-in-out infinite alternate;
   animation-delay: calc(var(--i) * 0.04s);
+  will-change: transform;
 }
 
 @keyframes eqPulse {
-  from { height: 8px; }
-  to   { height: calc(20px + (var(--i) * 3px)); }
+  from { transform: scaleY(0.15); }
+  to   { transform: scaleY(1); }
 }
 
-/* ── floating album card ── */
 .album {
   position: absolute;
   border-radius: 12px;
-  background: linear-gradient(135deg, var(--from), var(--to));
   display: flex;
   align-items: center;
   justify-content: center;
   opacity: 0.55;
-  transform: rotate(var(--rot));
-  transition: transform 60ms linear;
-  animation: albumFloat var(--duration) ease-in-out infinite alternate;
-  animation-delay: var(--delay);
-  box-shadow:
-    0 0 0 1px rgba(255,255,255,0.08),
-    0 8px 32px rgba(0,0,0,0.5);
-  /* inner shadow to look like vinyl / artwork */
+  will-change: transform;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.08), 0 8px 32px rgba(0,0,0,0.5);
   overflow: hidden;
+}
+
+:global(html[data-theme="light"]) .album {
+  opacity: 0.20;
+  box-shadow: 0 0 0 1px rgba(46, 36, 51, 0.06), 0 8px 32px rgba(46, 36, 51, 0.08);
 }
 
 .album::before {
@@ -77,6 +70,10 @@
   position: absolute;
   inset: 0;
   background: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, transparent 60%);
+}
+
+:global(html[data-theme="light"]) .album::before {
+  background: linear-gradient(135deg, rgba(255,255,255,0.40) 0%, transparent 60%);
 }
 
 .album::after {
@@ -87,6 +84,10 @@
   background: rgba(0,0,0,0.25);
 }
 
+:global(html[data-theme="light"]) .album::after {
+  background: rgba(46, 36, 51, 0.04);
+}
+
 .albumSymbol {
   position: relative;
   z-index: 1;
@@ -95,7 +96,7 @@
   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
 }
 
-@keyframes albumFloat {
-  from { margin-top: -8px; }
-  to   { margin-top: 8px; }
+:global(html[data-theme="light"]) .albumSymbol {
+  opacity: 0.40;
+  filter: drop-shadow(0 2px 4px rgba(46, 36, 51, 0.10));
 }

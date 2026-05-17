@@ -20,16 +20,17 @@
 }
 
 .page[data-theme="light"] {
-  --text-primary:    #0d0d14;
-  --text-secondary:  #44445a;
-  --surface:         rgba(240, 240, 255, 0.82);
-  --surface-border:  rgba(0, 0, 0, 0.10);
-  --button-bg:       linear-gradient(135deg, #1ed760 0%, #00c3ff 100%);
-  --button-text:     #0d0d14;
-  --accent:          #1ed760;
-  --accent2:         #9747ff;
+  --text-primary:    #2E2433;
+  --text-secondary:  #6B5E6D;
+  --surface:         #FFFDFC;
+  --surface-border:  #DDD6CE;
+  --surface-hover:   #F2EDE7;
+  --button-bg:       #6FA37B;
+  --button-text:     #FFFFFF;
+  --accent:          #6FA37B;
+  --accent2:         #8D7AAE;
 
-  background: #f0f0fa;
+  background: var(--background);
 }
 
 /* ── layout ── */

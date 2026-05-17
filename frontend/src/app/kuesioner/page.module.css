@@ -7,39 +7,58 @@
   overflow: hidden;
   font-family: var(--font-figtree), 'Figtree', system-ui, sans-serif;
 
-  --text-primary:   #f0f0ff;
-  --text-secondary: #a0a0c0;
-  --surface:        rgba(18, 18, 30, 0.72);
-  --surface-border: rgba(255,255,255,0.10);
-  --chip-bg:        rgba(255,255,255,0.06);
-  --chip-active-bg: rgba(30,215,96,0.18);
-  --chip-active-border: rgba(30,215,96,0.55);
-  --button-bg:      linear-gradient(135deg, #1ed760 0%, #00c3ff 100%);
-  --button-text:    #0d0d14;
+  --text-primary:        #f0f0ff;
+  --text-secondary:      #a0a0c0;
+  --surface:             rgba(18, 18, 30, 0.72);
+  --surface-border:      rgba(255, 255, 255, 0.10);
+  --chip-bg:             rgba(255, 255, 255, 0.06);
+  --chip-hover-border:   rgba(30, 215, 96, 0.35);
+  --chip-active-bg:      rgba(30, 215, 96, 0.18);
+  --chip-active-border:  rgba(30, 215, 96, 0.55);
+  --chip-active-text:    #1ed760;
+  --button-bg:           linear-gradient(135deg, #1ed760 0%, #00c3ff 100%);
+  --button-text:         #0d0d14;
+  --button-hover-shadow: rgba(30, 215, 96, 0.3);
+  --ghost-hover-border:  rgba(30, 215, 96, 0.4);
+  --accent1:             #1ed760;
+  --accent2:             #00c3ff;
+  --accent3:             #9747ff;
+  --progress-track:      rgba(255, 255, 255, 0.08);
+  --context-glow:        rgba(151, 71, 255, 0.22);
+  --toggle-hover-border: #1ed760;
+  --back-hover-color:    #1ed760;
+  --saved-badge-color:   #1ed760;
+  --surface-shadow:      0 12px 30px rgba(0, 0, 0, 0.25);
+  --button-shadow:       rgba(30, 215, 96, 0.2);
 }
 
 .page[data-theme="light"] {
-  --text-primary:   #0d0d14;
-  --text-secondary: #44445a;
-  --surface:        rgba(240, 240, 255, 0.82);
-  --surface-border: rgba(0,0,0,0.10);
-  --chip-bg:        rgba(0,0,0,0.04);
-  --chip-active-bg: rgba(30,215,96,0.14);
-  --chip-active-border: rgba(30,215,96,0.5);
-  --button-bg:      linear-gradient(135deg, #1ed760 0%, #00c3ff 100%);
-  --button-text:    #0d0d14;
-}
-
-.layout {
-  position: relative;
-  z-index: 1;
-  width: 100%;
-  max-width: 960px;
-  margin: 0 auto;
-  display: grid;
-  gap: 14px;
-  align-content: start;
-  padding-bottom: 32px;
+  --text-primary:        #2E2433;
+  --text-secondary:      #6B5E6D;
+  --surface:             #FFFDFC;
+  --surface-border:      #DDD6CE;
+  --chip-bg:             #F5F1EC;
+  --chip-border:         #D8D0C8;
+  --chip-text:           #5B4E5E;
+  --chip-hover-bg:       #F0EAE4;
+  --chip-active-bg:      #E7F1E8;
+  --chip-active-border:  #6FA37B;
+  --chip-active-text:    #4F7A59;
+  --button-bg:           #6FA37B;
+  --button-text:         #FFFFFF;
+  --button-hover-bg:     #5E926A;
+  --button-hover-shadow: rgba(111, 163, 123, 0.25);
+  --ghost-hover-border:  #6FA37B;
+  --accent1:             #6FA37B;
+  --accent2:             #8D7AAE;
+  --accent3:             #8C8190;
+  --progress-track:      #E7DED6;
+  --context-glow:        rgba(111, 163, 123, 0.12);
+  --toggle-hover-border: #6FA37B;
+  --back-hover-color:    #6FA37B;
+  --saved-badge-color:   #6FA37B;
+  --surface-shadow:      0 1px 4px rgba(46, 36, 51, 0.06);
+  --button-shadow:       rgba(111, 163, 123, 0.20);
 }
 
 /* ── top bar ── */
@@ -48,7 +67,6 @@
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  padding: 8px 0;
 }
 
 .backLink {
@@ -57,7 +75,10 @@
   font-size: 0.9rem;
   transition: color 0.15s;
 }
-.backLink:hover { color: #1ed760; }
+
+.backLink:hover {
+  color: var(--back-hover-color);
+}
 
 .themeToggle {
   border: 1.5px solid var(--surface-border);
@@ -72,9 +93,19 @@
   font-family: inherit;
   transition: border-color 0.18s, transform 0.18s;
 }
+
 .themeToggle:hover {
-  border-color: #1ed760;
+  border-color: var(--toggle-hover-border);
   transform: translateY(-2px);
+}
+
+/* ── layout ── */
+.layout {
+  position: relative;
+  z-index: 1;
+  width: min(720px, 100%);
+  display: grid;
+  gap: 14px;
 }
 
 /* ── context card ── */
@@ -83,6 +114,7 @@
   border: 1.5px solid var(--surface-border);
   border-radius: 20px;
   backdrop-filter: blur(14px);
+  box-shadow: var(--surface-shadow);
   padding: 22px 26px;
   position: relative;
   overflow: hidden;
@@ -94,7 +126,7 @@
   top: -30px; right: -30px;
   width: 140px; height: 140px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(151,71,255,0.22), transparent 70%);
+  background: radial-gradient(circle, var(--context-glow), transparent 70%);
   pointer-events: none;
 }
 
@@ -119,6 +151,7 @@
   border: 1.5px solid var(--surface-border);
   border-radius: 20px;
   backdrop-filter: blur(14px);
+  box-shadow: var(--surface-shadow);
   padding: 22px 26px;
 }
 
@@ -134,14 +167,14 @@
   margin: 0 0 18px;
   height: 6px;
   border-radius: 999px;
-  background: rgba(255,255,255,0.08);
+  background: var(--progress-track);
   overflow: hidden;
 }
 
 .progressBarFill {
   height: 100%;
   width: 0;
-  background: linear-gradient(90deg, #1ed760, #00c3ff, #9747ff);
+  background: linear-gradient(90deg, var(--accent1, #1ed760), var(--accent2, #00c3ff), var(--accent3, #9747ff));
   transition: width 280ms ease;
   border-radius: 999px;
 }
@@ -175,10 +208,10 @@
 }
 
 .choiceChip {
-  border: 1.5px solid var(--surface-border);
+  border: 1.5px solid var(--chip-border, var(--surface-border));
   background: var(--chip-bg);
   border-radius: 10px;
-  color: var(--text-secondary);
+  color: var(--chip-text, var(--text-secondary));
   padding: 8px 4px;
   display: flex;
   flex-direction: column;
@@ -195,14 +228,17 @@
 }
 
 .choiceChip:hover {
-  border-color: rgba(30,215,96,0.35);
+  background: var(--chip-hover-bg, transparent);
+  border-color: var(--chip-hover-border);
   transform: translateY(-1px);
 }
 
 .choiceChip:has(input:checked) {
   background: var(--chip-active-bg);
   border-color: var(--chip-active-border);
-  color: #1ed760;
+  border-width: 2px;
+  color: var(--chip-active-text);
+  font-weight: 700;
 }
 
 .choiceChip input {
@@ -216,6 +252,7 @@
   flex-wrap: wrap;
   gap: 10px;
   align-items: center;
+  justify-content: center;
 }
 
 .saveButton {
@@ -228,12 +265,14 @@
   cursor: none;
   color: var(--button-text);
   background: var(--button-bg);
+  box-shadow: 0 2px 10px var(--button-shadow);
   transition: transform 0.18s, box-shadow 0.18s;
 }
 
 .saveButton:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 8px 28px rgba(30,215,96,0.3);
+  background: var(--button-hover-bg, var(--button-bg));
+  box-shadow: 0 8px 28px var(--button-hover-shadow);
 }
 
 .saveButton:disabled {
@@ -242,7 +281,7 @@
 }
 
 .ghostButton {
-  border: 1.5px solid var(--surface-border);
+  border: 1.5px solid var(--chip-border, var(--surface-border));
   border-radius: 12px;
   padding: 12px 22px;
   background: transparent;
@@ -251,16 +290,29 @@
   font-weight: 700;
   font-size: 0.94rem;
   cursor: none;
-  transition: border-color 0.15s, transform 0.18s;
+  transition: background 0.15s, border-color 0.15s, transform 0.18s;
 }
 
 .ghostButton:hover {
-  border-color: rgba(30,215,96,0.4);
+  background: var(--chip-hover-bg, transparent);
+  border-color: var(--ghost-hover-border);
   transform: translateY(-1px);
 }
 
+/* ── secondary chip (violet) ── */
+:global(html[data-theme="light"]) .secondaryChip {
+  background: #EEE8F7;
+  border-color: #D8D0C8;
+  color: #8D7AAE;
+}
+
+:global(html[data-theme="light"]) .secondaryChip:hover {
+  background: #E8DEF2;
+  border-color: #8D7AAE;
+}
+
 .savedBadge {
-  color: #1ed760;
+  color: var(--saved-badge-color);
   font-weight: 700;
   font-size: 0.9rem;
 }

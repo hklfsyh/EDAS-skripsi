@@ -4,8 +4,7 @@
   --background: #0d0d14;
   --foreground: #f0f0ff;
 
-  /* Accent palette — Gen-Z music */
-  --accent-green:  #1ed760; /* Spotify green */
+  --accent-green:  #1ed760;
   --accent-pink:   #ff2d78;
   --accent-blue:   #00c3ff;
   --accent-violet: #9747ff;
@@ -19,11 +18,21 @@
 }
 
 :root[data-theme="light"] {
-  --background: #f5f5fa;
-  --foreground: #0d0d14;
-  --scroll-track: #e0e0ee;
-  --scroll-thumb: #1ed760;
-  --scroll-thumb-hover: #9747ff;
+  --background: #F7F4EF;
+  --foreground: #2E2433;
+
+  --accent-green:  #6FA37B;
+  --accent-pink:   #D8A0A8;
+  --accent-blue:   #8FAFD1;
+  --accent-violet: #8D7AAE;
+  --accent-amber:  #C9A56A;
+  --accent-lime:   #6FA37B;
+  --accent-coral:  #D8A0A8;
+
+  --scroll-track: #E7E2DC;
+  --scroll-thumb: #C4B8BE;
+  --scroll-thumb-hover: #B4A8AE;
+  --eq-color: #C9B8BE;
 }
 
 *, *::before, *::after {

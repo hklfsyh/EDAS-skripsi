@@ -169,5 +169,6 @@ export function getYouTubeProjectRefreshToken(): string {
 export async function getYouTubeProjectAccessToken(): Promise<string> {
   const refreshToken = getYouTubeProjectRefreshToken();
   const refreshed = await refreshYouTubeToken(refreshToken);
+  console.log("[YouTube Token] Scope from refresh:", refreshed.scope);
   return refreshed.access_token;
 }

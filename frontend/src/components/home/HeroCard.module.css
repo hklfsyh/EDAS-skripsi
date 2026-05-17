@@ -3,42 +3,72 @@
   border: 1.5px solid var(--surface-border);
   border-radius: 22px;
   backdrop-filter: blur(14px);
-  padding: 28px 32px 24px;
+  padding: 32px 32px 28px;
   position: relative;
   overflow: hidden;
 }
 
-/* top-right glow accent */
 .heroCard::before {
   content: "";
   position: absolute;
   top: -40px; right: -40px;
-  width: 180px; height: 180px;
+  width: 200px; height: 200px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(30,215,96,0.22), transparent 70%);
+  background: radial-gradient(circle, rgba(30,215,96,0.18), transparent 70%);
   pointer-events: none;
+}
+
+:global(html[data-theme="light"]) .heroCard::before {
+  background: radial-gradient(circle, rgba(111, 163, 123, 0.08), transparent 70%);
+}
+
+:global(html[data-theme="light"]) .highlight {
+  background: #6FA37B;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+:global(html[data-theme="light"]) .step {
+  background: #F5F1EC;
+  border-color: #D8D0C8;
+}
+
+:global(html[data-theme="light"]) .stepNum {
+  background: #6FA37B;
+  color: #FFFFFF;
+}
+
+:global(html[data-theme="light"]) .eqBar {
+  background: #6FA37B;
 }
 
 .badge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  border: 1.5px solid rgba(30,215,96,0.4);
-  background: rgba(30,215,96,0.10);
+  border: 1.5px solid rgba(30,215,96,0.3);
+  background: rgba(30,215,96,0.08);
   color: #1ed760;
   border-radius: 999px;
-  padding: 4px 12px;
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  padding: 5px 14px;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
+}
+
+:global(html[data-theme="light"]) .badge {
+  border-color: rgba(111, 163, 123, 0.30);
+  background: #E7F1E8;
+  color: #4F7A59;
 }
 
 .title {
   margin: 0 0 12px;
   color: var(--text-primary);
-  font-size: clamp(1.9rem, 3.4vw, 2.8rem);
+  font-size: clamp(1.8rem, 3.2vw, 2.6rem);
   font-weight: 900;
   line-height: 1.1;
   letter-spacing: -0.03em;
@@ -51,15 +81,73 @@
   background-clip: text;
 }
 
+:global(html[data-theme="light"]) .highlight {
+  background: #6FA37B;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
 .body {
   margin: 0 0 20px;
   color: var(--text-secondary);
   line-height: 1.65;
   font-size: 1rem;
-  max-width: 520px;
+  max-width: 540px;
 }
 
-/* ── decorative mini equalizer ── */
+.howItWorks {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  padding: 7px 16px 7px 7px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+:global(html[data-theme="light"]) .step {
+  background: #F5F1EC;
+  border-color: #D8D0C8;
+}
+
+.stepNum {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1ed760, #00c3ff);
+  color: #0d0d14;
+  font-size: 0.75rem;
+  font-weight: 900;
+  flex-shrink: 0;
+}
+
+:global(html[data-theme="light"]) .stepNum {
+  background: #6FA37B;
+  color: #FFFFFF;
+}
+
+.stepArrow {
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+  font-weight: 700;
+  opacity: 0.5;
+}
+
 .eq {
   display: flex;
   align-items: flex-end;
@@ -74,14 +162,21 @@
   background: linear-gradient(180deg, #1ed760, #00c3ff);
   animation: eqAnim calc(0.5s + calc(var(--i) * 0.06s)) ease-in-out infinite alternate;
   animation-delay: calc(var(--i) * 0.045s);
+  transform-origin: bottom;
+}
+
+:global(html[data-theme="light"]) .eqBar {
+  background: #6FA37B;
 }
 
 @keyframes eqAnim {
-  from { height: 4px; opacity: 0.4; }
-  to   { height: calc(8px + (var(--i) * 1.8px)); opacity: 1; }
+  from { transform: scaleY(0.15); opacity: 0.4; }
+  to   { transform: scaleY(1); opacity: 1; }
 }
 
 @media (max-width: 600px) {
   .heroCard { padding: 20px; }
-  .title { font-size: 1.8rem; }
+  .title { font-size: 1.6rem; }
+  .howItWorks { flex-direction: column; align-items: flex-start; }
+  .stepArrow { transform: rotate(90deg); }
 }

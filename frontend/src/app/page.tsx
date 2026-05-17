@@ -32,7 +32,7 @@ export default function Home() {
         <header className={styles.topBar}>
           <span className={styles.logo}>
             <span className={styles.logoIcon}>🎧</span>
-            PlaylistAI
+            VibePlay
           </span>
           <button
             type="button"
@@ -48,8 +48,8 @@ export default function Home() {
         <ContextFormCard />
 
         <section className={styles.note}>
-          <h3>📋 Catatan</h3>
-          <p>Isi pilihan sesuai kebutuhan sesi kamu saat ini — sistem akan menyesuaikan rekomendasinya.</p>
+          <h3>💡 Cara kerjanya</h3>
+          <p>Kami menggunakan metode <strong>EDAS</strong> (Evaluation based on Distance from Average Solution) untuk memeringkat lagu berdasarkan preferensi musikmu. Hasilnya adalah playlist yang paling cocok dengan aktivitas dan suasana hatimu saat ini.</p>
         </section>
       </main>
     </div>

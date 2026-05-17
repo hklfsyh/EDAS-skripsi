@@ -387,6 +387,20 @@ export async function handleYouTubeProjectExport(request: Request): Promise<Resp
     const youtubeStatusMatch = /youtube_[^:]+_failed:(\d+):/.exec(message);
     if (youtubeStatusMatch) {
       const status = Number(youtubeStatusMatch[1]);
+
+      if (message.includes("youtubeSignupRequired")) {
+        return NextResponse.json(
+          {
+            status: "error",
+            platform: "youtube",
+            title: null,
+            publicUrl: null,
+            error: "Akun Google (kalskripdas@gmail.com) belum memiliki channel YouTube. Buat channel di youtube.com, lalu pastikan YouTube Data API v3 sudah diaktifkan di Google Cloud Console.",
+          },
+          { status: 401 },
+        );
+      }
+
       return NextResponse.json(
         { status: "error", platform: "youtube", title: null, publicUrl: null, error: message },
         { status: Number.isFinite(status) ? status : 500 },

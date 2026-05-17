@@ -9,8 +9,8 @@ import { getOrCreateClientId } from "@/lib/clientId";
 import styles from "./page.module.css";
 
 const RESULT_STORAGE_KEY = "playlist-result-v1";
-
 const THEME_STORAGE_KEY = "playlist-theme-v1";
+const EXT_PREFIX = "ext-url-v2";
 
 type ContextData = {
   activity: string;
@@ -68,6 +68,21 @@ function formatDuration(sec: number): string {
   const m = Math.floor(sec / 60);
   const s = sec % 60;
   return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+function generatePlaylistName(ctx: ContextData): string {
+  return `${ctx.activity} • ${ctx.mood} • ${ctx.timeOfDay}`;
+}
+
+function playlistFingerprint(tracks: PlaylistItem[]): string {
+  const data = tracks.map((t) => `${t.title}|${t.artist}`).sort().join("||");
+  let hash = 0;
+  for (let i = 0; i < data.length; i++) {
+    const ch = data.charCodeAt(i);
+    hash = ((hash << 5) - hash) + ch;
+    hash |= 0;
+  }
+  return Math.abs(hash).toString(36);
 }
 
 export default function HasilPage() {
@@ -134,53 +149,56 @@ export default function HasilPage() {
 
   const overDuration = Math.max(0, result.summary.totalDurationSec - result.summary.targetDurationSec);
 
-  // Export playlist ke Spotify via project account server-side
-  const handleExportSpotify = async () => {
-    setSpotifyLoading(true);
+  const fp = useMemo(() => playlistFingerprint(result.playlist), [result.playlist]);
+  const extKeySpotify = `${EXT_PREFIX}-spotify-${fp}`;
+  const extKeyYoutube = `${EXT_PREFIX}-youtube-${fp}`;
+
+  const redirectToUrl = (url: string) => {
+    window.location.href = url;
+  };
+
+  const openOrCreate = async (platform: "spotify" | "youtube") => {
+    const extKey = platform === "spotify" ? extKeySpotify : extKeyYoutube;
+    const setLoading = platform === "spotify" ? setSpotifyLoading : setYoutubeLoading;
+    const endpoint = platform === "spotify" ? "/api/spotify/project-export" : "/api/youtube/project-export";
+    const label = platform === "spotify" ? "Spotify" : "YouTube";
+
+    setLoading(true);
     try {
-      const res = await fetch("/api/spotify/project-export", {
+      const cached = localStorage.getItem(extKey);
+      if (cached) {
+        console.log(`[${label} Export] Reuse existing ${label} playlist — ${cached}`);
+        redirectToUrl(cached);
+        return;
+      }
+
+      console.log(`[${label} Export] No cached URL — creating new playlist`);
+      const playlistName = generatePlaylistName(result.context);
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          playlistName,
           tracks: result.playlist.map((s) => ({ title: s.title, artist: s.artist })),
         }),
       });
       const data = await res.json();
       if (data.status === "success" && data.publicUrl) {
-        globalThis.open(data.publicUrl, "_blank", "noopener,noreferrer");
+        localStorage.setItem(extKey, data.publicUrl);
+        console.log(`[${label} Export] Created new playlist — ${data.publicUrl}`);
+        redirectToUrl(data.publicUrl);
       } else {
-        alert(data.error || "Gagal export ke Spotify.");
+        alert(data.error || `Gagal export ke ${label}.`);
       }
     } catch {
-      alert("Gagal export ke Spotify.");
+      alert(`Gagal export ke ${label}.`);
     } finally {
-      setSpotifyLoading(false);
+      setLoading(false);
     }
   };
 
-  // Export playlist ke YouTube via project account server-side
-  const handleExportYoutube = async () => {
-    setYoutubeLoading(true);
-    try {
-      const res = await fetch("/api/youtube/project-export", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          tracks: result.playlist.map((s) => ({ title: s.title, artist: s.artist })),
-        }),
-      });
-      const data = await res.json();
-      if (data.status === "success" && data.publicUrl) {
-        globalThis.open(data.publicUrl, "_blank", "noopener,noreferrer");
-      } else {
-        alert(data.error || "Gagal export ke YouTube.");
-      }
-    } catch {
-      alert("Gagal export ke YouTube.");
-    } finally {
-      setYoutubeLoading(false);
-    }
-  };
+  const handleExportSpotify = () => openOrCreate("spotify");
+  const handleExportYoutube = () => openOrCreate("youtube");
 
   const handleSelesai = () => {
     router.push("/");
@@ -335,32 +353,39 @@ export default function HasilPage() {
         )}
 
         <section className={styles.card}>
-          <h2>Buka playlist di platform eksternal</h2>
+          <h2>Simpan ke platform musik</h2>
+          <p style={{ marginBottom: 12 }}>Buka playlist hasil rekomendasi langsung di platform favoritmu.</p>
 
-          <div className={styles.platformBlock}>
-            <h3>Spotify</h3>
-            <div className={styles.experimentActions}>
+          <div className={styles.platformGrid}>
+            <div className={styles.platformCard}>
+              <div className={styles.platformHeader}>
+                <span className={styles.platformIcon}>🎧</span>
+                <span className={styles.platformName}>Spotify</span>
+              </div>
               <button
                 type="button"
                 className={styles.primaryButton}
                 onClick={handleExportSpotify}
                 disabled={spotifyLoading}
               >
-                {spotifyLoading ? "Membuka playlist..." : "Buka playlist di Spotify"}
+                {spotifyLoading && <span className={styles.spinner} />}
+                {spotifyLoading ? "Membuka playlist..." : "Buka di Spotify"}
               </button>
             </div>
-          </div>
 
-          <div className={styles.platformBlock}>
-            <h3>YouTube</h3>
-            <div className={styles.experimentActions}>
+            <div className={styles.platformCard}>
+              <div className={styles.platformHeader}>
+                <span className={styles.platformIcon}>▶️</span>
+                <span className={styles.platformName}>YouTube</span>
+              </div>
               <button
                 type="button"
                 className={styles.primaryButton}
                 onClick={handleExportYoutube}
                 disabled={youtubeLoading}
               >
-                {youtubeLoading ? "Membuka playlist..." : "Buka playlist di YouTube"}
+                {youtubeLoading && <span className={styles.spinner} />}
+                {youtubeLoading ? "Membuka playlist..." : "Buka di YouTube"}
               </button>
             </div>
           </div>

@@ -15,7 +15,7 @@
 }
 
 :global([data-theme="light"]) .halftone {
-  background-image: radial-gradient(circle, rgba(0, 0, 0, 0.12) 1.2px, transparent 1.2px);
+  background-image: radial-gradient(circle, rgba(46, 36, 51, 0.06) 1.2px, transparent 1.2px);
 }
 
 .layer {
@@ -67,13 +67,13 @@
 }
 
 :global([data-theme="light"]) .blob1 {
-  opacity: 0.3;
+  opacity: 0.08;
 }
 :global([data-theme="light"]) .blob2 {
-  opacity: 0.25;
+  opacity: 0.06;
 }
 :global([data-theme="light"]) .blob3 {
-  opacity: 0.2;
+  opacity: 0.05;
 }
 
 .word {
@@ -139,8 +139,8 @@
 }
 
 :global([data-theme="light"]) .word {
-  -webkit-text-stroke: 3px #1a1a1a;
-  opacity: 0.28 !important;
+  -webkit-text-stroke: 3px rgba(46, 36, 51, 0.20);
+  opacity: 0.12 !important;
 }
 
 @keyframes wordFloat {
@@ -222,7 +222,19 @@
 }
 
 :global([data-theme="light"]) .panel {
-  border-color: rgba(26, 26, 26, 0.18);
+  border-color: rgba(221, 214, 206, 0.25);
+}
+
+:global([data-theme="light"]) .burst {
+  border-color: rgba(221, 214, 206, 0.15);
+}
+
+:global([data-theme="light"]) .burstA {
+  background: #C9A56A;
+}
+
+:global([data-theme="light"]) .burstB {
+  background: #D8A0A8;
 }
 
 .speedLines {
@@ -240,7 +252,7 @@
 :global([data-theme="light"]) .speedLines {
   background: repeating-conic-gradient(
     from 0deg at 50% 50%,
-    rgba(26, 26, 26, 0.04) 0deg,
+    rgba(46, 36, 51, 0.03) 0deg,
     transparent 0.8deg,
     transparent 6deg
   );

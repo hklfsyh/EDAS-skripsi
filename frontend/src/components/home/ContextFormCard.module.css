@@ -14,12 +14,18 @@
 }
 
 :global(html[data-theme="light"]) .card {
-  --input-border: rgba(24, 34, 74, 0.28);
-  --input-bg: rgba(255, 255, 255, 0.88);
-  --input-text: #172046;
-  --input-placeholder: #5a6288;
-  --select-option-bg: #f5f7ff;
-  --select-option-text: #18214a;
+  --input-border: #D8D0C8;
+  --input-bg: #F5F1EC;
+  --input-text: #2E2433;
+  --input-placeholder: #8C8190;
+  --select-option-bg: #F2EDE7;
+  --select-option-text: #2E2433;
+}
+
+:global(html[data-theme="light"]) .primaryButton,
+:global(html[data-theme="light"]) .secondaryButton {
+  background: #6FA37B;
+  color: #FFFFFF;
 }
 
 .card h2 {
@@ -85,6 +91,10 @@
   padding-right: 36px;
 }
 
+:global(html[data-theme="light"]) .field select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238C8190' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+
 .field select option {
   background: var(--select-option-bg);
   color: var(--select-option-text);
@@ -95,6 +105,12 @@
   outline: none;
   border-color: rgba(30,215,96,0.55);
   box-shadow: 0 0 0 3px rgba(30,215,96,0.12);
+}
+
+:global(html[data-theme="light"]) .field select:focus,
+:global(html[data-theme="light"]) .field input:focus {
+  border-color: #6FA37B;
+  box-shadow: 0 0 0 3px rgba(111, 163, 123, 0.15);
 }
 
 .field input[type="number"] {
@@ -137,6 +153,11 @@
   filter: brightness(1.06);
 }
 
+:global(html[data-theme="light"]) .primaryButton:hover {
+  background: #5E926A;
+  box-shadow: 0 8px 28px rgba(111, 163, 123, 0.25);
+}
+
 .primaryButton:active {
   transform: translateY(0);
 }
@@ -155,6 +176,11 @@
   border: 1.5px solid rgba(30,215,96,0.25);
   background: rgba(30,215,96,0.07);
   padding: 16px 18px;
+}
+
+:global(html[data-theme="light"]) .summaryBox {
+  border-color: #6FA37B;
+  background: #E7F1E8;
 }
 
 .summaryBox h3 {
@@ -196,6 +222,11 @@
 .secondaryButton:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 28px rgba(30,215,96,0.3);
+}
+
+:global(html[data-theme="light"]) .secondaryButton:hover {
+  background: #5E926A;
+  box-shadow: 0 8px 28px rgba(111, 163, 123, 0.25);
 }
 
 @media (max-width: 600px) {

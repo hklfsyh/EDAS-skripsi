@@ -15,7 +15,18 @@ type Star = {
 };
 
 const STAR_CHARS = ["★", "✦", "✧", "⭐", "✵", "✴", "✸", "✹", "✺"];
-const TRAIL_COLORS = ["#ffe033", "#ff3c5a", "#3a8fff", "#ff9f3f", "#ffffff", "#ff6dde"];
+const TRAIL_COLORS_DARK = ["#ffe033", "#ff3c5a", "#3a8fff", "#ff9f3f", "#ffffff", "#ff6dde"];
+const TRAIL_COLORS_LIGHT = ["#C9A56A", "#D8A0A8", "#8FAFD1", "#C9A56A", "#6FA37B", "#8D7AAE"];
+
+function getTrailColors(): string[] {
+  if (typeof window === "undefined") return TRAIL_COLORS_DARK;
+  return document.documentElement.dataset.theme === "light" ? TRAIL_COLORS_LIGHT : TRAIL_COLORS_DARK;
+}
+
+function isLightMode(): boolean {
+  if (typeof window === "undefined") return false;
+  return document.documentElement.dataset.theme === "light";
+}
 
 export function ComicCursorTrail() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -39,10 +50,12 @@ export function ComicCursorTrail() {
       const el = document.createElement("span");
       el.className = styles.star;
       const char = STAR_CHARS[Math.floor(Math.random() * STAR_CHARS.length)];
-      const color = TRAIL_COLORS[Math.floor(Math.random() * TRAIL_COLORS.length)];
+      const color = getTrailColors()[Math.floor(Math.random() * getTrailColors().length)];
       el.textContent = char;
       el.style.color = color;
-      el.style.textShadow = `0 0 6px ${color}, 0 0 12px ${color}`;
+      el.style.textShadow = isLightMode()
+        ? `0 0 4px ${color}, 0 0 8px ${color}`
+        : `0 0 6px ${color}, 0 0 12px ${color}`;
       containerEl.appendChild(el);
 
       const size = isIdle ? 10 + Math.random() * 10 : 12 + Math.random() * 14;
@@ -70,7 +83,7 @@ export function ComicCursorTrail() {
         const x = Math.random() * window.innerWidth;
         const y = Math.random() * window.innerHeight;
         const star = createStar(x, y, true);
-        star.el.style.opacity = String(0.2 + Math.random() * 0.5);
+        star.el.style.opacity = String((0.2 + Math.random() * 0.5) * (isLightMode() ? 0.35 : 1.0));
         idleStars.push(star);
       }
     }
@@ -96,6 +109,8 @@ export function ComicCursorTrail() {
     window.addEventListener("mousemove", onMouseMove);
 
     function animate() {
+      const isLight = document.documentElement.dataset.theme === "light";
+      const lightAlpha = isLight ? 0.4 : 1.0;
       if (isMovingRef.current) {
         spawnCount++;
         if (spawnCount % 2 === 0) spawnTrailStar();
@@ -113,7 +128,7 @@ export function ComicCursorTrail() {
           progress < 0.2 ? progress / 0.2 : 1 - (progress - 0.2) / 0.8;
 
         star.el.style.transform = `translate(${star.x - star.size / 2}px, ${star.y - star.size / 2}px) rotate(${star.life * 4}deg) scale(${1 - progress * 0.5})`;
-        star.el.style.opacity = String(Math.max(0, opacity));
+        star.el.style.opacity = String(Math.max(0, opacity * lightAlpha));
 
         if (star.life >= star.maxLife) {
           star.el.remove();
@@ -150,9 +165,9 @@ export function ComicCursorTrail() {
         if (star.y < -20) star.y = window.innerHeight + 20;
         if (star.y > window.innerHeight + 20) star.y = -20;
 
-        const baseOpacity = isMovingRef.current
+        const baseOpacity = (isMovingRef.current
           ? 0.08
-          : 0.2 + 0.3 * Math.abs(Math.sin(Date.now() * 0.001 + star.x * 0.01));
+          : 0.2 + 0.3 * Math.abs(Math.sin(Date.now() * 0.001 + star.x * 0.01))) * (isLight ? 0.35 : 1.0);
         star.el.style.transform = `translate(${star.x}px, ${star.y}px) rotate(${Date.now() * 0.03}deg)`;
         star.el.style.opacity = String(baseOpacity);
       });

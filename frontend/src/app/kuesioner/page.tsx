@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -53,12 +53,25 @@ const defaultContext: ContextData = {
 
 export default function KuesionerPage() {
   const router = useRouter();
-  // Ambil preferensi tema dari localStorage
-  const [theme, setTheme] = useState<"dark" | "light">(() => {
+
+  const applyTheme = (t: "dark" | "light") => {
+    document.documentElement.dataset.theme = t;
+    localStorage.setItem(THEME_STORAGE_KEY, t);
+  };
+
+  // Ambil preferensi tema dari localStorage — set html[data-theme] synchronous
+  const [theme, setThemeState] = useState<"dark" | "light">(() => {
     if (globalThis.window === undefined) return "dark";
     const saved = localStorage.getItem(THEME_STORAGE_KEY);
-    return saved === "light" ? "light" : "dark";
+    const t = saved === "light" ? "light" : "dark";
+    applyTheme(t);
+    return t;
   });
+
+  const setTheme = (next: "dark" | "light") => {
+    applyTheme(next);
+    setThemeState(next);
+  };
 
   // Ambil konteks aktivitas dari localStorage
   const [contextData] = useState<ContextData>(() => {
@@ -82,11 +95,6 @@ export default function KuesionerPage() {
       .map((question, index) => ({ question, index }))
       .slice(start, start + QUESTIONS_PER_STEP);
   }, [step]);
-
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    localStorage.setItem(THEME_STORAGE_KEY, theme);
-  }, [theme]);
 
   const handleAnswerSelect = (index: number, value: number) => {
     setAnswers((prev) => ({ ...prev, [index]: value }));
@@ -132,21 +140,21 @@ export default function KuesionerPage() {
 
       <section className={styles.layout}>
         <header className={styles.topBar}>
-          <Link href="/" className={styles.backLink}>← Balik ke halaman awal</Link>
+          <Link href="/" className={styles.backLink}>← Kembali</Link>
           <button
             type="button"
             className={styles.themeToggle}
-            onClick={() => setTheme((p) => p === "dark" ? "light" : "dark")}
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
           >
             {theme === "dark" ? "☀️ Light" : "🌙 Dark"}
           </button>
         </header>
 
         <section className={styles.contextCard}>
-          <h1>Pertanyaan preferensi musik</h1>
+          <h1>Pilih preferensi musikmu</h1>
           <p>
-            Berikan jawaban terhadap setiap pernyataan berikut sesuai dengan preferensi musik
-            yang ingin Anda dengarkan pada aktivitas yang telah Anda pilih sebelumnya.
+            Jawab 14 pernyataan berikut sesuai selera musikmu untuk aktivitas yang sudah
+            kamu pilih sebelumnya. Hasilnya akan dipakai untuk merangkai playlist terbaik.
           </p>
         </section>
 

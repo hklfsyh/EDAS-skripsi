@@ -12,6 +12,10 @@
   --step-idle-text: #e2e2f6;
   --note-color: #f1f1ff;
   --subtle-color: #cfcfe8;
+  --accent1: #1ed760;
+  --accent2: #00c3ff;
+  --accent3: #9747ff;
+  --percent-color: #1ed760;
 
   min-height: 100svh;
   display: grid;
@@ -21,19 +25,23 @@
 }
 
 :global(html[data-theme="light"]) .page {
-  --surface-bg: rgba(248, 250, 255, 0.92);
-  --surface-border: rgba(20, 24, 42, 0.2);
-  --surface-shadow: 0 14px 34px rgba(32, 46, 88, 0.12);
-  --title-color: #121428;
-  --text-color: #2f3350;
-  --progress-track: rgba(32, 40, 84, 0.14);
-  --step-border: rgba(27, 33, 68, 0.2);
-  --step-done-bg: rgba(30, 215, 96, 0.26);
-  --step-done-text: #0d5a2e;
-  --step-idle-bg: rgba(37, 45, 89, 0.08);
-  --step-idle-text: #2a3153;
-  --note-color: #101833;
-  --subtle-color: #3f466d;
+  --surface-bg: #FFFDFC;
+  --surface-border: #DDD6CE;
+  --surface-shadow: 0 14px 34px rgba(46, 36, 51, 0.08);
+  --title-color: #2E2433;
+  --text-color: #6B5E6D;
+  --progress-track: #E7DED6;
+  --step-border: #DDD6CE;
+  --step-done-bg: #E7F1E8;
+  --step-done-text: #4F7A59;
+  --step-idle-bg: #F5F1EC;
+  --step-idle-text: #6B5E6D;
+  --note-color: #8C8190;
+  --subtle-color: #8C8190;
+  --accent1: #6FA37B;
+  --accent2: #8D7AAE;
+  --accent3: #8C8190;
+  --percent-color: #6FA37B;
 }
 
 .card {
@@ -70,7 +78,7 @@
 
 .progressFill {
   height: 100%;
-  background: linear-gradient(90deg, #1ed760, #00c3ff, #9747ff);
+  background: linear-gradient(90deg, var(--accent1), var(--accent2), var(--accent3));
   transition: width 180ms linear;
 }
 
@@ -78,7 +86,7 @@
   margin-top: 8px;
   display: inline-block;
   font-weight: 700;
-  color: #1ed760;
+  color: var(--percent-color);
 }
 
 .stepList {
@@ -118,14 +126,4 @@
   font-size: 0.82rem;
   color: var(--subtle-color) !important;
   opacity: 1;
-}
-
-.helperDuration {
-  position: absolute;
-  right: 16px;
-  bottom: 12px;
-  z-index: 1;
-  color: var(--note-color);
-  opacity: 0.95;
-  font-size: 0.8rem;
 }

@@ -467,9 +467,9 @@ export default function ProsesPage() {
       <MusicCursorTrail />
 
       <section className={styles.card}>
-        <h1>Menyiapkan rekomendasi playlist kamu...</h1>
+        <h1>Menyusun playlist terbaik untukmu</h1>
         <p>
-          Sistem sedang memproses preferensi kamu, menyusun playlist, dan menyiapkan penjelasan rekomendasi.
+          Sistem sedang menganalisis preferensi musikmu, memeringkat lagu dengan metode EDAS, dan menyiapkan penjelasan rekomendasi.
         </p>
 
         <div className={styles.progressWrap}>
@@ -498,7 +498,6 @@ export default function ProsesPage() {
         </p>
       </section>
 
-      <span className={styles.helperDuration}>{formatDuration(Math.max(0, Math.round((100 - progress) * 0.08)))}</span>
     </main>
   );
 }
