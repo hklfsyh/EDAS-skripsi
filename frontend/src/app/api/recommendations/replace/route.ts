@@ -74,6 +74,8 @@ function findReplacements(
   ranked: ReturnType<typeof runEdasRanking>,
   gapSec: number,
 ): ReplacementSong[] {
+  if (gapSec <= 0) return [];
+
   const candidates = ranked
     .map((r) => ({
       id_song: r.candidate.id_song,
@@ -100,9 +102,11 @@ function findReplacements(
 
   const multiResult: ReplacementSong[] = [];
   let multiTotal = 0;
-  const tolerance = Math.max(gapSec * 0.15, 30);
+  const tolerance = gapSec < 60 ? Math.max(gapSec * 0.15, 10) : Math.max(gapSec * 0.15, 30);
+  const MAX_REPLACEMENTS = 4;
 
   for (const c of candidates) {
+    if (multiResult.length >= MAX_REPLACEMENTS) break;
     if (multiTotal >= gapSec - 5) break;
     if (multiTotal + c.durationSec <= gapSec + tolerance) {
       multiResult.push(c);
@@ -135,7 +139,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const preferences = mapQuestionnaireToPreferences(answers);
+    const safeAnswers = Array.isArray(answers) && answers.length > 0 ? answers : new Array(14).fill(3);
+    const preferences = mapQuestionnaireToPreferences(safeAnswers);
     const ranked = runEdasRanking(candidates, preferences);
 
     const replacements = findReplacements(ranked, gapDurationSec);

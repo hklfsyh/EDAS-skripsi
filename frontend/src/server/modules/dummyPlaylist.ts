@@ -96,7 +96,7 @@ export async function handleDummyPlaylistGet(request: Request) {
     });
   } catch {
     return NextResponse.json(
-      { error: "Gagal memuat playlist dummy dari database" },
+      { error: "Gagal memuat playlist dari database" },
       { status: 500 },
     );
   }
@@ -128,7 +128,7 @@ export async function handleDummyPlaylistPost(request: Request) {
     });
   } catch {
     return NextResponse.json(
-      { error: "Gagal memuat playlist dummy dari database" },
+      { error: "Gagal memuat playlist dari database" },
       { status: 500 },
     );
   }

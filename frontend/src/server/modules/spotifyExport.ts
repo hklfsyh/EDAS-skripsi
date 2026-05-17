@@ -1,12 +1,5 @@
 import { NextResponse } from "next/server";
-import {
-  refreshSpotifyToken,
-  SPOTIFY_ACCESS_COOKIE,
-  SPOTIFY_EXPIRES_COOKIE,
-  SPOTIFY_REFRESH_COOKIE,
-  getSpotifyProjectAccessToken,
-} from "@/lib/spotify";
-import { readCookie } from "@/server/utils/cookies";
+import { getSpotifyProjectAccessToken } from "@/lib/spotify";
 
 type ExportTrack = {
   title: string;
@@ -33,76 +26,6 @@ async function getResponseTextSafe(response: Response): Promise<string> {
   } catch {
     return "";
   }
-}
-
-// Ambil/refresh token Spotify dari cookie
-async function getValidAccessToken(request: Request): Promise<{
-  accessToken: string;
-  setCookies?: Array<{ name: string; value: string; maxAge: number }>;
-}> {
-  const cookieHeader = request.headers.get("cookie") ?? "";
-  const accessToken = readCookie(cookieHeader, SPOTIFY_ACCESS_COOKIE);
-  const refreshToken = readCookie(cookieHeader, SPOTIFY_REFRESH_COOKIE);
-  const expiresAtRaw = readCookie(cookieHeader, SPOTIFY_EXPIRES_COOKIE);
-  const expiresAt = expiresAtRaw ? Number(expiresAtRaw) : 0;
-
-  if (accessToken && expiresAt > Date.now()) {
-    return { accessToken };
-  }
-
-  if (!refreshToken) {
-    throw new Error("not_authenticated");
-  }
-
-  const refreshed = await refreshSpotifyToken(refreshToken);
-  const nextCookies: Array<{ name: string; value: string; maxAge: number }> = [
-    {
-      name: SPOTIFY_ACCESS_COOKIE,
-      value: refreshed.access_token,
-      maxAge: refreshed.expires_in,
-    },
-    {
-      name: SPOTIFY_EXPIRES_COOKIE,
-      value: String(Date.now() + refreshed.expires_in * 1000),
-      maxAge: refreshed.expires_in,
-    },
-  ];
-
-  if (refreshed.refresh_token) {
-    nextCookies.push({
-      name: SPOTIFY_REFRESH_COOKIE,
-      value: refreshed.refresh_token,
-      maxAge: 60 * 60 * 24 * 30,
-    });
-  }
-
-  return {
-    accessToken: refreshed.access_token,
-    setCookies: nextCookies,
-  };
-}
-
-// Buat playlist baru di Spotify
-async function spotifyCreatePlaylist(playlistName: string, accessToken: string): Promise<{ id: string; external_urls?: { spotify?: string } }> {
-  const response = await fetch("https://api.spotify.com/v1/me/playlists", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      name: playlistName,
-      description: "Eksperimen export playlist dari hasil EDAS dummy.",
-      public: false,
-    }),
-  });
-
-  if (!response.ok) {
-    const detail = await getResponseTextSafe(response);
-    throw new Error(`spotify_create_playlist_failed:${response.status}:${detail}`);
-  }
-
-  return (await response.json()) as { id: string; external_urls?: { spotify?: string } };
 }
 
 // Cari URI track Spotify berdasarkan judul + artis
@@ -227,103 +150,9 @@ async function resolveTrackUris(
   return { foundUris, missingTracks };
 }
 
-export async function handleSpotifyExportPost(request: Request) {
-  try {
-    const body = (await request.json()) as ExportRequestBody;
-    if (!body.playlistName || !Array.isArray(body.tracks) || body.tracks.length === 0) {
-      return NextResponse.json({ error: "Payload export tidak valid." }, { status: 400 });
-    }
-
-    const sanitizedTracks = body.tracks
-      .filter((track) => track?.title?.trim() && track?.artist?.trim())
-      .slice(0, MAX_EXPORT_TRACKS)
-      .map((track) => ({
-        title: track.title.trim(),
-        artist: track.artist.trim(),
-      }));
-
-    if (sanitizedTracks.length === 0) {
-      return NextResponse.json({ error: "Daftar lagu kosong setelah validasi." }, { status: 400 });
-    }
-
-    const { accessToken, setCookies } = await getValidAccessToken(request);
-    const playlist = await spotifyCreatePlaylist(body.playlistName, accessToken);
-
-    const { foundUris, missingTracks } = await resolveTrackUris(sanitizedTracks, accessToken);
-
-    const { addedUris, failedUris } =
-      foundUris.length > 0
-        ? await spotifyAddTracks(playlist.id, foundUris, accessToken)
-        : { addedUris: [], failedUris: [] as AddTrackFailure[] };
-
-    if (foundUris.length > 0 && addedUris.length === 0 && failedUris.length > 0) {
-      const sample = failedUris.slice(0, 3);
-      return NextResponse.json(
-        {
-          error: "spotify_add_tracks_all_failed",
-          hint: "Playlist berhasil dibuat, tapi Spotify menolak penambahan semua lagu. Coba reconnect Spotify agar token + scope segar, lalu ulangi export.",
-          totalResolvedUris: foundUris.length,
-          sampleFailures: sample,
-        },
-        { status: 403 },
-      );
-    }
-
-    const response = NextResponse.json({
-      ok: true,
-      playlistId: playlist.id,
-      playlistUrl: playlist.external_urls?.spotify ?? null,
-      totalRequested: sanitizedTracks.length,
-      totalAdded: addedUris.length,
-      totalMissing: missingTracks.length,
-      missingTracks,
-      totalFailedToAdd: failedUris.length,
-      failedToAddSample: failedUris.slice(0, 3),
-      cappedByServer: body.tracks.length > MAX_EXPORT_TRACKS,
-    });
-
-    if (setCookies) {
-      for (const cookie of setCookies) {
-        response.cookies.set(cookie.name, cookie.value, {
-          httpOnly: true,
-          sameSite: "lax",
-          secure: false,
-          path: "/",
-          maxAge: cookie.maxAge,
-        });
-      }
-    }
-
-    return response;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "unknown_error";
-    if (message === "not_authenticated") {
-      return NextResponse.json({ error: "Spotify belum terhubung." }, { status: 401 });
-    }
-
-    const spotifyStatusMatch = /spotify_[^:]+_failed:(\d+):/.exec(message);
-    if (spotifyStatusMatch) {
-      const status = Number(spotifyStatusMatch[1]);
-      const isForbidden = status === 403;
-
-      return NextResponse.json(
-        {
-          error: message,
-          hint: isForbidden
-            ? "Spotify menolak aksi playlist (403). Pastikan akun ada di Users and access, lalu remove access app di Spotify Account dan connect ulang agar scope playlist terpasang ulang."
-            : undefined,
-        },
-        { status: Number.isFinite(status) ? status : 500 },
-      );
-    }
-
-    return NextResponse.json({ error: message }, { status: 500 });
-  }
-}
-
 // ============================================================
 // PROJECT ACCOUNT EXPORT (server-side, kalskripdas@gmail.com)
-// Tidak menggunakan cookie/user token — token dari env.
+// Token dari environment — tanpa cookie OAuth user.
 // ============================================================
 
 function formatPlaylistTitle(): string {
