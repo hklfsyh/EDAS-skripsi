@@ -23,8 +23,8 @@
     radial-gradient(circle at 84% 16%, rgba(0, 195, 255, 0.15) 0%, transparent 24%),
     radial-gradient(circle at 26% 82%, rgba(255, 45, 120, 0.11) 0%, transparent 20%),
     radial-gradient(circle at 76% 78%, rgba(30, 215, 96, 0.1) 0%, transparent 20%);
-  filter: blur(10px);
-  opacity: 0.9;
+  filter: blur(8px);
+  opacity: 0.78;
 }
 
 :global(html[data-theme="light"]) .gradientWash {
@@ -41,8 +41,8 @@
   background:
     radial-gradient(circle at var(--focus-x) var(--focus-y), rgba(0, 195, 255, 0.14) 0%, transparent 18%),
     radial-gradient(circle at calc(var(--focus-x) + 8%) calc(var(--focus-y) + 4%), rgba(151, 71, 255, 0.1) 0%, transparent 22%);
-  filter: blur(24px);
-  opacity: 0.9;
+  filter: blur(16px);
+  opacity: 0.58;
   will-change: opacity, transform;
 }
 
@@ -57,7 +57,7 @@
   background:
     radial-gradient(circle at 50% -4%, rgba(255, 255, 255, 0.05) 0%, transparent 28%),
     radial-gradient(circle at 50% 108%, rgba(7, 10, 22, 0.45) 0%, transparent 30%);
-  opacity: 0.72;
+  opacity: 0.55;
 }
 
 :global(html[data-theme="light"]) .edgeGlow {
@@ -83,7 +83,6 @@
   will-change: transform;
   box-shadow: 0 0 0 1px rgba(255,255,255,0.14), 0 16px 44px rgba(0,0,0,0.42);
   overflow: hidden;
-  backdrop-filter: blur(2px);
 }
 
 :global(html[data-theme="light"]) .album {
@@ -132,11 +131,12 @@
 @media (max-width: 540px) {
   .gradientWash {
     inset: -12%;
-    filter: blur(18px);
+    filter: blur(14px);
   }
 
   .spotlight {
     inset: -18%;
-    filter: blur(28px);
+    filter: blur(18px);
+    opacity: 0.44;
   }
 }

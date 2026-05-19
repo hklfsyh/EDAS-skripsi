@@ -45,6 +45,8 @@ export function MusicBackground() {
   const raf = useRef<number>(0);
   const startTime = useRef(performance.now());
   const lastTouchAt = useRef(0);
+  const scrollRatioRef = useRef(0);
+  const lastFrameRef = useRef(0);
 
   const isDark =
     typeof window !== "undefined"
@@ -55,9 +57,12 @@ export function MusicBackground() {
     const container = containerRef.current;
     if (!container) return;
 
-    const cards = Array.from(container.querySelectorAll<HTMLElement>("[data-depth]"));
+    const allCards = Array.from(container.querySelectorAll<HTMLElement>("[data-depth]"));
     const prefersCoarsePointer = window.matchMedia("(pointer: coarse)").matches;
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const cards = prefersCoarsePointer ? allCards.filter((_, index) => index % 2 === 0) : allCards;
     startTime.current = performance.now();
+    lastFrameRef.current = performance.now();
 
     const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
 
@@ -78,21 +83,35 @@ export function MusicBackground() {
       setTarget(touch.clientX / window.innerWidth, touch.clientY / window.innerHeight, true);
     };
 
-    const tick = () => {
-      const t = (performance.now() - startTime.current) / 1000;
+    const updateScrollRatio = () => {
       const maxScroll = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
-      const scrollRatio = clamp01(window.scrollY / maxScroll);
+      scrollRatioRef.current = clamp01(window.scrollY / maxScroll);
+    };
+    updateScrollRatio();
+
+    const tick = () => {
+      const now = performance.now();
+      const minFrameGap = prefersReducedMotion ? 48 : prefersCoarsePointer ? 40 : 28;
+      if (now - lastFrameRef.current < minFrameGap) {
+        raf.current = requestAnimationFrame(tick);
+        return;
+      }
+
+      lastFrameRef.current = now;
+      const t = (now - startTime.current) / 1000;
+      const scrollRatio = scrollRatioRef.current;
       const touchIsFresh = performance.now() - lastTouchAt.current < 1800;
 
       if (prefersCoarsePointer && !touchIsFresh) {
         setTarget(
-          0.5 + Math.sin(t * 0.22) * 0.16,
-          0.26 + scrollRatio * 0.34 + Math.cos(t * 0.18) * 0.08,
+          0.5 + Math.sin(t * 0.16) * 0.1,
+          0.3 + scrollRatio * 0.22 + Math.cos(t * 0.15) * 0.04,
         );
       }
 
-      focus.current.x += (target.current.x - focus.current.x) * 0.06;
-      focus.current.y += (target.current.y - focus.current.y) * 0.06;
+      const easing = prefersCoarsePointer ? 0.035 : 0.055;
+      focus.current.x += (target.current.x - focus.current.x) * easing;
+      focus.current.y += (target.current.y - focus.current.y) * easing;
 
       const mx = focus.current.x;
       const my = focus.current.y;
@@ -102,12 +121,12 @@ export function MusicBackground() {
       for (const card of cards) {
         const depth = parseFloat(card.dataset.depth ?? "0.2");
         const off = parseFloat(card.dataset.floatOff ?? "0");
-        const dx = (mx - 0.5) * depth * 180;
-        const dy = (my - 0.5) * depth * 180;
-        const rot = (mx - 0.5) * depth * 14;
-        const idleX = Math.sin(t * 0.7 + off) * 22 + Math.sin(t * 1.3 + off * 1.7) * 12 + Math.cos(t * 0.4 + off * 2.3) * 8;
-        const idleY = Math.sin(t * 0.9 + off * 1.3) * 18 + Math.cos(t * 1.1 + off * 0.9) * 10 + Math.sin(t * 0.5 + off * 0.5) * 6;
-        const idleRot = Math.sin(t * 0.3 + off * 0.7) * 10;
+        const dx = (mx - 0.5) * depth * (prefersCoarsePointer ? 72 : 128);
+        const dy = (my - 0.5) * depth * (prefersCoarsePointer ? 68 : 120);
+        const rot = (mx - 0.5) * depth * (prefersCoarsePointer ? 6 : 10);
+        const idleX = Math.sin(t * 0.58 + off) * 14 + Math.sin(t * 1.04 + off * 1.7) * 7;
+        const idleY = Math.sin(t * 0.74 + off * 1.3) * 12 + Math.cos(t * 0.92 + off * 0.9) * 6;
+        const idleRot = Math.sin(t * 0.24 + off * 0.7) * (prefersCoarsePointer ? 4 : 7);
         card.style.transform = `translate3d(${dx + idleX}px, ${dy + idleY}px, 0) rotate(${rot + idleRot}deg)`;
       }
 
@@ -118,11 +137,15 @@ export function MusicBackground() {
     window.addEventListener("mousemove", onMove);
     window.addEventListener("touchstart", onTouch, { passive: true });
     window.addEventListener("touchmove", onTouch, { passive: true });
+    window.addEventListener("scroll", updateScrollRatio, { passive: true });
+    window.addEventListener("resize", updateScrollRatio);
 
     return () => {
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("touchstart", onTouch);
       window.removeEventListener("touchmove", onTouch);
+      window.removeEventListener("scroll", updateScrollRatio);
+      window.removeEventListener("resize", updateScrollRatio);
       cancelAnimationFrame(raf.current);
     };
   }, []);

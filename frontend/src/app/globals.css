@@ -100,7 +100,12 @@ body {
   font-family: 'Figtree', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  cursor: none; /* we use custom cursor */
+}
+
+@media (hover: hover) and (pointer: fine) {
+  body {
+    cursor: none; /* we use custom cursor */
+  }
 }
 
 a {
