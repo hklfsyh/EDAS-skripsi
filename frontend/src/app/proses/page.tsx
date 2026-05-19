@@ -124,8 +124,6 @@ const PREFERENCE_LABELS: Record<PreferenceParameter, { high: string; low: string
     const timeOfDay = context.timeOfDay || "waktu yang dipilih";
     const mood = context.mood || "netral";
 
-    const topSongs = playlist.slice(0, 2).map((song) => song.title).filter(Boolean);
-
     const primaryText =
       preferenceSummary.primary.length > 0
         ? joinList(preferenceSummary.primary)
@@ -141,14 +139,9 @@ const PREFERENCE_LABELS: Record<PreferenceParameter, { high: string; low: string
         ? ` Di sisi lain, sistem tidak terlalu memprioritaskan ${joinList(preferenceSummary.avoid)} pada sesi ini.`
         : "";
 
-    const songsText =
-      topSongs.length > 0
-        ? ` Beberapa lagu teratas seperti ${joinList(topSongs)} ikut mewakili arah rekomendasi ini.`
-        : "";
-
     return (
       `Untuk sesi ${activity} pada ${timeOfDay} dengan suasana saat ini ${mood}, jawaban kuesionermu menunjukkan kecenderungan ke ${primaryText}.${secondaryText}${avoidText} ` +
-      `Karena itu, playlist ini dipilih dari lagu-lagu yang tingkat kecocokannya paling tinggi dengan kebutuhan sesi ini, sehingga hasilnya tidak terasa dipilih secara acak.${songsText} ` +
+      `Karena itu, playlist ini dipilih dari lagu-lagu yang tingkat kecocokannya paling tinggi dengan kebutuhan sesi ini, sehingga hasilnya tidak terasa dipilih secara acak. ` +
       `Dengan total durasi sekitar ${totalMinutes} menit, playlist ini disusun agar tetap terasa nyambung dan relevan untuk menemani sesi yang kamu pilih.`
     )
       .replace(/\s+/g, " ")
@@ -180,10 +173,6 @@ const PREFERENCE_LABELS: Record<PreferenceParameter, { high: string; low: string
             targetDurationSec: context.durationMinutes * 60,
             totalDurationSec,
             selectedSongs: playlist.length,
-            topSongs: playlist.slice(0, 5).map((item) => ({
-              title: item.title,
-              artist: item.artist,
-            })),
             preferenceSummary,
           }),
         },
@@ -289,13 +278,13 @@ const PREFERENCE_LABELS: Record<PreferenceParameter, { high: string; low: string
     return payload.playlist;
   }
 
-// Simpan hasil rekomendasi ke database
+// Simpan hasil rekomendasi ke database, return id_session jika berhasil
 async function saveRecommendation(
   clientId: string,
   context: ContextData,
   answers: Record<number, number>,
   playlist: PlaylistItem[],
-) {
+): Promise<number | undefined> {
   const payload = {
     clientId,
     context: {
@@ -312,13 +301,16 @@ async function saveRecommendation(
     })),
   };
 
-  await fetch("/api/recommendations/save", {
+  const res = await fetch("/api/recommendations/save", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify(payload),
   });
+
+  const data = await res.json().catch(() => ({} as Record<string, unknown>));
+  return data?.id_session ? Number(data.id_session) : undefined;
 }
 
 export default function ProsesPage() {
@@ -397,6 +389,11 @@ export default function ProsesPage() {
           fallbackUsed: true,
           reason: "not_generated_yet",
         };
+        // Simpan rekomendasi ke database dan ambil id_session
+        const savedSessionId = await saveRecommendation(
+          getOrCreateClientId(), context, answers, playlist,
+        ).catch(() => undefined);
+
         const resultPayload = {
           context,
           answers,
@@ -409,15 +406,10 @@ export default function ProsesPage() {
           createdAt: new Date().toISOString(),
           nlgText: fallbackNarration,
           nlgMeta: fallbackMeta,
+          id_session: savedSessionId,
         };
 
         localStorage.setItem(RESULT_STORAGE_KEY, JSON.stringify(resultPayload));
-        setCurrentStep(4);
-        setProgress(68);
-
-        // Simpan rekomendasi ke database tanpa blok UI
-        void saveRecommendation(getOrCreateClientId(), context, answers, playlist).catch(() => undefined);
-
         setCurrentStep(4);
         setProgress(74);
         setNlgStatusText("Penjelasan rekomendasi sedang disusun.");

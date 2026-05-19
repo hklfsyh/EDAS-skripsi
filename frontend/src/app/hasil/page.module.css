@@ -494,6 +494,44 @@
   font-size: 0.9rem;
 }
 
+.historyExtLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.historyExtLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--button-text);
+  background: var(--button-bg);
+  box-shadow: 0 2px 8px rgba(93, 143, 104, 0.18);
+  text-decoration: none;
+  transition: transform 0.18s, box-shadow 0.18s, background 0.18s;
+}
+
+.historyExtLink:hover {
+  transform: translateY(-1px);
+  background: var(--button-bg-hover);
+  box-shadow: 0 4px 16px rgba(93, 143, 104, 0.26);
+}
+
+.extMuted {
+  font-size: 0.8rem;
+  color: var(--muted-foreground);
+  font-weight: 600;
+  padding: 8px 0;
+}
+
 .fallback {
   min-height: 100svh;
   display: grid;

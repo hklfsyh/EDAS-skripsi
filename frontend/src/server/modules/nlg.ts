@@ -72,8 +72,6 @@ function buildGeminiPrompt(body: NlgRequestBody): string {
   const targetMin = formatMinutes(body.targetDurationSec ?? 0);
   const totalMin = formatMinutes(body.totalDurationSec ?? 0);
   const count = body.selectedSongs ?? 0;
-  const topSongs = (body.topSongs ?? []).slice(0, 3);
-  const songList = topSongs.map((song) => `"${song.title}" oleh ${song.artist}`).join(", ");
   const summary = body.preferenceSummary ?? {};
   const primary = (summary.primary ?? []).slice(0, 2).join(", ");
   const secondary = (summary.secondary ?? []).slice(0, 2).join(", ");
@@ -88,7 +86,6 @@ Data sesi:
 - Target durasi: ${targetMin} menit
 - Durasi total playlist: ${totalMin} menit
 - Jumlah lagu terpilih: ${count} lagu
-${songList ? `- Lagu teratas: ${songList}` : ""}
 ${primary ? `- Kecenderungan utama: ${primary}` : ""}
 ${secondary ? `- Kecenderungan tambahan: ${secondary}` : ""}
 ${avoid ? `- Tidak terlalu diprioritaskan: ${avoid}` : ""}
@@ -101,7 +98,10 @@ Instruksi output:
 - Awali dengan penjelasan bahwa dari jawaban kuesioner yang diisi, sesi ini terlihat lebih cocok dengan karakter musik tertentu
 - Jelaskan bahwa playlist kemudian lebih memprioritaskan lagu-lagu yang paling selaras / paling cocok dengan karakter tersebut
 - Jelaskan bahwa hasilnya bukan sekadar dipilih acak, tetapi disusun dari lagu yang tingkat kecocokannya lebih tinggi dibanding kandidat lain
-- Sebutkan 1-2 lagu teratas jika ada, hanya sebagai contoh pendukung
+- Jangan menyebut judul lagu, nama artis, atau contoh lagu tertentu meskipun tersedia dalam data playlist
+- Jangan menyebut nama artis tertentu
+- Jelaskan karakter umum playlist berdasarkan konteks, preferensi, durasi, dan kecenderungan audio
+- Narasi harus tetap relevan meskipun sebagian lagu dalam playlist diganti oleh pengguna
 - Tutup dengan kalimat ringan yang menekankan bahwa playlist ini dibuat agar tetap nyambung untuk sesi yang dipilih
 - Jangan gunakan frasa seperti "preferensi kuat", "dirancang agar", "membuat lebih nyaman", "lebih teratur", atau frasa lain yang terdengar terlalu administratif atau menjanjikan efek
 - Jangan menyebut EDAS, appraisal score, bobot, ranking, decision matrix, atau istilah teknis lain

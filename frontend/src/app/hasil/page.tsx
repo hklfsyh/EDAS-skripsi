@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { MusicBackground } from "@/components/common/MusicBackground";
@@ -30,6 +30,7 @@ type PlaylistItem = {
 };
 
 type ResultData = {
+  id_session?: number;
   context: ContextData;
   playlist: PlaylistItem[];
   summary: {
@@ -62,6 +63,12 @@ type HistorySession = {
   duration_target: number;
   created_at: string;
   songs: HistorySong[];
+  spotify_playlist_url: string | null;
+  spotify_playlist_title: string | null;
+  spotify_exported_at: string | null;
+  youtube_playlist_url: string | null;
+  youtube_playlist_title: string | null;
+  youtube_exported_at: string | null;
 };
 
 // Format durasi ke mm:ss
@@ -106,9 +113,9 @@ export default function HasilPage() {
     document.documentElement.dataset.theme = saved === "light" ? "light" : "dark";
   }, []);
 
-  // Ambil status koneksi Spotify/YouTube dan riwayat rekomendasi
-  useEffect(() => {
+  const loadHistory = useCallback(() => {
     const clientId = getOrCreateClientId();
+    setHistoryLoading(true);
     void fetch(`/api/recommendations/history?clientId=${encodeURIComponent(clientId)}`)
       .then((response) => response.json() as Promise<{ history: HistorySession[]; error?: string }>)
       .then((payload) => {
@@ -124,6 +131,11 @@ export default function HasilPage() {
         setHistoryLoading(false);
       });
   }, []);
+
+  // Ambil status koneksi Spotify/YouTube dan riwayat rekomendasi
+  useEffect(() => {
+    loadHistory();
+  }, [loadHistory]);
 
   // Status koneksi Spotify/YouTube tidak perlu dicek —
   // server menggunakan token project akun tetap (kalskripdas@gmail.com).
@@ -186,6 +198,33 @@ export default function HasilPage() {
     window.location.href = url;
   };
 
+  const checkExternalUrlDb = async (platform: string): Promise<{ url: string | null; title: string | null }> => {
+    if (!result?.id_session) return { url: null, title: null };
+    try {
+      const res = await fetch(
+        `/api/recommendations/external-url?id_session=${result.id_session}&platform=${platform}`,
+      );
+      const data = await res.json();
+      return { url: data?.url ?? null, title: data?.title ?? null };
+    } catch {
+      return { url: null, title: null };
+    }
+  };
+
+  const saveExternalUrlDb = (platform: string, url: string, title: string) => {
+    if (!result?.id_session) return;
+    fetch("/api/recommendations/external-url", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id_session: result.id_session,
+        platform,
+        url,
+        title,
+      }),
+    }).catch(() => console.warn(`Gagal simpan URL ${platform} ke database.`));
+  };
+
   const openOrCreate = async (platform: "spotify" | "youtube") => {
     const extKey = platform === "spotify" ? extKeySpotify : extKeyYoutube;
     const setLoading = platform === "spotify" ? setSpotifyLoading : setYoutubeLoading;
@@ -194,14 +233,29 @@ export default function HasilPage() {
 
     setLoading(true);
     try {
+      // 1. Database adalah sumber utama — cek DB dulu jika id_session tersedia
+      const { url: dbUrl, title: dbTitle } = await checkExternalUrlDb(platform);
+      if (dbUrl) {
+        localStorage.setItem(extKey, dbUrl);
+        console.log(`[${label} Export] Reuse database ${label} playlist — ${dbUrl}`);
+        redirectToUrl(dbUrl);
+        return;
+      }
+
+      // 2. Fallback ke localStorage cache
       const cached = localStorage.getItem(extKey);
       if (cached) {
-        console.log(`[${label} Export] Reuse existing ${label} playlist — ${cached}`);
+        // Sync cache ke database jika memungkinkan
+        if (result?.id_session) {
+          saveExternalUrlDb(platform, cached, generatePlaylistName(result.context));
+        }
+        console.log(`[${label} Export] Reuse cached ${label} playlist — ${cached}`);
         redirectToUrl(cached);
         return;
       }
 
-      console.log(`[${label} Export] No cached URL — creating new playlist`);
+      // 3. Generate playlist eksternal baru
+      console.log(`[${label} Export] No existing URL — creating new playlist`);
       const playlistName = generatePlaylistName(result.context);
       const res = await fetch(endpoint, {
         method: "POST",
@@ -214,6 +268,7 @@ export default function HasilPage() {
       const data = await res.json();
       if (data.status === "success" && data.publicUrl) {
         localStorage.setItem(extKey, data.publicUrl);
+        saveExternalUrlDb(platform, data.publicUrl, playlistName);
         console.log(`[${label} Export] Created new playlist — ${data.publicUrl}`);
         redirectToUrl(data.publicUrl);
       } else {
@@ -229,8 +284,34 @@ export default function HasilPage() {
   const handleExportSpotify = () => openOrCreate("spotify");
   const handleExportYoutube = () => openOrCreate("youtube");
 
-  const handleSelesai = () => {
-    router.push("/");
+  const handleSelesai = async () => {
+    if (result?.id_session) {
+      const safePlaylist = playlist
+        .filter((item) => item.id_song != null)
+        .map((item) => ({
+          id_song: Number(item.id_song),
+          rank: Number(item.rank),
+          appraisalScore: Number(item.appraisalScore),
+        }));
+      if (safePlaylist.length > 0) {
+        try {
+          const res = await fetch("/api/recommendations/update-playlist", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              id_session: result.id_session,
+              playlist: safePlaylist,
+            }),
+          });
+          if (!res.ok) {
+            console.warn("Safety save playlist gagal:", res.status);
+          }
+        } catch {
+          // Safety net — silent jika gagal, jangan block navigasi
+        }
+      }
+    }
+    router.replace("/");
   };
 
   const handleOpenHistory = (sessionId: number) => {
@@ -289,7 +370,7 @@ export default function HasilPage() {
       }
 
       const replacements: PlaylistItem[] = (data.replacements ?? []).map(
-        (r: PlaylistItem, idx: number) => ({
+        (r: PlaylistItem) => ({
           ...r,
           rank: 0,
         }),
@@ -331,8 +412,39 @@ export default function HasilPage() {
       setPlaylist(reRanked);
       setExcludedSongIds(new Set(allExcluded));
       setSelectedSongIds(new Set());
+
+      // Simpan playlist final ke database jika id_session tersedia
+      let dbSaveFailed = false;
+      if (result?.id_session) {
+        try {
+          const dbRes = await fetch("/api/recommendations/update-playlist", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              id_session: result.id_session,
+              playlist: reRanked.map((item) => ({
+                id_song: item.id_song,
+                rank: item.rank,
+                appraisalScore: item.appraisalScore,
+              })),
+            }),
+          });
+          if (!dbRes.ok) {
+            const dbErr = await dbRes.json().catch(() => null);
+            console.warn("Playlist final gagal disimpan ke server:", dbErr?.error ?? dbRes.status);
+            dbSaveFailed = true;
+          } else {
+            loadHistory();
+          }
+        } catch {
+          console.warn("Playlist final gagal disimpan ke server.");
+          dbSaveFailed = true;
+        }
+      }
+
       setReplaceMessage(
-        `${songsToRemove.length} lagu diganti dengan ${replacements.length} lagu baru (${(data.replacedDurationSec / 60).toFixed(0)} menit).`,
+        `${songsToRemove.length} lagu diganti dengan ${replacements.length} lagu baru (${(data.replacedDurationSec / 60).toFixed(0)} menit).` +
+          (dbSaveFailed ? " Lagu berhasil diganti di tampilan, tetapi gagal disimpan ke riwayat." : ""),
       );
     } catch {
       setReplaceMessage("Gagal memproses penggantian lagu.");
@@ -521,6 +633,33 @@ export default function HasilPage() {
                     </li>
                   ))}
                 </ul>
+
+                <div className={styles.historyExtLinks}>
+                  {selectedSession.spotify_playlist_url ? (
+                    <a
+                      href={selectedSession.spotify_playlist_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={styles.historyExtLink}
+                    >
+                      Buka Spotify
+                    </a>
+                  ) : (
+                    <span className={styles.extMuted}>Belum dibuka di Spotify</span>
+                  )}
+                  {selectedSession.youtube_playlist_url ? (
+                    <a
+                      href={selectedSession.youtube_playlist_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={styles.historyExtLink}
+                    >
+                      Buka YouTube
+                    </a>
+                  ) : (
+                    <span className={styles.extMuted}>Belum dibuka di YouTube</span>
+                  )}
+                </div>
               </div>
             </dialog>
           </div>

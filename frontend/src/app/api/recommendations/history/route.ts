@@ -19,8 +19,16 @@ export async function GET(request: Request) {
       mood: string;
       duration_target: number;
       created_at: string;
+      spotify_playlist_url: string | null;
+      spotify_playlist_title: string | null;
+      spotify_exported_at: string | null;
+      youtube_playlist_url: string | null;
+      youtube_playlist_title: string | null;
+      youtube_exported_at: string | null;
     }[]>`
-      select id_session, activity, time_category, mood, duration_target, created_at
+      select id_session, activity, time_category, mood, duration_target, created_at,
+             spotify_playlist_url, spotify_playlist_title, spotify_exported_at,
+             youtube_playlist_url, youtube_playlist_title, youtube_exported_at
       from recommendation_session
       where client_id = ${clientId}
       order by created_at desc
