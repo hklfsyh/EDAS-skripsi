@@ -1,9 +1,9 @@
 .page {
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: visible;
 }
 
 .layout {
-  width: min(1040px, 100%);
   display: grid;
   gap: 16px;
   padding-block: 16px 28px;
@@ -16,14 +16,24 @@
   gap: 10px;
 }
 
-.backLink {
+.backLink,
+.backLinkButton {
   color: var(--muted-foreground);
   font-weight: 700;
   font-size: 0.92rem;
   transition: color 0.15s;
 }
 
-.backLink:hover {
+.backLinkButton {
+  border: none;
+  padding: 0;
+  background: transparent;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.backLink:hover,
+.backLinkButton:hover {
   color: var(--accent-primary);
 }
 
@@ -49,7 +59,6 @@
   border-radius: 22px;
   border: 1.5px solid var(--surface-border);
   background: var(--surface);
-  backdrop-filter: blur(14px);
   box-shadow: var(--surface-shadow);
   padding: 24px;
 }
@@ -552,6 +561,125 @@
   font-weight: 700;
 }
 
+.contextLine {
+  margin: 0 0 10px;
+  color: var(--muted-foreground);
+  font-size: 0.9rem;
+}
+
+/* ── Step navigation ── */
+
+.stepNav {
+  margin-top: 18px;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.navButton {
+  border: none;
+  border-radius: 12px;
+  padding: 12px 20px;
+  font-weight: 800;
+  font-size: 0.9rem;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--button-text);
+  background: var(--button-bg);
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--accent-secondary) 18%, transparent);
+  transition: transform 0.18s, box-shadow 0.18s, background 0.18s;
+}
+
+.navButton:hover {
+  transform: translateY(-2px);
+  background: var(--button-bg-hover);
+  box-shadow: 0 8px 28px color-mix(in srgb, var(--accent-secondary) 22%, transparent);
+}
+
+.secondaryNavButton {
+  border: 1.5px solid var(--surface-border);
+  border-radius: 12px;
+  padding: 12px 20px;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.18s;
+}
+
+.secondaryNavButton:hover {
+  background: var(--surface-subtle);
+  border-color: var(--accent-primary);
+  transform: translateY(-1px);
+}
+
+/* ── Step dots indicator ── */
+
+.stepsDots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 0 4px;
+  background: transparent;
+  border: none;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  transition: background 0.2s, transform 0.2s;
+  cursor: pointer;
+}
+
+.dotActive {
+  background: var(--accent-primary);
+  transform: scale(1.3);
+}
+
+.dotInactive {
+  background: var(--surface-border);
+}
+
+.dotInactive:hover {
+  background: var(--muted-foreground);
+}
+
+/* ── History compact row ── */
+
+.historyRow {
+  margin-top: 16px;
+  text-align: center;
+}
+
+.historyLink {
+  border: 1.5px solid var(--surface-card-border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--foreground);
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  padding: 8px 16px;
+  transition: border-color 0.15s, background 0.15s, transform 0.18s;
+}
+
+.historyLink:hover {
+  border-color: var(--accent-primary);
+  background: var(--surface-subtle);
+  transform: translateY(-1px);
+}
+
+/* ── Layout width for hasil ── */
+
+.layout {
+  width: min(480px, 100%);
+  padding-bottom: 20px;
+}
+
 @media (max-width: 700px) {
   .platformGrid {
     grid-template-columns: 1fr;
@@ -586,5 +714,15 @@
   .batchBar {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .stepNav {
+    flex-direction: column;
+  }
+
+  .navButton,
+  .secondaryNavButton {
+    width: 100%;
+    text-align: center;
   }
 }

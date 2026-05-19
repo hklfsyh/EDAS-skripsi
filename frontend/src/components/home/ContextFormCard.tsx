@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  PLAYLIST_CONTEXT_STORAGE_KEY,
+  clearPlaylistFlowFinishedFlag,
+} from "@/lib/playlistFlow";
 import styles from "./ContextFormCard.module.css";
-
-const CONTEXT_STORAGE_KEY = "playlist-context-v1";
 
 export function ContextFormCard() {
   const router = useRouter();
@@ -13,10 +15,8 @@ export function ContextFormCard() {
   const [timeOfDay, setTimeOfDay] = useState("");
   const [mood, setMood] = useState("");
   const [durationMinutes, setDurationMinutes] = useState<number | "">("");
-  const [hasSubmitted, setHasSubmitted] = useState(false);
   const [isIncomplete, setIsIncomplete] = useState(false);
 
-  // Simpan konteks aktivitas ke localStorage
   const handleSubmit: React.ComponentProps<"form">["onSubmit"] = (event) => {
     event.preventDefault();
 
@@ -25,8 +25,7 @@ export function ContextFormCard() {
       return;
     }
 
-    const normalizedDuration = Math.max(15, Math.min(360, durationMinutes || 15));
-    setDurationMinutes(normalizedDuration);
+    const normalizedDuration = Math.max(5, Math.min(360, durationMinutes || 5));
     setIsIncomplete(false);
 
     const payload = {
@@ -38,14 +37,14 @@ export function ContextFormCard() {
       createdAt: new Date().toISOString(),
     };
 
-    localStorage.setItem(CONTEXT_STORAGE_KEY, JSON.stringify(payload));
-    setHasSubmitted(true);
+    clearPlaylistFlowFinishedFlag();
+    localStorage.setItem(PLAYLIST_CONTEXT_STORAGE_KEY, JSON.stringify(payload));
+    router.push("/kuesioner");
   };
 
   return (
     <section className={styles.card}>
-      <h2>Mulai dari konteks kamu dulu</h2>
-      <p className={styles.formDescription}>Pilih konteks sesi kamu dulu supaya rekomendasinya lebih pas.</p>
+      <h2>Konteks sesi kamu</h2>
 
       <form className={styles.form} onSubmit={handleSubmit}>
         <label className={styles.field}>
@@ -86,10 +85,10 @@ export function ContextFormCard() {
         </label>
 
         <label className={styles.field}>
-          <span>Mau denger berapa menit?</span>
+          <span>Durasi (menit)</span>
           <input
             type="number"
-            min={15}
+            min={5}
             max={360}
             step={5}
             value={durationMinutes}
@@ -97,43 +96,18 @@ export function ContextFormCard() {
               const value = event.target.value;
               setDurationMinutes(value === "" ? "" : Number(value));
             }}
+            placeholder="5–360 menit"
           />
         </label>
 
         <button type="submit" className={styles.primaryButton}>
-          Simpan pilihan
+          Simpan & lanjut
         </button>
 
         {isIncomplete && (
           <p className={styles.errorText}>Semua pilihan perlu diisi dulu sebelum lanjut.</p>
         )}
       </form>
-
-      {hasSubmitted && (
-        <div className={styles.summaryBox}>
-          <h3>Pilihanmu sudah tersimpan ✅</h3>
-          <ul>
-            <li>
-              <strong>Aktivitas:</strong> {activity}
-            </li>
-            <li>
-              <strong>Waktu:</strong> {timeOfDay}
-            </li>
-            <li>
-              <strong>Suasana saat ini:</strong> {mood}
-            </li>
-            <li>
-              <strong>Durasi:</strong> {durationMinutes} menit
-            </li>
-          </ul>
-
-          <p>Kalau sudah sesuai, lanjut ke halaman kuesioner ya.</p>
-
-          <button className={styles.secondaryButton} onClick={() => router.push("/kuesioner")}>
-            Lanjut ke pertanyaan musik
-          </button>
-        </div>
-      )}
     </section>
   );
 }

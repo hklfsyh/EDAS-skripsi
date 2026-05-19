@@ -5,28 +5,28 @@
 }
 
 .card {
-  width: min(820px, 100%);
-  margin-top: 10vh;
+  width: min(480px, 100%);
+  margin-top: 6vh;
   border-radius: 22px;
   border: 1.5px solid var(--surface-border);
   background: var(--surface-strong);
   backdrop-filter: blur(14px);
   box-shadow: var(--surface-shadow);
-  padding: 28px;
+  padding: 24px;
 }
 
 .card h1 {
-  margin: 0 0 10px;
-  font-size: clamp(1.35rem, 3vw, 1.95rem);
+  margin: 0 0 8px;
+  font-size: clamp(1.2rem, 3vw, 1.6rem);
   color: var(--foreground);
   letter-spacing: -0.02em;
 }
 
-.card p {
+.desc {
   margin: 0;
   color: var(--muted-foreground);
-  line-height: 1.7;
-  max-width: 68ch;
+  line-height: 1.6;
+  font-size: 0.9rem;
 }
 
 .progressWrap {
@@ -44,47 +44,29 @@
 }
 
 .percentLabel {
-  margin-top: 10px;
+  margin-top: 8px;
   display: inline-block;
   font-weight: 800;
+  font-size: 0.9rem;
   color: var(--accent-primary);
 }
 
-.stepList {
-  margin: 18px 0 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: 10px;
-}
-
-.stepDone,
-.stepIdle {
-  padding: 12px 14px;
-  border-radius: 12px;
-  border: 1px solid var(--surface-border);
-  font-size: 0.93rem;
-}
-
-.stepDone {
-  background: var(--success-soft);
-  color: var(--foreground);
-}
-
-.stepIdle {
-  background: var(--surface-subtle);
-  color: var(--muted-foreground);
+.statusText {
+  margin-top: 12px !important;
+  font-size: 0.88rem;
+  color: var(--foreground) !important;
+  font-weight: 600;
 }
 
 .note {
-  margin-top: 16px !important;
-  font-size: 0.9rem;
+  margin-top: 14px !important;
+  font-size: 0.85rem;
   color: var(--foreground) !important;
 }
 
 .previewTime {
-  margin-top: 6px !important;
-  font-size: 0.84rem;
+  margin-top: 4px !important;
+  font-size: 0.8rem;
   color: var(--muted-foreground) !important;
 }
 

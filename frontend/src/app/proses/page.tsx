@@ -1,16 +1,19 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MusicBackground } from "@/components/common/MusicBackground";
 import { MusicCursorTrail } from "@/components/common/MusicCursorTrail";
 import { getOrCreateClientId } from "@/lib/clientId";
+import {
+  PLAYLIST_CONTEXT_STORAGE_KEY,
+  PLAYLIST_QUESTIONNAIRE_STORAGE_KEY,
+  PLAYLIST_RESULT_STORAGE_KEY,
+  isPlaylistFlowFinished,
+} from "@/lib/playlistFlow";
 import { mapQuestionnaireToPreferences, type PreferenceParameter } from "@/server/utils/preferenceMapping";
 import styles from "./page.module.css";
 
-const CONTEXT_STORAGE_KEY = "playlist-context-v1";
-const QUESTIONNAIRE_STORAGE_KEY = "playlist-questionnaire-v1";
-const RESULT_STORAGE_KEY = "playlist-result-v1";
 const THEME_STORAGE_KEY = "playlist-theme-v1";
 const DEFAULT_NLG_TIMEOUT_MS = 60000;
 const NLG_TIMEOUT_MS = Number(
@@ -224,12 +227,6 @@ const PREFERENCE_LABELS: Record<PreferenceParameter, { high: string; low: string
     }
   }
 
-  function formatDuration(sec: number): string {
-    const minutes = Math.floor(sec / 60);
-    const seconds = sec % 60;
-    return `${minutes}:${String(seconds).padStart(2, "0")}`;
-  }
-
   async function fetchWithTimeout(
     input: RequestInfo | URL,
     init: RequestInit,
@@ -313,6 +310,15 @@ async function saveRecommendation(
   return data?.id_session ? Number(data.id_session) : undefined;
 }
 
+const STATUS_LABELS: Record<number, string> = {
+  0: "Membaca konteks aktivitas...",
+  1: "Mengonversi jawaban jadi preferensi...",
+  2: "Mengambil daftar lagu...",
+  3: "Memproses EDAS...",
+  4: "Menyusun playlist...",
+  5: "Menyusun penjelasan rekomendasi...",
+};
+
 export default function ProsesPage() {
   const router = useRouter();
   const [progress, setProgress] = useState(8);
@@ -325,20 +331,12 @@ export default function ProsesPage() {
   useEffect(() => {
     const saved = localStorage.getItem(THEME_STORAGE_KEY);
     document.documentElement.dataset.theme = saved === "light" ? "light" : "dark";
+    if (isPlaylistFlowFinished()) {
+      router.replace("/");
+      return;
+    }
     getOrCreateClientId();
-  }, []);
-
-  const steps = useMemo(
-    () => [
-      "Membaca konteks aktivitas pengguna",
-      "Mengonversi jawaban kuesioner jadi bobot preferensi",
-      "Mengambil daftar lagu dari basis data",
-      "Memproses EDAS berdasarkan bobot preferensi",
-      "Menyusun playlist rekomendasi sesuai target durasi",
-      "Menyusun penjelasan rekomendasi",
-    ],
-    [],
-  );
+  }, [router]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -346,8 +344,13 @@ export default function ProsesPage() {
     let redirectTimer: ReturnType<typeof setTimeout> | undefined;
     let nlgStatusTimer: ReturnType<typeof setTimeout> | undefined;
 
-    const contextRaw = localStorage.getItem(CONTEXT_STORAGE_KEY);
-    const answersRaw = localStorage.getItem(QUESTIONNAIRE_STORAGE_KEY);
+    if (isPlaylistFlowFinished()) {
+      router.replace("/");
+      return undefined;
+    }
+
+    const contextRaw = localStorage.getItem(PLAYLIST_CONTEXT_STORAGE_KEY);
+    const answersRaw = localStorage.getItem(PLAYLIST_QUESTIONNAIRE_STORAGE_KEY);
 
     if (!contextRaw || !answersRaw) {
       router.replace("/");
@@ -409,7 +412,7 @@ export default function ProsesPage() {
           id_session: savedSessionId,
         };
 
-        localStorage.setItem(RESULT_STORAGE_KEY, JSON.stringify(resultPayload));
+        localStorage.setItem(PLAYLIST_RESULT_STORAGE_KEY, JSON.stringify(resultPayload));
         setCurrentStep(4);
         setProgress(74);
         setNlgStatusText("Penjelasan rekomendasi sedang disusun.");
@@ -428,7 +431,7 @@ export default function ProsesPage() {
           nlgText: nlgResult.text,
           nlgMeta: nlgResult.meta,
         };
-        localStorage.setItem(RESULT_STORAGE_KEY, JSON.stringify(finalPayload));
+        localStorage.setItem(PLAYLIST_RESULT_STORAGE_KEY, JSON.stringify(finalPayload));
         setCurrentStep(5);
         setProgress(100);
 
@@ -451,7 +454,9 @@ export default function ProsesPage() {
       if (redirectTimer) clearTimeout(redirectTimer);
       if (nlgStatusTimer) clearTimeout(nlgStatusTimer);
     };
-  }, [router, steps]);
+  }, [router]);
+
+  const statusText = nlgStatusText || STATUS_LABELS[currentStep] || "";
 
   return (
     <main className={`app-shell ${styles.page}`}>
@@ -460,8 +465,8 @@ export default function ProsesPage() {
 
       <section className={`app-container ${styles.card}`}>
         <h1>Menyusun playlist terbaik untukmu</h1>
-        <p>
-          Sistem sedang menganalisis preferensi musikmu, memeringkat lagu dengan metode EDAS, dan menyiapkan penjelasan rekomendasi.
+        <p className={styles.desc}>
+          Sistem sedang menganalisis preferensi musikmu, memeringkat lagu, dan menyiapkan penjelasan rekomendasi.
         </p>
 
         <div className={styles.progressWrap}>
@@ -469,27 +474,15 @@ export default function ProsesPage() {
         </div>
         <span className={styles.percentLabel}>{Math.min(progress, 100)}%</span>
 
-        <ul className={styles.stepList}>
-          {steps.map((step, idx) => (
-            <li
-              key={step}
-              className={idx <= currentStep ? styles.stepDone : styles.stepIdle}
-            >
-              {idx <= currentStep ? "✅" : "⏳"} {step}
-            </li>
-          ))}
-        </ul>
-
-        {currentStep >= 4 && currentStep < 5 && nlgStatusText ? (
-          <p className={styles.previewTime}>{nlgStatusText}</p>
-        ) : null}
+        {statusText && (
+          <p className={styles.statusText}>{statusText}</p>
+        )}
 
         <p className={styles.note}>Kamu akan diarahkan otomatis ke halaman hasil.</p>
         <p className={styles.previewTime}>
           Proses ini biasanya selesai dalam beberapa detik hingga kurang dari satu menit.
         </p>
       </section>
-
     </main>
   );
 }

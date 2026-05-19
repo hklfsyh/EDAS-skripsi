@@ -33,20 +33,6 @@ const ALBUMS_LIGHT = [
   ["#8b5cf6", "#ff5a9d", "♪", 0.12],
 ] as const;
 
-const BLOBS_DARK = [
-  { depth: "0.4", bg: "radial-gradient(ellipse 70% 60% at center, rgba(151,71,255,0.34), transparent 65%)", w: "70%", h: "60%", l: "15%", t: "20%" },
-  { depth: "0.3", bg: "radial-gradient(ellipse 60% 55% at center, rgba(0,195,255,0.26), transparent 60%)", w: "60%", h: "55%", r: "5%", b: "5%" },
-  { depth: "0.25", bg: "radial-gradient(ellipse 50% 50% at center, rgba(255,45,120,0.22), transparent 55%)", w: "50%", h: "50%", l: "30%", t: "40%" },
-  { depth: "0.35", bg: "radial-gradient(ellipse 55% 45% at center, rgba(30,215,96,0.18), transparent 55%)", w: "55%", h: "45%", r: "20%", t: "15%" },
-];
-
-const BLOBS_LIGHT = [
-  { depth: "0.4", bg: "radial-gradient(ellipse 70% 60% at center, rgba(255,138,29,0.26), transparent 65%)", w: "70%", h: "60%", l: "15%", t: "20%" },
-  { depth: "0.3", bg: "radial-gradient(ellipse 60% 55% at center, rgba(139,92,246,0.2), transparent 60%)", w: "60%", h: "55%", r: "5%", b: "5%" },
-  { depth: "0.25", bg: "radial-gradient(ellipse 50% 50% at center, rgba(255,90,157,0.18), transparent 55%)", w: "50%", h: "50%", l: "30%", t: "40%" },
-  { depth: "0.35", bg: "radial-gradient(ellipse 55% 45% at center, rgba(0,166,255,0.2), transparent 55%)", w: "55%", h: "45%", r: "20%", t: "15%" },
-];
-
 function sr(seed: number, off = 0): number {
   const v = Math.sin(seed * 17.351 + off * 53.179) * 29341.8;
   return v - Math.floor(v);
@@ -54,9 +40,11 @@ function sr(seed: number, off = 0): number {
 
 export function MusicBackground() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const mouse = useRef({ x: 0.5, y: 0.5 });
+  const focus = useRef({ x: 0.5, y: 0.42 });
+  const target = useRef({ x: 0.5, y: 0.42 });
   const raf = useRef<number>(0);
   const startTime = useRef(performance.now());
+  const lastTouchAt = useRef(0);
 
   const isDark =
     typeof window !== "undefined"
@@ -68,17 +56,48 @@ export function MusicBackground() {
     if (!container) return;
 
     const cards = Array.from(container.querySelectorAll<HTMLElement>("[data-depth]"));
-    const blobs = Array.from(container.querySelectorAll<HTMLElement>("[data-blob]"));
+    const prefersCoarsePointer = window.matchMedia("(pointer: coarse)").matches;
     startTime.current = performance.now();
 
+    const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
+
+    const setTarget = (x: number, y: number, fromTouch = false) => {
+      target.current = { x: clamp01(x), y: clamp01(y) };
+      if (fromTouch) {
+        lastTouchAt.current = performance.now();
+      }
+    };
+
     const onMove = (event: MouseEvent) => {
-      mouse.current = { x: event.clientX / window.innerWidth, y: event.clientY / window.innerHeight };
+      setTarget(event.clientX / window.innerWidth, event.clientY / window.innerHeight);
+    };
+
+    const onTouch = (event: TouchEvent) => {
+      const touch = event.touches[0] ?? event.changedTouches[0];
+      if (!touch) return;
+      setTarget(touch.clientX / window.innerWidth, touch.clientY / window.innerHeight, true);
     };
 
     const tick = () => {
-      const mx = mouse.current.x;
-      const my = mouse.current.y;
       const t = (performance.now() - startTime.current) / 1000;
+      const maxScroll = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
+      const scrollRatio = clamp01(window.scrollY / maxScroll);
+      const touchIsFresh = performance.now() - lastTouchAt.current < 1800;
+
+      if (prefersCoarsePointer && !touchIsFresh) {
+        setTarget(
+          0.5 + Math.sin(t * 0.22) * 0.16,
+          0.26 + scrollRatio * 0.34 + Math.cos(t * 0.18) * 0.08,
+        );
+      }
+
+      focus.current.x += (target.current.x - focus.current.x) * 0.06;
+      focus.current.y += (target.current.y - focus.current.y) * 0.06;
+
+      const mx = focus.current.x;
+      const my = focus.current.y;
+      container.style.setProperty("--focus-x", `${(mx * 100).toFixed(2)}%`);
+      container.style.setProperty("--focus-y", `${(my * 100).toFixed(2)}%`);
 
       for (const card of cards) {
         const depth = parseFloat(card.dataset.depth ?? "0.2");
@@ -92,53 +111,29 @@ export function MusicBackground() {
         card.style.transform = `translate3d(${dx + idleX}px, ${dy + idleY}px, 0) rotate(${rot + idleRot}deg)`;
       }
 
-      for (const blob of blobs) {
-        const depth = parseFloat(blob.dataset.blobDepth ?? "1");
-        const bx = (0.5 - mx) * depth * 60;
-        const by = (0.5 - my) * depth * 60;
-        blob.style.transform = `translate3d(${bx}px, ${by}px, 0)`;
-      }
-
       raf.current = requestAnimationFrame(tick);
     };
 
     raf.current = requestAnimationFrame(tick);
     window.addEventListener("mousemove", onMove);
+    window.addEventListener("touchstart", onTouch, { passive: true });
+    window.addEventListener("touchmove", onTouch, { passive: true });
 
     return () => {
       window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("touchstart", onTouch);
+      window.removeEventListener("touchmove", onTouch);
       cancelAnimationFrame(raf.current);
     };
   }, []);
 
   const albums = isDark ? ALBUMS_DARK : ALBUMS_LIGHT;
-  const blobs = isDark ? BLOBS_DARK : BLOBS_LIGHT;
-
   return (
     <div ref={containerRef} className={styles.root} aria-hidden>
-      {blobs.map((blob, index) => (
-        <div
-          key={index}
-          className={styles.blob}
-          data-blob
-          data-blob-depth={blob.depth}
-          style={{
-            background: blob.bg,
-            width: blob.w,
-            height: blob.h,
-            left: blob.l,
-            top: blob.t,
-            right: blob.r,
-            bottom: blob.b,
-          } as CSSProperties}
-        />
-      ))}
+      <div className={styles.gradientWash} />
+      <div className={styles.spotlight} />
+      <div className={styles.edgeGlow} />
       <div className={styles.grain} />
-      <div className={styles.eqBars}>
-        {Array.from({ length: 20 }, (_, index) => (
-          <span key={index} className={styles.eqBar} style={{ "--i": index } as CSSProperties} />
-        ))}
-      </div>
       {albums.map(([from, to, symbol, depth], index) => {
         const bx = 3 + sr(index, 1) * 92;
         const by = 2 + sr(index, 2) * 90;

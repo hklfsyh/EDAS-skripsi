@@ -1,16 +1,19 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { MusicBackground } from "@/components/common/MusicBackground";
 import { MusicCursorTrail } from "@/components/common/MusicCursorTrail";
+import {
+  PLAYLIST_CONTEXT_STORAGE_KEY,
+  PLAYLIST_QUESTIONNAIRE_STORAGE_KEY,
+  isPlaylistFlowFinished,
+} from "@/lib/playlistFlow";
 import styles from "./page.module.css";
 
 const THEME_STORAGE_KEY = "playlist-theme-v1";
-const CONTEXT_STORAGE_KEY = "playlist-context-v1";
-const QUESTIONS_PER_STEP = 4;
 
 const questions = [
   "Saya lebih suka musik yang terasa cepat dan bikin suasana jadi lebih hidup.",
@@ -29,6 +32,8 @@ const questions = [
   "Saya nyaman dengan musik yang tidak terlalu banyak kata-kata.",
 ] as const;
 
+const TOTAL_QUESTIONS = questions.length;
+
 const choiceLabels = [
   { value: 1, label: "Nggak banget" },
   { value: 2, label: "Kurang" },
@@ -42,96 +47,196 @@ type ContextData = {
   timeOfDay: string;
   mood: string;
   durationMinutes: number;
-  profileName: string;
-  createdAt: string;
-};
-
-const defaultContext: ContextData = {
-  activity: "", timeOfDay: "", mood: "",
-  durationMinutes: 0, profileName: "", createdAt: "",
 };
 
 export default function KuesionerPage() {
   const router = useRouter();
+  const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [isRouteReady, setIsRouteReady] = useState(false);
 
-  const applyTheme = (t: "dark" | "light") => {
-    document.documentElement.dataset.theme = t;
-    localStorage.setItem(THEME_STORAGE_KEY, t);
-  };
-
-  // Ambil preferensi tema dari localStorage — set html[data-theme] synchronous
-  const [theme, setThemeState] = useState<"dark" | "light">(() => {
-    if (globalThis.window === undefined) return "dark";
-    const saved = localStorage.getItem(THEME_STORAGE_KEY);
-    const t = saved === "light" ? "light" : "dark";
-    applyTheme(t);
-    return t;
+  const [theme, setTheme] = useState<"dark" | "light">(() => {
+    if (typeof window === "undefined") return "dark";
+    return (localStorage.getItem(THEME_STORAGE_KEY) === "light" ? "light" : "dark") as "dark" | "light";
   });
 
-  const setTheme = (next: "dark" | "light") => {
-    applyTheme(next);
-    setThemeState(next);
+  const toggleTheme = () => {
+    const next = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    localStorage.setItem(THEME_STORAGE_KEY, next);
+    document.documentElement.dataset.theme = next;
   };
 
-  // Ambil konteks aktivitas dari localStorage
-  const [contextData] = useState<ContextData>(() => {
-    if (globalThis.window === undefined) return defaultContext;
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+  }, [theme]);
+
+  useEffect(() => {
+    if (isPlaylistFlowFinished()) {
+      router.replace("/");
+      return;
+    }
+
+    if (!localStorage.getItem(PLAYLIST_CONTEXT_STORAGE_KEY)) {
+      router.replace("/");
+      return;
+    }
+
+    setIsRouteReady(true);
+  }, [router]);
+
+  const contextData = useMemo(() => {
     try {
-      const saved = localStorage.getItem(CONTEXT_STORAGE_KEY);
-      return saved ? JSON.parse(saved) : defaultContext;
-    } catch { return defaultContext; }
-  });
+      const saved = localStorage.getItem(PLAYLIST_CONTEXT_STORAGE_KEY);
+      if (!saved) return null;
+      return JSON.parse(saved) as ContextData;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const framingText = useMemo(() => {
+    if (!contextData) {
+      return "Jawab pertanyaan berikut berdasarkan konteks aktivitas yang kamu pilih sebelumnya.";
+    }
+    const activity = contextData.activity || "aktivitas pilihanmu";
+    const time = contextData.timeOfDay || "waktu yang kamu tentukan";
+    const mood = contextData.mood || "suasana yang kamu pilih";
+    return `Bayangkan kamu sedang ${activity} pada ${time} dengan suasana saat ini ${mood}. Jawab pertanyaan berikut berdasarkan konteks tersebut.`;
+  }, [contextData]);
 
   const [answers, setAnswers] = useState<Record<number, number>>({});
-  const [step, setStep] = useState(1);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [isSaved, setIsSaved] = useState(false);
-
-  const totalSteps = Math.ceil(questions.length / QUESTIONS_PER_STEP);
-
-  // Render subset pertanyaan per step
-  const currentQuestions = useMemo(() => {
-    const start = (step - 1) * QUESTIONS_PER_STEP;
-    return questions
-      .map((question, index) => ({ question, index }))
-      .slice(start, start + QUESTIONS_PER_STEP);
-  }, [step]);
-
-  const handleAnswerSelect = (index: number, value: number) => {
-    setAnswers((prev) => ({ ...prev, [index]: value }));
-  };
+  const [showCompletion, setShowCompletion] = useState(false);
 
   const answeredCount = useMemo(
     () => Object.values(answers).filter((v) => v >= 1 && v <= 5).length,
     [answers],
   );
-  const progressPct = (answeredCount / questions.length) * 100;
-  const isCurrentStepComplete = currentQuestions.every(({ index }) => {
-    const v = answers[index];
-    return v >= 1 && v <= 5;
-  });
 
-  // Narasi konteks untuk pengantar kuesioner
-  const contextNarrative = useMemo(() => {
-    const activity = contextData.activity || "aktivitas pilihanmu";
-    const time = contextData.timeOfDay || "waktu yang kamu tentukan";
-    const mood = contextData.mood || "suasana yang kamu pilih";
-    const dur = contextData.durationMinutes > 0
-      ? `${contextData.durationMinutes} menit`
-      : "durasi yang kamu atur";
-    return `Bayangkan kamu sedang ${activity} di ${time} dengan suasana saat ini ${mood} selama ${dur}. Jawab pernyataan berikut sesuai preferensi musik yang ingin kamu dengarkan pada aktivitas tersebut.`;
-  }, [contextData]);
+  const progressPct = (answeredCount / TOTAL_QUESTIONS) * 100;
+  const currentQuestion = questions[currentIndex];
+  const currentAnswer = answers[currentIndex];
 
-  // Simpan jawaban kuesioner ke localStorage
-  const handleSave = () => {
-    if (answeredCount !== questions.length) return;
-    localStorage.setItem("playlist-questionnaire-v1", JSON.stringify(answers));
+  const handleSelect = (value: number) => {
+    setAnswers((prev) => ({ ...prev, [currentIndex]: value }));
+
+    if (advanceTimerRef.current) {
+      clearTimeout(advanceTimerRef.current);
+    }
+
+    if (currentIndex < TOTAL_QUESTIONS - 1) {
+      advanceTimerRef.current = setTimeout(() => {
+        setCurrentIndex((p) => p + 1);
+      }, 300);
+    }
+  };
+
+  useEffect(() => {
+    if (!showCompletion && answeredCount === TOTAL_QUESTIONS && currentIndex >= TOTAL_QUESTIONS - 1) {
+      setShowCompletion(true);
+    }
+  }, [answeredCount, currentIndex, showCompletion]);
+
+  const handlePrevious = () => {
+    if (advanceTimerRef.current) {
+      clearTimeout(advanceTimerRef.current);
+      advanceTimerRef.current = null;
+    }
+    setShowCompletion(false);
+    setCurrentIndex((p) => Math.max(0, p - 1));
+  };
+
+  const handleSaveAndContinue = () => {
+    if (answeredCount !== TOTAL_QUESTIONS) return;
+    localStorage.setItem(PLAYLIST_QUESTIONNAIRE_STORAGE_KEY, JSON.stringify(answers));
     setIsSaved(true);
   };
 
-  // Lanjut ke proses rekomendasi
-  const handleContinueToProcess = () => {
-    router.push("/proses");
-  };
+  useEffect(() => {
+    return () => {
+      if (advanceTimerRef.current) {
+        clearTimeout(advanceTimerRef.current);
+      }
+    };
+  }, []);
+
+  if (!isRouteReady) {
+    return null;
+  }
+
+  if (isSaved) {
+    return (
+      <main className={`app-shell ${styles.page}`} data-theme={theme}>
+        <MusicBackground />
+        <MusicCursorTrail />
+        <section className={`app-container ${styles.layout}`}>
+          <header className={styles.topBar}>
+            <Link href="/" className={styles.backLink}>
+              ← Kembali
+            </Link>
+            <button type="button" className={styles.themeToggle} onClick={toggleTheme}>
+              {theme === "dark" ? "☀️ Light" : "🌙 Dark"}
+            </button>
+          </header>
+          <section className={styles.formCard}>
+            <h2>Semua pertanyaan sudah dijawab ✅</h2>
+            <p className={styles.doneText}>
+              Jawabanmu sudah lengkap. Sekarang sistem akan memproses rekomendasi playlist terbaik untukmu.
+            </p>
+            <button
+              type="button"
+              className={styles.saveButton}
+              onClick={() => router.push("/proses")}
+            >
+              Lanjut ke proses rekomendasi
+            </button>
+          </section>
+        </section>
+      </main>
+    );
+  }
+
+  if (showCompletion) {
+    return (
+      <main className={`app-shell ${styles.page}`} data-theme={theme}>
+        <MusicBackground />
+        <MusicCursorTrail />
+        <section className={`app-container ${styles.layout}`}>
+          <header className={styles.topBar}>
+            <Link href="/" className={styles.backLink}>
+              ← Kembali
+            </Link>
+            <button type="button" className={styles.themeToggle} onClick={toggleTheme}>
+              {theme === "dark" ? "☀️ Light" : "🌙 Dark"}
+            </button>
+          </header>
+          <section className={styles.formCard}>
+            <div className={styles.progressBarWrap}>
+              <div className={styles.progressBarFill} style={{ width: "100%" }} />
+            </div>
+            <p className={styles.questionCount}>Pertanyaan {TOTAL_QUESTIONS} dari {TOTAL_QUESTIONS}</p>
+            <h2 className={styles.lastQuestion}>Semua pertanyaan sudah dijawab.</h2>
+            <p className={styles.doneText}>
+              Simpan jawabanmu dulu ya sebelum lanjut ke proses rekomendasi.
+            </p>
+            <div className={styles.actionRow}>
+              <button type="button" className={styles.ghostButton} onClick={handlePrevious}>
+                ← Sebelumnya
+              </button>
+              <button
+                type="button"
+                className={styles.saveButton}
+                onClick={handleSaveAndContinue}
+              >
+                Simpan & Lanjut
+              </button>
+            </div>
+          </section>
+        </section>
+      </main>
+    );
+  }
 
   return (
     <main className={`app-shell ${styles.page}`} data-theme={theme}>
@@ -140,97 +245,53 @@ export default function KuesionerPage() {
 
       <section className={`app-container ${styles.layout}`}>
         <header className={styles.topBar}>
-          <Link href="/" className={styles.backLink}>← Kembali</Link>
-          <button
-            type="button"
-            className={styles.themeToggle}
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          >
+          <Link href="/" className={styles.backLink}>
+            ← Kembali
+          </Link>
+          <button type="button" className={styles.themeToggle} onClick={toggleTheme}>
             {theme === "dark" ? "☀️ Light" : "🌙 Dark"}
           </button>
         </header>
 
-        <section className={styles.contextCard}>
-          <h1>Pilih preferensi musikmu</h1>
-          <p>
-            Jawab 14 pernyataan berikut sesuai selera musikmu untuk aktivitas yang sudah
-            kamu pilih sebelumnya. Hasilnya akan dipakai untuk merangkai playlist terbaik.
-          </p>
-        </section>
-
         <section className={styles.formCard}>
-          <p className={styles.descriptionText}>{contextNarrative}</p>
-
-          <div className={styles.progressBarWrap} aria-label="Progress jawaban">
-            <div className={styles.progressBarFill} style={{ width: `${progressPct}%` }} />
+          <div className={styles.progressBarWrap}>
+            <div
+              className={styles.progressBarFill}
+              style={{ width: `${progressPct}%` }}
+            />
           </div>
 
-          <ol className={styles.questionList}>
-            {currentQuestions.map(({ question, index }) => (
-              <li key={question} className={styles.questionItem}>
-                <p>{question}</p>
-                <div className={styles.choiceRow}>
-                  {choiceLabels.map((choice) => (
-                    <label key={`${index}-${choice.value}`} className={styles.choiceChip}>
-                      <input
-                        type="radio"
-                        name={`q-${index}`}
-                        value={choice.value}
-                        checked={answers[index] === choice.value}
-                        onChange={() => handleAnswerSelect(index, choice.value)}
-                      />
-                      <span>{choice.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </li>
+          <p className={styles.questionCount}>
+            Pertanyaan {currentIndex + 1} dari {TOTAL_QUESTIONS}
+          </p>
+
+          <p className={styles.framingText}>{framingText}</p>
+
+          <p className={styles.questionText}>{currentQuestion}</p>
+
+          <div className={styles.choiceRow}>
+            {choiceLabels.map((choice) => (
+              <label
+                key={choice.value}
+                className={`${styles.choiceChip} ${currentAnswer === choice.value ? styles.choiceActive : ""}`}
+              >
+                <input
+                  type="radio"
+                  name={`q-${currentIndex}`}
+                  value={choice.value}
+                  checked={currentAnswer === choice.value}
+                  onChange={() => handleSelect(choice.value)}
+                />
+                <span className={styles.choiceValue}>{choice.value}</span>
+                <span className={styles.choiceLabel}>{choice.label}</span>
+              </label>
             ))}
-          </ol>
+          </div>
 
           <div className={styles.actionRow}>
-            {step > 1 && (
-              <button
-                type="button"
-                className={styles.ghostButton}
-                onClick={() => setStep((p) => Math.max(1, p - 1))}
-              >
+            {currentIndex > 0 && (
+              <button type="button" className={styles.ghostButton} onClick={handlePrevious}>
                 ← Sebelumnya
-              </button>
-            )}
-
-            {step < totalSteps && (
-              <button
-                type="button"
-                className={styles.saveButton}
-                disabled={!isCurrentStepComplete}
-                onClick={() => setStep((p) => Math.min(totalSteps, p + 1))}
-              >
-                Lanjut →
-              </button>
-            )}
-
-            {step === totalSteps && (
-              <button
-                type="button"
-                className={styles.saveButton}
-                disabled={answeredCount !== questions.length}
-                onClick={handleSave}
-              >
-                Simpan jawaban
-              </button>
-            )}
-
-            {step < totalSteps && !isCurrentStepComplete && (
-              <span className={styles.savedBadge}>Lengkapi pilihan di halaman ini dulu ya.</span>
-            )}
-            {isSaved && <span className={styles.savedBadge}>Jawaban tersimpan ✅</span>}
-            {isSaved && (
-              <button
-                type="button"
-                className={styles.saveButton}
-                onClick={handleContinueToProcess}
-              >
-                Lanjut ke proses rekomendasi →
               </button>
             )}
           </div>

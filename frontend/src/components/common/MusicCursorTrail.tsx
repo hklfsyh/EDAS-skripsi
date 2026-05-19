@@ -45,28 +45,33 @@ export function MusicCursorTrail() {
 
   useEffect(() => {
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const prefersCoarsePointer = window.matchMedia("(pointer: coarse)").matches;
 
-    const dot = document.createElement("div");
-    dot.id = "custom-cursor-dot";
-    const isDarkMode = document.documentElement.dataset.theme !== "light";
-    const dotColor = isDarkMode ? "#1ed760" : "#6FA37B";
-    dot.style.cssText = [
-      "position:fixed",
-      "top:0",
-      "left:0",
-      "width:10px",
-      "height:10px",
-      "border-radius:50%",
-      `background:${dotColor}`,
-      `box-shadow:0 0 14px 4px ${isDarkMode ? "rgba(30,215,96,.7)" : "rgba(111,163,123,.5)"}`,
-      "pointer-events:none",
-      "z-index:99999",
-      "transform:translate(-50%,-50%)",
-      "will-change:transform",
-    ].join(";") + ";";
-    document.body.appendChild(dot);
+    let dot: HTMLDivElement | null = null;
+    if (!prefersCoarsePointer) {
+      dot = document.createElement("div");
+      dot.id = "custom-cursor-dot";
+      const isDarkMode = document.documentElement.dataset.theme !== "light";
+      const dotColor = isDarkMode ? "#1ed760" : "#6FA37B";
+      dot.style.cssText = [
+        "position:fixed",
+        "top:0",
+        "left:0",
+        "width:10px",
+        "height:10px",
+        "border-radius:50%",
+        `background:${dotColor}`,
+        `box-shadow:0 0 14px 4px ${isDarkMode ? "rgba(30,215,96,.7)" : "rgba(111,163,123,.5)"}`,
+        "pointer-events:none",
+        "z-index:99999",
+        "transform:translate(-50%,-50%)",
+        "will-change:transform",
+      ].join(";") + ";";
+      document.body.appendChild(dot);
+    }
 
     const updateDot = (mx: number, my: number) => {
+      if (!dot) return;
       dot.style.transform = `translate(${mx}px, ${my}px) translate(-50%, -50%)`;
     };
 
@@ -82,10 +87,9 @@ export function MusicCursorTrail() {
     resize();
     window.addEventListener("resize", resize);
 
-    const onMove = (e: MouseEvent) => {
-      const mx = e.clientX, my = e.clientY;
+    const activateTrail = (mx: number, my: number, forcedSpeed?: number) => {
       const dx = mx - mouse.current.x, dy = my - mouse.current.y;
-      mouse.current.speed = Math.sqrt(dx * dx + dy * dy);
+      mouse.current.speed = forcedSpeed ?? Math.sqrt(dx * dx + dy * dy);
       mouse.current.px = mouse.current.x;
       mouse.current.py = mouse.current.y;
       mouse.current.x = mx; mouse.current.y = my;
@@ -97,6 +101,25 @@ export function MusicCursorTrail() {
         isDrawing.current = true;
         raf.current = requestAnimationFrame(draw);
       }
+    };
+
+    const onMove = (e: MouseEvent) => {
+      activateTrail(e.clientX, e.clientY);
+    };
+
+    const onTouchStart = (event: TouchEvent) => {
+      const touch = event.touches[0] ?? event.changedTouches[0];
+      if (!touch) return;
+      activateTrail(touch.clientX, touch.clientY, 34);
+      if (!prefersReducedMotion) {
+        spawnParticles(touch.clientX, touch.clientY, 42);
+      }
+    };
+
+    const onTouchMove = (event: TouchEvent) => {
+      const touch = event.touches[0] ?? event.changedTouches[0];
+      if (!touch) return;
+      activateTrail(touch.clientX, touch.clientY, 18);
     };
 
     function spawnParticles(x: number, y: number, speed: number) {
@@ -241,12 +264,16 @@ export function MusicCursorTrail() {
     }
 
     window.addEventListener("mousemove", onMove);
+    window.addEventListener("touchstart", onTouchStart, { passive: true });
+    window.addEventListener("touchmove", onTouchMove, { passive: true });
 
     return () => {
       window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("touchstart", onTouchStart);
+      window.removeEventListener("touchmove", onTouchMove);
       window.removeEventListener("resize", resize);
       cancelAnimationFrame(raf.current);
-      if (dot.parentNode) dot.remove();
+      if (dot?.parentNode) dot.remove();
     };
   }, []);
 

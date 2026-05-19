@@ -2,16 +2,20 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { MusicBackground } from "@/components/common/MusicBackground";
 import { MusicCursorTrail } from "@/components/common/MusicCursorTrail";
 import { getOrCreateClientId } from "@/lib/clientId";
+import {
+  PLAYLIST_EXCLUDED_IDS_STORAGE_KEY,
+  PLAYLIST_QUESTIONNAIRE_STORAGE_KEY,
+  PLAYLIST_RESULT_STORAGE_KEY,
+  isPlaylistFlowFinished,
+  markPlaylistFlowFinished,
+} from "@/lib/playlistFlow";
 import styles from "./page.module.css";
 
-const RESULT_STORAGE_KEY = "playlist-result-v1";
 const THEME_STORAGE_KEY = "playlist-theme-v1";
 const EXT_PREFIX = "ext-url-v2";
-const EXCLUDED_STORAGE_KEY = "playlist-excluded-ids-v1";
 
 type ContextData = {
   activity: string;
@@ -71,7 +75,6 @@ type HistorySession = {
   youtube_exported_at: string | null;
 };
 
-// Format durasi ke mm:ss
 function formatDuration(sec: number): string {
   const m = Math.floor(sec / 60);
   const s = sec % 60;
@@ -79,7 +82,7 @@ function formatDuration(sec: number): string {
 }
 
 function generatePlaylistName(ctx: ContextData): string {
-  return `${ctx.activity} • ${ctx.mood} • ${ctx.timeOfDay}`;
+  return `${ctx.activity} \u2022 ${ctx.mood} \u2022 ${ctx.timeOfDay}`;
 }
 
 function playlistFingerprint(tracks: PlaylistItem[]): string {
@@ -98,20 +101,40 @@ export default function HasilPage() {
   const [spotifyLoading, setSpotifyLoading] = useState(false);
   const [youtubeLoading, setYoutubeLoading] = useState(false);
   const [historyItems, setHistoryItems] = useState<HistorySession[]>([]);
-  const [historyLoading, setHistoryLoading] = useState(true);
-  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [, setHistoryLoading] = useState(true);
+  const [, setHistoryError] = useState<string | null>(null);
   const [selectedSessionId, setSelectedSessionId] = useState<number | null>(null);
   const [playlist, setPlaylist] = useState<PlaylistItem[]>([]);
   const [selectedSongIds, setSelectedSongIds] = useState<Set<number>>(new Set());
   const [excludedSongIds, setExcludedSongIds] = useState<Set<number>>(new Set());
   const [isReplacing, setIsReplacing] = useState(false);
   const [replaceMessage, setReplaceMessage] = useState<string | null>(null);
+  const [sectionStep, setSectionStep] = useState(1);
+  const [result, setResult] = useState<ResultData | null>(null);
+  const [isRouteReady, setIsRouteReady] = useState(false);
 
-  // Ambil hasil rekomendasi dari localStorage
   useEffect(() => {
     const saved = localStorage.getItem(THEME_STORAGE_KEY);
     document.documentElement.dataset.theme = saved === "light" ? "light" : "dark";
-  }, []);
+
+    if (isPlaylistFlowFinished()) {
+      router.replace("/");
+      return;
+    }
+
+    const raw = localStorage.getItem(PLAYLIST_RESULT_STORAGE_KEY);
+    if (!raw) {
+      router.replace("/");
+      return;
+    }
+
+    try {
+      setResult(JSON.parse(raw) as ResultData);
+      setIsRouteReady(true);
+    } catch {
+      router.replace("/");
+    }
+  }, [router]);
 
   const loadHistory = useCallback(() => {
     const clientId = getOrCreateClientId();
@@ -132,20 +155,11 @@ export default function HasilPage() {
       });
   }, []);
 
-  // Ambil status koneksi Spotify/YouTube dan riwayat rekomendasi
   useEffect(() => {
-    loadHistory();
-  }, [loadHistory]);
-
-  // Status koneksi Spotify/YouTube tidak perlu dicek —
-  // server menggunakan token project akun tetap (kalskripdas@gmail.com).
-
-  const result = useMemo(() => {
-    if (globalThis.window === undefined) return null;
-    const raw = localStorage.getItem(RESULT_STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw) as ResultData;
-  }, []);
+    if (isRouteReady) {
+      loadHistory();
+    }
+  }, [isRouteReady, loadHistory]);
 
   const selectedSession = useMemo(
     () => historyItems.find((session) => session.id_session === selectedSessionId) ?? null,
@@ -155,16 +169,14 @@ export default function HasilPage() {
   const showNlgDebug =
     process.env.NEXT_PUBLIC_NLG_DEBUG === "true" || process.env.NODE_ENV !== "production";
 
-  // Inisialisasi playlist dari hasil
   useEffect(() => {
     if (result) {
       setPlaylist(result.playlist);
     }
   }, [result]);
 
-  // Muat daftar lagu yang sudah pernah dibuang dari localStorage
   useEffect(() => {
-    const saved = localStorage.getItem(EXCLUDED_STORAGE_KEY);
+    const saved = localStorage.getItem(PLAYLIST_EXCLUDED_IDS_STORAGE_KEY);
     if (saved) {
       try {
         const ids = JSON.parse(saved) as number[];
@@ -177,22 +189,17 @@ export default function HasilPage() {
     }
   }, []);
 
-  if (!result) {
-    return (
-      <main className={styles.fallback}>
-        <h1>Data hasil belum tersedia</h1>
-        <p>Mulai dari halaman awal dulu ya.</p>
-        <Link href="/">Ke Beranda</Link>
-      </main>
-    );
-  }
-
   const currentTotalSec = useMemo(() => playlist.reduce((sum, s) => sum + s.durationSec, 0), [playlist]);
-  const overDuration = Math.max(0, currentTotalSec - result.summary.targetDurationSec);
 
   const fp = useMemo(() => playlistFingerprint(playlist), [playlist]);
   const extKeySpotify = `${EXT_PREFIX}-spotify-${fp}`;
   const extKeyYoutube = `${EXT_PREFIX}-youtube-${fp}`;
+
+  if (!isRouteReady || !result) {
+    return null;
+  }
+
+  const overDuration = Math.max(0, currentTotalSec - result.summary.targetDurationSec);
 
   const redirectToUrl = (url: string) => {
     window.location.href = url;
@@ -233,29 +240,25 @@ export default function HasilPage() {
 
     setLoading(true);
     try {
-      // 1. Database adalah sumber utama — cek DB dulu jika id_session tersedia
-      const { url: dbUrl, title: dbTitle } = await checkExternalUrlDb(platform);
+      const { url: dbUrl } = await checkExternalUrlDb(platform);
       if (dbUrl) {
         localStorage.setItem(extKey, dbUrl);
-        console.log(`[${label} Export] Reuse database ${label} playlist — ${dbUrl}`);
+        console.log(`[${label} Export] Reuse database ${label} playlist \u2014 ${dbUrl}`);
         redirectToUrl(dbUrl);
         return;
       }
 
-      // 2. Fallback ke localStorage cache
       const cached = localStorage.getItem(extKey);
       if (cached) {
-        // Sync cache ke database jika memungkinkan
         if (result?.id_session) {
           saveExternalUrlDb(platform, cached, generatePlaylistName(result.context));
         }
-        console.log(`[${label} Export] Reuse cached ${label} playlist — ${cached}`);
+        console.log(`[${label} Export] Reuse cached ${label} playlist \u2014 ${cached}`);
         redirectToUrl(cached);
         return;
       }
 
-      // 3. Generate playlist eksternal baru
-      console.log(`[${label} Export] No existing URL — creating new playlist`);
+      console.log(`[${label} Export] No existing URL \u2014 creating new playlist`);
       const playlistName = generatePlaylistName(result.context);
       const res = await fetch(endpoint, {
         method: "POST",
@@ -269,7 +272,7 @@ export default function HasilPage() {
       if (data.status === "success" && data.publicUrl) {
         localStorage.setItem(extKey, data.publicUrl);
         saveExternalUrlDb(platform, data.publicUrl, playlistName);
-        console.log(`[${label} Export] Created new playlist — ${data.publicUrl}`);
+        console.log(`[${label} Export] Created new playlist \u2014 ${data.publicUrl}`);
         redirectToUrl(data.publicUrl);
       } else {
         alert(data.error || `Gagal export ke ${label}.`);
@@ -284,7 +287,7 @@ export default function HasilPage() {
   const handleExportSpotify = () => openOrCreate("spotify");
   const handleExportYoutube = () => openOrCreate("youtube");
 
-  const handleSelesai = async () => {
+  const finishFlowAndGoHome = async () => {
     if (result?.id_session) {
       const safePlaylist = playlist
         .filter((item) => item.id_song != null)
@@ -307,15 +310,12 @@ export default function HasilPage() {
             console.warn("Safety save playlist gagal:", res.status);
           }
         } catch {
-          // Safety net — silent jika gagal, jangan block navigasi
+          // Safety net
         }
       }
     }
+    markPlaylistFlowFinished();
     router.replace("/");
-  };
-
-  const handleOpenHistory = (sessionId: number) => {
-    setSelectedSessionId(sessionId);
   };
 
   const handleCloseHistory = () => {
@@ -347,7 +347,7 @@ export default function HasilPage() {
     const currentIds = playlist.map((s) => s.id_song!).filter(Boolean);
     const allExcluded = [...new Set([...excludedSongIds, ...removedIds])];
 
-    const answersRaw = localStorage.getItem("playlist-questionnaire-v1");
+    const answersRaw = localStorage.getItem(PLAYLIST_QUESTIONNAIRE_STORAGE_KEY);
 
     try {
       const res = await fetch("/api/recommendations/replace", {
@@ -403,9 +403,9 @@ export default function HasilPage() {
         },
       };
 
-      localStorage.setItem(RESULT_STORAGE_KEY, JSON.stringify(updatedResult));
+      localStorage.setItem(PLAYLIST_RESULT_STORAGE_KEY, JSON.stringify(updatedResult));
       localStorage.setItem(
-        EXCLUDED_STORAGE_KEY,
+        PLAYLIST_EXCLUDED_IDS_STORAGE_KEY,
         JSON.stringify(allExcluded),
       );
 
@@ -413,7 +413,6 @@ export default function HasilPage() {
       setExcludedSongIds(new Set(allExcluded));
       setSelectedSongIds(new Set());
 
-      // Simpan playlist final ke database jika id_session tersedia
       let dbSaveFailed = false;
       if (result?.id_session) {
         try {
@@ -460,146 +459,222 @@ export default function HasilPage() {
 
       <section className={`app-container ${styles.layout}`}>
         <header className={styles.topBar}>
-          <Link href="/" className={styles.backLink}>← Kembali ke beranda</Link>
+          <button type="button" className={styles.backLinkButton} onClick={finishFlowAndGoHome}>← Kembali ke beranda</button>
           <span className={styles.badge}>Hasil Rekomendasi</span>
         </header>
 
-        <section className={styles.card}>
-          <h1>Hasil rekomendasi playlist</h1>
-          <p>
-            Konteks: <strong>{result.context.activity}</strong> · {result.context.timeOfDay} · suasana saat ini {result.context.mood}
-          </p>
+        {sectionStep === 1 && (
+          <section className={styles.card}>
+            <h1>Hasil rekomendasi playlist</h1>
+            <p className={styles.contextLine}>
+              {result.context.activity} &middot; {result.context.timeOfDay} &middot; suasana saat ini {result.context.mood}
+            </p>
 
-          <div className={styles.metrics}>
-            <span>Target: {formatDuration(result.summary.targetDurationSec)}</span>
-            <span>Total: {formatDuration(currentTotalSec)}</span>
-            <span>Lagu: {playlist.length}</span>
-            <span>Kelebihan: {formatDuration(overDuration)}</span>
-          </div>
-        </section>
+            <div className={styles.metrics}>
+              <span>Target {formatDuration(result.summary.targetDurationSec)}</span>
+              <span>Total {formatDuration(currentTotalSec)}</span>
+              <span>{playlist.length} lagu</span>
+              <span>Kelebihan {formatDuration(overDuration)}</span>
+            </div>
 
-        <section className={styles.card}>
-          <h2>Top playlist (ranking EDAS)</h2>
-          {selectedSongIds.size > 0 && (
-            <div className={styles.batchBar}>
-              <span className={styles.batchInfo}>
-                {selectedSongIds.size} lagu dipilih
-              </span>
+            <p className={styles.nlgText}>{result.nlgText}</p>
+            {showNlgDebug && result.nlgMeta && (
+              <div className={styles.nlgMeta}>
+                <span className={styles.nlgBadge}>Source: {result.nlgMeta.source ?? "unknown"}</span>
+                {result.nlgMeta.model && (
+                  <span className={styles.nlgBadge}>Model: {result.nlgMeta.model}</span>
+                )}
+                {typeof result.nlgMeta.fallbackUsed === "boolean" && (
+                  <span className={styles.nlgBadge}>
+                    Fallback: {result.nlgMeta.fallbackUsed ? "yes" : "no"}
+                  </span>
+                )}
+              </div>
+            )}
+
+            <div className={styles.stepsDots}>
+              <span className={`${styles.dot} ${styles.dotActive}`} />
+              <span className={`${styles.dot} ${styles.dotInactive}`} />
+              <span className={`${styles.dot} ${styles.dotInactive}`} />
+            </div>
+            <div className={styles.stepNav}>
+              <span />
               <button
                 type="button"
-                className={styles.batchButton}
-                onClick={handleBatchReplace}
-                disabled={isReplacing}
+                className={styles.navButton}
+                onClick={() => setSectionStep(2)}
               >
-                {isReplacing && <span className={styles.spinner} />}
-                {isReplacing ? "Memproses..." : "Ganti lagu terpilih"}
+                Lihat playlist →
               </button>
             </div>
-          )}
-          {replaceMessage && (
-            <p className={styles.replaceMessage}>{replaceMessage}</p>
-          )}
-          <ul className={styles.songList}>
-            {playlist.map((song) => {
-              const songId = song.id_song;
-              const isSelected = songId !== undefined && selectedSongIds.has(songId);
-              return (
-                <li
-                  key={`${song.rank}-${song.title}-${songId ?? song.durationSec}`}
-                  className={isSelected ? styles.songSelected : undefined}
-                  onClick={() => {
-                    if (!isReplacing && songId !== undefined) {
-                      toggleSelectSong(songId);
-                    }
-                  }}
-                  role="option"
-                  aria-selected={isSelected}
-                >
-                  <div className={styles.songCheck}>
-                    <input
-                      type="checkbox"
-                      className={styles.checkbox}
-                      checked={isSelected}
-                      onChange={() => {
-                        if (!isReplacing) toggleSelectSong(songId);
-                      }}
-                      disabled={isReplacing}
-                      id={`chk-${song.rank}-${songId}`}
-                    />
-                  </div>
-                  <div>
-                    <strong>#{song.rank} {song.title}</strong>
-                    <p>{song.artist}</p>
-                  </div>
-                  <div className={styles.songMeta}>
-                    <span>{formatDuration(song.durationSec)}</span>
-                    <span>AS {song.appraisalScore.toFixed(4)}</span>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
+          </section>
+        )}
 
-        <section className={styles.card}>
-          <h2>Penjelasan rekomendasi</h2>
-          <p className={styles.nlgText}>{result.nlgText}</p>
-          {showNlgDebug && result.nlgMeta && (
-            <div className={styles.nlgMeta}>
-              <span className={styles.nlgBadge}>Source: {result.nlgMeta.source ?? "unknown"}</span>
-              {result.nlgMeta.model && (
-                <span className={styles.nlgBadge}>Model: {result.nlgMeta.model}</span>
-              )}
-              {typeof result.nlgMeta.fallbackUsed === "boolean" && (
-                <span className={styles.nlgBadge}>
-                  Fallback: {result.nlgMeta.fallbackUsed ? "yes" : "no"}
+        {sectionStep === 2 && (
+          <section className={styles.card}>
+            <h2>Top playlist</h2>
+
+            {selectedSongIds.size > 0 && (
+              <div className={styles.batchBar}>
+                <span className={styles.batchInfo}>
+                  {selectedSongIds.size} lagu dipilih
                 </span>
-              )}
-            </div>
-          )}
-        </section>
+                <button
+                  type="button"
+                  className={styles.batchButton}
+                  onClick={handleBatchReplace}
+                  disabled={isReplacing}
+                >
+                  {isReplacing && <span className={styles.spinner} />}
+                  {isReplacing ? "Memproses..." : "Ganti lagu terpilih"}
+                </button>
+              </div>
+            )}
+            {replaceMessage && (
+              <p className={styles.replaceMessage}>{replaceMessage}</p>
+            )}
 
-        <section className={styles.card}>
-          <h2>Riwayat rekomendasi terbaru</h2>
-          {historyLoading && <p>Memuat riwayat...</p>}
-          {!historyLoading && historyError && <p>{historyError}</p>}
-          {!historyLoading && !historyError && historyItems.length === 0 && (
-            <p>Belum ada riwayat rekomendasi untuk perangkat ini.</p>
-          )}
-          {!historyLoading && !historyError && historyItems.length > 0 && (
-            <ul className={styles.historyList}>
-              {historyItems.map((session) => (
-                <li key={session.id_session} className={styles.historyItem}>
-                  <button
-                    type="button"
-                    className={styles.historyButton}
-                    onClick={() => handleOpenHistory(session.id_session)}
+            <ul className={styles.songList}>
+              {playlist.map((song) => {
+                const songId = song.id_song;
+                const isSelected = songId !== undefined && selectedSongIds.has(songId);
+                return (
+                  <li
+                    key={`${song.rank}-${song.title}-${songId ?? song.durationSec}`}
+                    className={isSelected ? styles.songSelected : undefined}
+                    onClick={() => {
+                      if (!isReplacing && songId !== undefined) {
+                        toggleSelectSong(songId);
+                      }
+                    }}
+                    role="option"
+                    aria-selected={isSelected}
                   >
-                    <div className={styles.historyTitle}>
-                      <span>
-                        <strong>{session.activity}</strong> · {session.time_category} · suasana saat ini {session.mood}
-                      </span>
-                      <span className={styles.historyAction}>Lihat detail</span>
+                    <div className={styles.songCheck}>
+                      <input
+                        type="checkbox"
+                        className={styles.checkbox}
+                        checked={isSelected}
+                        onChange={() => {
+                          if (!isReplacing) toggleSelectSong(songId);
+                        }}
+                        disabled={isReplacing}
+                        id={`chk-${song.rank}-${songId}`}
+                      />
                     </div>
-                    <div className={styles.historyMeta}>
-                      <span>Target {formatDuration(session.duration_target * 60)}</span>
-                      <span>{new Date(session.created_at).toLocaleString("id-ID")}</span>
+                    <div>
+                      <strong>#{song.rank} {song.title}</strong>
+                      <p>{song.artist}</p>
                     </div>
-                    {session.songs.length > 0 && (
-                      <div className={styles.historyPreview}>
-                        {session.songs.slice(0, 3).map((song) => (
-                          <span key={`${session.id_session}-${song.id_song}-${song.rank_order}`}>
-                            #{song.rank_order} {song.title}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </button>
-                </li>
-              ))}
+                    <div className={styles.songMeta}>
+                      <span>{formatDuration(song.durationSec)}</span>
+                      <span>AS {song.appraisalScore.toFixed(4)}</span>
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
-          )}
-        </section>
+
+            <div className={styles.stepsDots}>
+              <span className={`${styles.dot} ${styles.dotInactive}`} onClick={() => setSectionStep(1)} />
+              <span className={`${styles.dot} ${styles.dotActive}`} />
+              <span className={`${styles.dot} ${styles.dotInactive}`} onClick={() => setSectionStep(3)} />
+            </div>
+            <div className={styles.stepNav}>
+              <button
+                type="button"
+                className={styles.secondaryNavButton}
+                onClick={() => setSectionStep(1)}
+              >
+                ← Ringkasan
+              </button>
+              <button
+                type="button"
+                className={styles.navButton}
+                onClick={() => setSectionStep(3)}
+              >
+                Lanjut ke export →
+              </button>
+            </div>
+          </section>
+        )}
+
+        {sectionStep === 3 && (
+          <section className={styles.card}>
+            <h2>Simpan ke platform musik</h2>
+            <p style={{ marginBottom: 12 }}>Buka playlist hasil rekomendasi langsung di platform favoritmu.</p>
+
+            <div className={styles.platformGrid}>
+              <div className={styles.platformCard}>
+                <div className={styles.platformHeader}>
+                  <span className={styles.platformIcon}>🎧</span>
+                  <span className={styles.platformName}>Spotify</span>
+                </div>
+                <button
+                  type="button"
+                  className={styles.primaryButton}
+                  onClick={handleExportSpotify}
+                  disabled={spotifyLoading}
+                >
+                  {spotifyLoading && <span className={styles.spinner} />}
+                  {spotifyLoading ? "Membuka playlist..." : "Buka di Spotify"}
+                </button>
+              </div>
+
+              <div className={styles.platformCard}>
+                <div className={styles.platformHeader}>
+                  <span className={styles.platformIcon}>▶️</span>
+                  <span className={styles.platformName}>YouTube</span>
+                </div>
+                <button
+                  type="button"
+                  className={styles.primaryButton}
+                  onClick={handleExportYoutube}
+                  disabled={youtubeLoading}
+                >
+                  {youtubeLoading && <span className={styles.spinner} />}
+                  {youtubeLoading ? "Membuka playlist..." : "Buka di YouTube"}
+                </button>
+              </div>
+            </div>
+
+            <div className={styles.historyRow}>
+              <button
+                type="button"
+                className={styles.historyLink}
+                onClick={() => {
+                  if (historyItems.length > 0) {
+                    setSelectedSessionId(historyItems[0].id_session);
+                  }
+                }}
+              >
+                Riwayat rekomendasi
+              </button>
+            </div>
+
+            <div className={styles.stepsDots}>
+              <span className={`${styles.dot} ${styles.dotInactive}`} onClick={() => setSectionStep(2)} />
+              <span className={`${styles.dot} ${styles.dotInactive}`} onClick={() => setSectionStep(2)} />
+              <span className={`${styles.dot} ${styles.dotActive}`} />
+            </div>
+            <div className={styles.stepNav}>
+              <button
+                type="button"
+                className={styles.secondaryNavButton}
+                onClick={() => setSectionStep(2)}
+              >
+                ← Playlist
+              </button>
+              <button
+                type="button"
+                className={styles.navButton}
+                onClick={finishFlowAndGoHome}
+              >
+                Kembali ke beranda
+              </button>
+            </div>
+          </section>
+        )}
 
         {selectedSession && (
           <div className={styles.historyOverlay}>
@@ -618,7 +693,7 @@ export default function HasilPage() {
               </header>
               <div className={styles.historyModalBody}>
                 <p className={styles.historyContext}>
-                  <strong>{selectedSession.activity}</strong> · {selectedSession.time_category} · suasana saat ini {selectedSession.mood}
+                  <strong>{selectedSession.activity}</strong> &middot; {selectedSession.time_category} &middot; suasana saat ini {selectedSession.mood}
                 </p>
                 <div className={styles.historyModalMeta}>
                   <span>Target {formatDuration(selectedSession.duration_target * 60)}</span>
@@ -664,58 +739,6 @@ export default function HasilPage() {
             </dialog>
           </div>
         )}
-
-        <section className={styles.card}>
-          <h2>Simpan ke platform musik</h2>
-          <p style={{ marginBottom: 12 }}>Buka playlist hasil rekomendasi langsung di platform favoritmu.</p>
-
-          <div className={styles.platformGrid}>
-            <div className={styles.platformCard}>
-              <div className={styles.platformHeader}>
-                <span className={styles.platformIcon}>🎧</span>
-                <span className={styles.platformName}>Spotify</span>
-              </div>
-              <button
-                type="button"
-                className={styles.primaryButton}
-                onClick={handleExportSpotify}
-                disabled={spotifyLoading}
-              >
-                {spotifyLoading && <span className={styles.spinner} />}
-                {spotifyLoading ? "Membuka playlist..." : "Buka di Spotify"}
-              </button>
-            </div>
-
-            <div className={styles.platformCard}>
-              <div className={styles.platformHeader}>
-                <span className={styles.platformIcon}>▶️</span>
-                <span className={styles.platformName}>YouTube</span>
-              </div>
-              <button
-                type="button"
-                className={styles.primaryButton}
-                onClick={handleExportYoutube}
-                disabled={youtubeLoading}
-              >
-                {youtubeLoading && <span className={styles.spinner} />}
-                {youtubeLoading ? "Membuka playlist..." : "Buka di YouTube"}
-              </button>
-            </div>
-          </div>
-        </section>
-
-        <section className={styles.card}>
-          <h2>Selesai</h2>
-          <p>Kembali ke beranda untuk memulai rekomendasi baru.</p>
-          <button
-            type="button"
-            className={styles.primaryButton}
-            onClick={handleSelesai}
-            style={{ marginTop: 8 }}
-          >
-            Kembali ke beranda
-          </button>
-        </section>
       </section>
     </main>
   );

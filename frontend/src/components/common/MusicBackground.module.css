@@ -1,4 +1,6 @@
 .root {
+  --focus-x: 50%;
+  --focus-y: 42%;
   position: fixed;
   inset: 0;
   pointer-events: none;
@@ -6,46 +8,69 @@
   z-index: 0;
 }
 
-.blob {
-  position: absolute;
-  border-radius: 50%;
-  will-change: transform;
-  pointer-events: none;
-}
-
+.gradientWash,
+.spotlight,
+.edgeGlow,
 .grain {
   position: absolute;
   inset: 0;
+}
+
+.gradientWash {
+  inset: -8%;
+  background:
+    radial-gradient(circle at 14% 18%, rgba(151, 71, 255, 0.16) 0%, transparent 26%),
+    radial-gradient(circle at 84% 16%, rgba(0, 195, 255, 0.15) 0%, transparent 24%),
+    radial-gradient(circle at 26% 82%, rgba(255, 45, 120, 0.11) 0%, transparent 20%),
+    radial-gradient(circle at 76% 78%, rgba(30, 215, 96, 0.1) 0%, transparent 20%);
+  filter: blur(10px);
+  opacity: 0.9;
+}
+
+:global(html[data-theme="light"]) .gradientWash {
+  background:
+    radial-gradient(circle at 14% 18%, rgba(139, 92, 246, 0.12) 0%, transparent 26%),
+    radial-gradient(circle at 84% 16%, rgba(0, 166, 255, 0.12) 0%, transparent 24%),
+    radial-gradient(circle at 24% 82%, rgba(255, 122, 24, 0.1) 0%, transparent 19%),
+    radial-gradient(circle at 76% 78%, rgba(21, 201, 111, 0.08) 0%, transparent 20%);
+  opacity: 0.82;
+}
+
+.spotlight {
+  inset: -12%;
+  background:
+    radial-gradient(circle at var(--focus-x) var(--focus-y), rgba(0, 195, 255, 0.14) 0%, transparent 18%),
+    radial-gradient(circle at calc(var(--focus-x) + 8%) calc(var(--focus-y) + 4%), rgba(151, 71, 255, 0.1) 0%, transparent 22%);
+  filter: blur(24px);
+  opacity: 0.9;
+  will-change: opacity, transform;
+}
+
+:global(html[data-theme="light"]) .spotlight {
+  background:
+    radial-gradient(circle at var(--focus-x) var(--focus-y), rgba(0, 166, 255, 0.1) 0%, transparent 18%),
+    radial-gradient(circle at calc(var(--focus-x) - 6%) calc(var(--focus-y) + 6%), rgba(255, 122, 24, 0.08) 0%, transparent 20%);
+  opacity: 0.7;
+}
+
+.edgeGlow {
+  background:
+    radial-gradient(circle at 50% -4%, rgba(255, 255, 255, 0.05) 0%, transparent 28%),
+    radial-gradient(circle at 50% 108%, rgba(7, 10, 22, 0.45) 0%, transparent 30%);
+  opacity: 0.72;
+}
+
+:global(html[data-theme="light"]) .edgeGlow {
+  background:
+    radial-gradient(circle at 50% -4%, rgba(255, 255, 255, 0.7) 0%, transparent 26%),
+    radial-gradient(circle at 50% 108%, rgba(139, 92, 246, 0.08) 0%, transparent 28%);
+  opacity: 0.58;
+}
+
+.grain {
   opacity: 0.045;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-size: 200px 200px;
-}
-
-.eqBars {
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: flex-end;
-  gap: 3px;
-  height: 80px;
-  opacity: 0.14;
-}
-
-.eqBar {
-  display: block;
-  width: 4px;
-  border-radius: 3px 3px 0 0;
-  background: var(--eq-color, var(--accent-green));
-  animation: eqPulse calc(0.6s + calc(var(--i) * 0.07s)) ease-in-out infinite alternate;
-  animation-delay: calc(var(--i) * 0.04s);
-  will-change: transform;
-}
-
-@keyframes eqPulse {
-  from { transform: scaleY(0.15); }
-  to   { transform: scaleY(1); }
 }
 
 .album {
@@ -58,6 +83,7 @@
   will-change: transform;
   box-shadow: 0 0 0 1px rgba(255,255,255,0.14), 0 16px 44px rgba(0,0,0,0.42);
   overflow: hidden;
+  backdrop-filter: blur(2px);
 }
 
 :global(html[data-theme="light"]) .album {
@@ -79,7 +105,9 @@
 .album::after {
   content: "";
   position: absolute;
-  bottom: 0; left: 0; right: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
   height: 30%;
   background: rgba(0,0,0,0.25);
 }
@@ -99,4 +127,16 @@
 :global(html[data-theme="light"]) .albumSymbol {
   opacity: 0.74;
   filter: drop-shadow(0 2px 5px rgba(55, 42, 114, 0.22));
+}
+
+@media (max-width: 540px) {
+  .gradientWash {
+    inset: -12%;
+    filter: blur(18px);
+  }
+
+  .spotlight {
+    inset: -18%;
+    filter: blur(28px);
+  }
 }

@@ -96,10 +96,7 @@ body {
   display: flex;
   flex-direction: column;
   color: var(--foreground);
-  background:
-    radial-gradient(circle at top left, rgba(151, 71, 255, 0.13), transparent 28%),
-    radial-gradient(circle at top right, rgba(0, 195, 255, 0.14), transparent 24%),
-    linear-gradient(180deg, var(--background-elevated) 0%, var(--background) 36%, var(--background) 100%);
+  background: var(--background);
   font-family: 'Figtree', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -132,7 +129,7 @@ a {
 .app-container {
   position: relative;
   z-index: 1;
-  width: min(50vw, 100%);
+  width: min(480px, 100%);
   margin: 0 auto;
 }
 
@@ -150,13 +147,7 @@ a {
   }
 }
 
-@media (max-width: 1100px) {
-  .app-container {
-    width: min(68vw, 100%);
-  }
-}
-
-@media (max-width: 820px) {
+@media (max-width: 540px) {
   .app-container {
     width: 100%;
   }
