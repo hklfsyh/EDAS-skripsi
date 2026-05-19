@@ -1,13 +1,17 @@
+// NextResponse untuk mengirim respons HTTP API, sql untuk query database
 import { NextResponse } from "next/server";
 import sql from "@/server/db";
 
+// VALID_PLATFORMS — hanya Spotify dan YouTube yang didukung untuk export
 const VALID_PLATFORMS = ["spotify", "youtube"] as const;
 type Platform = (typeof VALID_PLATFORMS)[number];
 
+// isPlatform — guard function untuk validasi platform
 function isPlatform(value: string): value is Platform {
   return VALID_PLATFORMS.includes(value as Platform);
 }
 
+// GET — ambil URL playlist yang sudah di-export untuk sesi tertentu
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -24,6 +28,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Platform harus 'spotify' atau 'youtube'." }, { status: 400 });
     }
 
+    // Ambil URL dari kolom sesuai platform (spotify_playlist_url vs youtube_playlist_url)
     if (platform === "spotify") {
       const rows = await sql<Array<{ spotify_playlist_url: string | null; spotify_playlist_title: string | null; spotify_exported_at: string | null }>>`
         select spotify_playlist_url, spotify_playlist_title, spotify_exported_at
@@ -55,6 +60,7 @@ export async function GET(request: Request) {
   }
 }
 
+// POST — simpan URL playlist hasil export Spotify/YouTube ke database
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as {
@@ -93,6 +99,7 @@ export async function POST(request: Request) {
     const trimmedUrl = url.trim();
     const trimmedTitle = title?.trim() ?? null;
 
+    // Update kolom sesuai platform tujuan
     if (platform === "spotify") {
       await sql`
         update recommendation_session

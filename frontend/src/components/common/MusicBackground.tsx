@@ -3,6 +3,7 @@
 import { CSSProperties, useEffect, useRef } from "react";
 import styles from "./MusicBackground.module.css";
 
+// ALBUMS_DARK — data floating card untuk mode dark (gradient, simbol, depth)
 const ALBUMS_DARK = [
   ["#ff2d78", "#ff6b35", "♪", 0.12],
   ["#9747ff", "#00c3ff", "♫", 0.28],
@@ -33,11 +34,13 @@ const ALBUMS_LIGHT = [
   ["#8b5cf6", "#ff5a9d", "♪", 0.12],
 ] as const;
 
+// sr — seeded random number generator untuk posisi album
 function sr(seed: number, off = 0): number {
   const v = Math.sin(seed * 17.351 + off * 53.179) * 29341.8;
   return v - Math.floor(v);
 }
 
+// MusicBackground — latar animasi dengan floating card + gradient + grain
 export function MusicBackground() {
   const containerRef = useRef<HTMLDivElement>(null);
   const focus = useRef({ x: 0.5, y: 0.42 });
@@ -53,6 +56,7 @@ export function MusicBackground() {
       ? document.documentElement.dataset.theme !== "light"
       : true;
 
+  // useEffect: setup parallax + idle animation via requestAnimationFrame
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -118,6 +122,7 @@ export function MusicBackground() {
       container.style.setProperty("--focus-x", `${(mx * 100).toFixed(2)}%`);
       container.style.setProperty("--focus-y", `${(my * 100).toFixed(2)}%`);
 
+      // Animasi tiap floating card (parallax + idle float)
       for (const card of cards) {
         const depth = parseFloat(card.dataset.depth ?? "0.2");
         const off = parseFloat(card.dataset.floatOff ?? "0");

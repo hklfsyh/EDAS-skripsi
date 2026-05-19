@@ -1,24 +1,29 @@
 "use client";
 
+// CSSProperties — untuk CSS custom properties pada elemen bintang
 import { CSSProperties, useMemo } from "react";
 
 import styles from "./ComicStarField.module.css";
 
+// TrailPoint — titik posisi swarm dalam persen
 type TrailPoint = {
   xPct: number;
   yPct: number;
 };
 
+// StarSwarmState — state swarm bintang (trail + status aktif)
 type StarSwarmState = {
   trail: TrailPoint[];
   active: boolean;
 };
 
+// ComicStarFieldProps — props komponen (swarm state + jumlah bintang)
 type ComicStarFieldProps = {
   swarm: StarSwarmState;
   count?: number;
 };
 
+// StarConfig — konfigurasi per-bintang (posisi, ukuran, animasi, jitter)
 type StarConfig = {
   id: number;
   baseX: number;
@@ -31,16 +36,20 @@ type StarConfig = {
   jitterY: number;
 };
 
+// seededValue — PRNG sederhana untuk posisi bintang deterministik
 function seededValue(seed: number, offset = 0): number {
   const value = Math.sin(seed * 12.9898 + offset * 78.233) * 43758.5453;
   return value - Math.floor(value);
 }
 
+// clamp — batasi angka dalam rentang min-max
 function clamp(value: number, minimum: number, maximum: number): number {
   return Math.min(maximum, Math.max(minimum, value));
 }
 
+// ComicStarField — kumpulan bintang dengan efek kedip dan follow swarm
 export function ComicStarField({ swarm, count = 88 }: ComicStarFieldProps) {
+  // Buat konfigurasi bintang dengan useMemo (hitung sekali)
   const stars = useMemo<StarConfig[]>(() => {
     return Array.from({ length: count }, (_, index) => {
       const baseX = 2 + seededValue(index + 1, 1) * 96;
@@ -66,6 +75,7 @@ export function ComicStarField({ swarm, count = 88 }: ComicStarFieldProps) {
   return (
     <div className={styles.field} aria-hidden>
       {stars.map((star) => {
+        // Ambil titik trail terakhir sebagai target
         const lastTrailPoint = swarm.trail[swarm.trail.length - 1] ?? { xPct: 50, yPct: 50 };
         const targetTrailPoint =
           swarm.trail[Math.min(star.trailIndex, Math.max(0, swarm.trail.length - 1))] ??

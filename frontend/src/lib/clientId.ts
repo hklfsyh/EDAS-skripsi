@@ -1,5 +1,7 @@
+// Kunci localStorage untuk menyimpan client ID unik per pengguna
 const CLIENT_ID_KEY = "playlist-client-id-v1";
 
+// generateClientId — buat UUID atau fallback client ID berbasis timestamp
 function generateClientId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID();
@@ -9,6 +11,7 @@ function generateClientId() {
   return `client-${Date.now()}-${random}`;
 }
 
+// getOrCreateClientId — ambil client ID dari localStorage atau buat baru
 export function getOrCreateClientId() {
   if (typeof window === "undefined") {
     return "unknown-client";

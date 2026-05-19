@@ -1,8 +1,10 @@
+// NextResponse untuk respons API, createHash untuk fingerprint sesi, sql untuk database
 import { NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 
 import sql from "@/server/db";
 
+// SaveRequest — tipe payload request untuk menyimpan rekomendasi
 type SaveRequest = {
   clientId?: string;
   context?: {
@@ -19,6 +21,7 @@ type SaveRequest = {
   }>;
 };
 
+// FingerprintInput — data yang di-hash untuk deteksi duplikasi sesi
 type FingerprintInput = {
   context: {
     activity: string;
@@ -33,7 +36,7 @@ type FingerprintInput = {
   }>;
 };
 
-// Normalisasi jawaban kuesioner untuk penyimpanan
+// normalizeAnswers — normalisasi jawaban kuesioner untuk penyimpanan
 function normalizeAnswers(raw?: number[] | Record<number, number>) {
   if (!raw) return [];
   if (Array.isArray(raw)) {
@@ -46,13 +49,13 @@ function normalizeAnswers(raw?: number[] | Record<number, number>) {
     .map((key) => Number(raw[key]));
 }
 
-// Fingerprint sesi rekomendasi (anti-duplikasi)
+// computeFingerprint — fingerprint sesi rekomendasi (anti-duplikasi)
 function computeFingerprint(input: FingerprintInput) {
   const payload = JSON.stringify(input);
   return createHash("sha256").update(payload).digest("hex");
 }
 
-// Simpan hasil rekomendasi ke database
+// POST — simpan hasil rekomendasi ke database
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as SaveRequest;
@@ -80,6 +83,7 @@ export async function POST(request: Request) {
       appraisal_score: Number(item.appraisalScore),
     }));
 
+    // Buat fingerprint untuk deteksi duplikasi
     const fingerprintPayload: FingerprintInput = {
       context: {
         activity,
@@ -102,6 +106,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Playlist tidak menyertakan id_song yang valid." }, { status: 400 });
     }
 
+    // Cek apakah sudah ada sesi dengan fingerprint yang sama dalam 2 menit terakhir
     const lastSessions = await sql<{
       id_session: number;
       created_at: string;
@@ -127,6 +132,7 @@ export async function POST(request: Request) {
       }
     }
 
+    // Insert sesi baru ke recommendation_session
     const insertedSessions = await sql<{ id_session: number }[]>`
       insert into recommendation_session (client_id, activity, time_category, mood, duration_target, fingerprint)
       values (${clientId}, ${activity}, ${timeCategory}, ${mood}, ${durationTarget}, ${fingerprint})
@@ -138,6 +144,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Gagal menyimpan sesi rekomendasi." }, { status: 500 });
     }
 
+    // Insert lagu-lagu hasil rekomendasi ke recommendation_song
     const songRows = normalizedPlaylist.map((item) => ({
       id_session: sessionId,
       id_song: item.id_song,

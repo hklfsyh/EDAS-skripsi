@@ -1,3 +1,4 @@
+/* wrapper — container fixed untuk latar komik */
 .wrapper {
   position: fixed;
   inset: 0;
@@ -6,6 +7,7 @@
   z-index: 0;
 }
 
+/* halftone — pola titik halftone di seluruh latar */
 .halftone {
   position: absolute;
   inset: -10%;
@@ -18,6 +20,7 @@
   background-image: radial-gradient(circle, rgba(46, 36, 51, 0.06) 1.2px, transparent 1.2px);
 }
 
+/* layer — lapisan paralaks yang bergerak mengikuti scroll */
 .layer {
   position: absolute;
   inset: -8%;
@@ -25,6 +28,7 @@
   will-change: transform;
 }
 
+/* blob1/2/3 — bentuk organik abstrak bergaya komik */
 .blob1,
 .blob2,
 .blob3 {
@@ -66,16 +70,11 @@
   border-radius: 50%;
 }
 
-:global([data-theme="light"]) .blob1 {
-  opacity: 0.08;
-}
-:global([data-theme="light"]) .blob2 {
-  opacity: 0.06;
-}
-:global([data-theme="light"]) .blob3 {
-  opacity: 0.05;
-}
+:global([data-theme="light"]) .blob1 { opacity: 0.08; }
+:global([data-theme="light"]) .blob2 { opacity: 0.06; }
+:global([data-theme="light"]) .blob3 { opacity: 0.05; }
 
+/* word — kata-kata komik (POW, BAM, ZAP, dll) */
 .word {
   position: absolute;
   font-family: "Bangers", "Impact", fantasy;
@@ -88,6 +87,7 @@
   animation: wordFloat 6s ease-in-out infinite;
 }
 
+/* Masing-masing kata komik dengan ukuran, posisi, warna, rotasi */
 .wPow {
   font-size: clamp(60px, 8vw, 110px);
   color: #ffe033;
@@ -143,9 +143,9 @@
   opacity: 0.12 !important;
 }
 
+/* wordFloat — animasi floating naik-turun untuk kata komik */
 @keyframes wordFloat {
-  0%,
-  100% {
+  0%, 100% {
     transform: translateY(0) rotate(var(--r, -8deg));
   }
   50% {
@@ -153,6 +153,7 @@
   }
 }
 
+/* burst — bentuk bintang/ledakan bergaya komik */
 .burst {
   position: absolute;
   border: 5px solid #1a1a1a;
@@ -181,14 +182,11 @@
 }
 
 @keyframes spinSlow {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
+/* panel — panel komik (bingkai persegi) */
 .panel {
   position: absolute;
   border: 5px solid rgba(26, 26, 26, 0.3);
@@ -196,28 +194,20 @@
 }
 
 .panelA {
-  width: 220px;
-  height: 140px;
-  top: -2%;
-  left: 30%;
-  border-top: none;
-  border-left: none;
+  width: 220px; height: 140px;
+  top: -2%; left: 30%;
+  border-top: none; border-left: none;
 }
 
 .panelB {
-  width: 180px;
-  height: 240px;
-  bottom: -2%;
-  right: 25%;
-  border-bottom: none;
-  border-right: none;
+  width: 180px; height: 240px;
+  bottom: -2%; right: 25%;
+  border-bottom: none; border-right: none;
 }
 
 .panelC {
-  width: 140px;
-  height: 100px;
-  top: 50%;
-  left: -1%;
+  width: 140px; height: 100px;
+  top: 50%; left: -1%;
   border-left: none;
 }
 
@@ -229,14 +219,10 @@
   border-color: rgba(221, 214, 206, 0.15);
 }
 
-:global([data-theme="light"]) .burstA {
-  background: #C9A56A;
-}
+:global([data-theme="light"]) .burstA { background: #C9A56A; }
+:global([data-theme="light"]) .burstB { background: #D8A0A8; }
 
-:global([data-theme="light"]) .burstB {
-  background: #D8A0A8;
-}
-
+/* speedLines — garis kecepatan radial */
 .speedLines {
   position: absolute;
   inset: 0;
@@ -258,6 +244,7 @@
   );
 }
 
+/* inkOverlay — tekstur noise/tinta di atas semua layer */
 .inkOverlay {
   position: absolute;
   inset: 0;

@@ -1,8 +1,10 @@
 "use client";
 
+// useEffect, useRef — untuk animasi trail bintang dan referensi DOM
 import { useEffect, useRef } from "react";
 import styles from "./ComicCursorTrail.module.css";
 
+// Star — tipe data bintang individual (elemen DOM + posisi + kecepatan + life)
 type Star = {
   el: HTMLSpanElement;
   x: number;
@@ -14,20 +16,26 @@ type Star = {
   size: number;
 };
 
+// STAR_CHARS — karakter bintang/star yang muncul di trail
 const STAR_CHARS = ["★", "✦", "✧", "⭐", "✵", "✴", "✸", "✹", "✺"];
+// TRAIL_COLORS_DARK — palet warna trail untuk mode dark
 const TRAIL_COLORS_DARK = ["#ffe033", "#ff3c5a", "#3a8fff", "#ff9f3f", "#ffffff", "#ff6dde"];
+// TRAIL_COLORS_LIGHT — palet warna trail untuk mode light
 const TRAIL_COLORS_LIGHT = ["#C9A56A", "#D8A0A8", "#8FAFD1", "#C9A56A", "#6FA37B", "#8D7AAE"];
 
+// getTrailColors — ambil palet sesuai tema aktif
 function getTrailColors(): string[] {
   if (typeof window === "undefined") return TRAIL_COLORS_DARK;
   return document.documentElement.dataset.theme === "light" ? TRAIL_COLORS_LIGHT : TRAIL_COLORS_DARK;
 }
 
+// isLightMode — cek apakah tema light aktif
 function isLightMode(): boolean {
   if (typeof window === "undefined") return false;
   return document.documentElement.dataset.theme === "light";
 }
 
+// ComicCursorTrail — trail kursor bertema komik (bintang-bintang kecil mengikuti mouse)
 export function ComicCursorTrail() {
   const containerRef = useRef<HTMLDivElement>(null);
   const starsRef = useRef<Star[]>([]);
@@ -38,6 +46,7 @@ export function ComicCursorTrail() {
   const idleStarsRef = useRef<Star[]>([]);
   const idleInitRef = useRef(false);
 
+  // useEffect: setup event listener mousemove, spawn trail, idle stars, dan loop animasi
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -46,6 +55,7 @@ export function ComicCursorTrail() {
 
     const NUM_IDLE = 22;
 
+    // createStar — buat elemen bintang baru dan tambahkan ke DOM
     function createStar(x: number, y: number, isIdle = false): Star {
       const el = document.createElement("span");
       el.className = styles.star;
@@ -76,6 +86,7 @@ export function ComicCursorTrail() {
       };
     }
 
+    // initIdleStars — buat bintang-bintang statis yang melayang di latar
     function initIdleStars() {
       if (idleInitRef.current) return;
       idleInitRef.current = true;
@@ -108,6 +119,7 @@ export function ComicCursorTrail() {
 
     window.addEventListener("mousemove", onMouseMove);
 
+    // animate — loop animasi: update trail stars + idle stars
     function animate() {
       const isLight = document.documentElement.dataset.theme === "light";
       const lightAlpha = isLight ? 0.4 : 1.0;
@@ -116,6 +128,7 @@ export function ComicCursorTrail() {
         if (spawnCount % 2 === 0) spawnTrailStar();
       }
 
+      // Update trail stars (hidup, bergerak, memudar)
       starsRef.current = starsRef.current.filter((star) => {
         star.life++;
         star.x += star.vx;
@@ -137,6 +150,7 @@ export function ComicCursorTrail() {
         return true;
       });
 
+      // Update idle stars (tertarik ke mouse, floating, wrap-around)
       const mouseX = mouseRef.current.x;
       const mouseY = mouseRef.current.y;
 
@@ -160,6 +174,7 @@ export function ComicCursorTrail() {
         star.x += star.vx;
         star.y += star.vy;
 
+        // Wrap-around jika keluar layar
         if (star.x < -20) star.x = window.innerWidth + 20;
         if (star.x > window.innerWidth + 20) star.x = -20;
         if (star.y < -20) star.y = window.innerHeight + 20;

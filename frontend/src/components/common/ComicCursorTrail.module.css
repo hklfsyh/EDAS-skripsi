@@ -1,3 +1,4 @@
+/* container — area fixed untuk partikel cursor trail (tema komik) */
 .container {
   position: fixed;
   inset: 0;
@@ -6,6 +7,7 @@
   overflow: hidden;
 }
 
+/* star — partikel bintang mengikuti kursor */
 .star {
   position: fixed;
   top: 0;

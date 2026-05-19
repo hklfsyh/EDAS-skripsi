@@ -1,3 +1,4 @@
+/* field — container fixed untuk bintang di latar komik */
 .field {
   position: absolute;
   inset: 0;
@@ -5,6 +6,7 @@
   overflow: hidden;
 }
 
+/* star — bintang individual dengan posisi, ukuran, dan animasi via CSS custom properties */
 .star {
   position: absolute;
   left: calc(var(--bx) * 1%);
@@ -26,6 +28,7 @@
   animation-delay: calc(var(--twinkle-delay) * 1s);
 }
 
+/* star::after — border berkilau di sekeliling bintang */
 .star::after {
   content: "";
   position: absolute;
@@ -36,10 +39,12 @@
   animation-delay: calc(var(--twinkle-delay) * 1s);
 }
 
+/* star dark — gradien lebih terang */
 :global([data-theme="dark"]) .star {
   background: radial-gradient(circle at 35% 30%, #fffef3 0%, #fff3a5 48%, #ffd36a 100%);
 }
 
+/* star light — gradien lebih kalem */
 :global([data-theme="light"]) .star {
   background: radial-gradient(circle at 35% 30%, #f5e4c0 0%, #d4a858 52%, #c89840 100%);
   box-shadow:
@@ -51,22 +56,14 @@
   border-color: rgba(80, 60, 110, 0.20);
 }
 
+/* twinkleOpacity — animasi kedip opacity */
 @keyframes twinkleOpacity {
-  0%,
-  100% {
-    opacity: 0.2;
-  }
-  50% {
-    opacity: 0.95;
-  }
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 0.95; }
 }
 
+/* twinkleScale — animasi kedip skala border */
 @keyframes twinkleScale {
-  0%,
-  100% {
-    transform: scale(0.9);
-  }
-  50% {
-    transform: scale(1.24);
-  }
+  0%, 100% { transform: scale(0.9); }
+  50% { transform: scale(1.24); }
 }

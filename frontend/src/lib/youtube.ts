@@ -1,3 +1,4 @@
+// YouTubeTokenResponse — tipe respons token dari Google OAuth API
 export type YouTubeTokenResponse = {
   access_token: string;
   token_type: "Bearer";
@@ -6,6 +7,7 @@ export type YouTubeTokenResponse = {
   refresh_token?: string;
 };
 
+// getYouTubeConfig — ambil konfigurasi YouTube/Google OAuth dari environment
 function getYouTubeConfig() {
   const clientId = (process.env.YOUTUBE_CLIENT_ID ?? "").trim();
   const clientSecret = (process.env.YOUTUBE_CLIENT_SECRET ?? "").trim();
@@ -26,6 +28,7 @@ function getYouTubeConfig() {
   return { clientId, clientSecret, redirectUri };
 }
 
+// refreshYouTubeToken — refresh access token YouTube via Google OAuth endpoint
 async function refreshYouTubeToken(refreshToken: string): Promise<YouTubeTokenResponse> {
   const { clientId, clientSecret } = getYouTubeConfig();
 
@@ -55,6 +58,7 @@ async function refreshYouTubeToken(refreshToken: string): Promise<YouTubeTokenRe
 // === PROJECT ACCOUNT (server-side, kalskripdas@gmail.com) ===
 // Token dari environment — tanpa cookie OAuth user.
 
+// getYouTubeProjectRefreshToken — ambil refresh token YouTube akun project dari env
 function getYouTubeProjectRefreshToken(): string {
   const token = (process.env.YOUTUBE_PROJECT_REFRESH_TOKEN ?? "").trim();
   if (!token) {
@@ -63,6 +67,7 @@ function getYouTubeProjectRefreshToken(): string {
   return token;
 }
 
+// getYouTubeProjectAccessToken — dapatkan access token YouTube untuk akun project
 export async function getYouTubeProjectAccessToken(): Promise<string> {
   const refreshToken = getYouTubeProjectRefreshToken();
   const refreshed = await refreshYouTubeToken(refreshToken);

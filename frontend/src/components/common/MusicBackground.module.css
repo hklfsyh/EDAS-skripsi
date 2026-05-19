@@ -1,3 +1,4 @@
+/* root — container fixed untuk latar animasi musik */
 .root {
   --focus-x: 50%;
   --focus-y: 42%;
@@ -8,6 +9,7 @@
   z-index: 0;
 }
 
+/* Layer bersama (gradientWash, spotlight, edgeGlow, grain) */
 .gradientWash,
 .spotlight,
 .edgeGlow,
@@ -16,6 +18,7 @@
   inset: 0;
 }
 
+/* gradientWash — gradien radial latar statis (4 titik warna) */
 .gradientWash {
   inset: -8%;
   background:
@@ -27,6 +30,7 @@
   opacity: 0.78;
 }
 
+/* gradientWash light — warna lebih soft untuk light mode */
 :global(html[data-theme="light"]) .gradientWash {
   background:
     radial-gradient(circle at 14% 18%, rgba(139, 92, 246, 0.12) 0%, transparent 26%),
@@ -36,6 +40,7 @@
   opacity: 0.82;
 }
 
+/* spotlight — sorotan dinamis mengikuti kursor (via CSS custom properties) */
 .spotlight {
   inset: -12%;
   background:
@@ -53,6 +58,7 @@
   opacity: 0.7;
 }
 
+/* edgeGlow — efek cahaya di tepi atas dan bawah */
 .edgeGlow {
   background:
     radial-gradient(circle at 50% -4%, rgba(255, 255, 255, 0.05) 0%, transparent 28%),
@@ -67,12 +73,14 @@
   opacity: 0.58;
 }
 
+/* grain — tekstur noise/grain overlay */
 .grain {
   opacity: 0.045;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-size: 200px 200px;
 }
 
+/* album — kartu floating dengan gradient, simbol, dan shadow */
 .album {
   position: absolute;
   border-radius: 12px;
@@ -90,6 +98,7 @@
   box-shadow: 0 0 0 1px rgba(120, 133, 255, 0.22), 0 14px 36px rgba(103, 88, 196, 0.18);
 }
 
+/* album::before — efek highlight di pojok kiri atas kartu */
 .album::before {
   content: "";
   position: absolute;
@@ -101,6 +110,7 @@
   background: linear-gradient(135deg, rgba(255,255,255,0.28) 0%, transparent 60%);
 }
 
+/* album::after — efek bayangan di bagian bawah kartu */
 .album::after {
   content: "";
   position: absolute;
@@ -115,6 +125,7 @@
   background: rgba(52, 35, 118, 0.16);
 }
 
+/* albumSymbol — simbol not di tengah kartu */
 .albumSymbol {
   position: relative;
   z-index: 1;
@@ -128,6 +139,7 @@
   filter: drop-shadow(0 2px 5px rgba(55, 42, 114, 0.22));
 }
 
+/* Responsif — blur lebih besar di layar sempit */
 @media (max-width: 540px) {
   .gradientWash {
     inset: -12%;

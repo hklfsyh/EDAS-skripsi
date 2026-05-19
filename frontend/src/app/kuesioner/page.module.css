@@ -1,3 +1,4 @@
+/* page — halaman kuesioner, overflow hidden, font Figtree, variabel chip */
 .page {
   overflow: hidden;
   font-family: var(--font-figtree), 'Figtree', system-ui, sans-serif;
@@ -21,6 +22,7 @@
   --progress-track: rgba(255, 255, 255, 0.08);
 }
 
+/* page[data-theme="light"] — chip warna lebih terang untuk light mode */
 .page[data-theme="light"] {
   --chip-bg: #f5efe8;
   --chip-border: #ddd3ca;
@@ -32,6 +34,7 @@
   --progress-track: #e8dfd7;
 }
 
+/* topBar — baris atas (link kembali + theme toggle) */
 .topBar {
   display: flex;
   justify-content: space-between;
@@ -39,6 +42,7 @@
   gap: 12px;
 }
 
+/* backLink — tautan kembali ke halaman sebelumnya */
 .backLink {
   color: var(--text-secondary);
   font-weight: 700;
@@ -50,6 +54,7 @@
   color: var(--accent-primary);
 }
 
+/* themeToggle — tombol toggle tema */
 .themeToggle {
   border: 1.5px solid var(--surface-card-border);
   background: var(--surface-card);
@@ -70,6 +75,7 @@
   background: var(--surface-subtle);
 }
 
+/* layout — grid konten kuesioner, lebar maksimal 480px */
 .layout {
   width: min(480px, 100%);
   display: grid;
@@ -77,6 +83,7 @@
   padding-block: 12px 28px;
 }
 
+/* formCard — kartu kuesioner dengan surface, border, blur, shadow */
 .formCard {
   background: var(--surface-card);
   border: 1.5px solid var(--surface-card-border);
@@ -86,6 +93,7 @@
   padding: 24px 24px 20px;
 }
 
+/* progressBarWrap — wrapper progress bar horizontal */
 .progressBarWrap {
   margin-bottom: 16px;
   height: 6px;
@@ -94,6 +102,7 @@
   overflow: hidden;
 }
 
+/* progressBarFill — isian progress bar dengan gradient */
 .progressBarFill {
   height: 100%;
   width: 0;
@@ -102,6 +111,7 @@
   border-radius: 999px;
 }
 
+/* questionCount — label jumlah pertanyaan (misal "Pertanyaan 3/16") */
 .questionCount {
   margin: 0 0 4px;
   font-size: 0.78rem;
@@ -111,6 +121,7 @@
   letter-spacing: 0.04em;
 }
 
+/* framingText — teks framing konteks sebelum pertanyaan */
 .framingText {
   margin: 0 0 10px;
   font-size: 0.82rem;
@@ -119,6 +130,7 @@
   font-style: italic;
 }
 
+/* questionText — teks pertanyaan utama */
 .questionText {
   margin: 0 0 20px;
   font-size: 1.1rem;
@@ -127,6 +139,7 @@
   color: var(--text-primary);
 }
 
+/* lastQuestion — teks pertanyaan terakhir (durasi) */
 .lastQuestion {
   margin: 0 0 8px;
   font-size: 1rem;
@@ -134,6 +147,7 @@
   color: var(--text-primary);
 }
 
+/* doneText — teks konfirmasi setelah semua pertanyaan terjawab */
 .doneText {
   margin: 0 0 18px;
   font-size: 0.9rem;
@@ -141,11 +155,13 @@
   color: var(--text-secondary);
 }
 
+/* choiceRow — grid pilihan jawaban */
 .choiceRow {
   display: grid;
   gap: 10px;
 }
 
+/* choiceChip — chip pilihan jawaban (dapat diklik) */
 .choiceChip {
   display: grid;
   grid-template-columns: auto 1fr;
@@ -168,16 +184,19 @@
   transform: translateY(-1px);
 }
 
+/* choiceActive — chip yang sedang dipilih */
 .choiceActive {
   background: var(--chip-active-bg);
   border-color: var(--chip-active-border);
   border-width: 2px;
 }
 
+/* Sembunyikan input radio asli */
 .choiceChip input {
   display: none;
 }
 
+/* choiceValue — lingkaran angka di samping label pilihan */
 .choiceValue {
   width: 28px;
   height: 28px;
@@ -203,6 +222,7 @@
   color: #fffdfa;
 }
 
+/* choiceLabel — teks label pilihan jawaban */
 .choiceLabel {
   font-size: 0.92rem;
   font-weight: 600;
@@ -215,12 +235,14 @@
   font-weight: 700;
 }
 
+/* actionRow — baris tombol aksi (lanjut/kembali) */
 .actionRow {
   margin-top: 20px;
   display: flex;
   gap: 10px;
 }
 
+/* ghostButton — tombol sekunder (kembali) */
 .ghostButton {
   border: 1.5px solid var(--chip-border);
   border-radius: 12px;
@@ -240,6 +262,7 @@
   transform: translateY(-1px);
 }
 
+/* saveButton — tombol simpan lanjut ke proses */
 .saveButton {
   width: 100%;
   border: none;
@@ -261,6 +284,7 @@
   box-shadow: 0 8px 28px color-mix(in srgb, var(--accent-secondary) 22%, transparent);
 }
 
+/* Responsif — padding/gap lebih kecil di layar sempit */
 @media (max-width: 680px) {
   .layout {
     gap: 14px;

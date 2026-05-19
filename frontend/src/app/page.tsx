@@ -13,8 +13,10 @@ import {
 } from "@/lib/playlistFlow";
 import styles from "./page.module.css";
 
+// Kunci localStorage untuk menyimpan tema (dark/light)
 const THEME_STORAGE_KEY = "playlist-theme-v1";
 
+// HistorySong — tipe data lagu dalam riwayat sesi rekomendasi
 type HistorySong = {
   id_song: number;
   title: string;
@@ -23,6 +25,7 @@ type HistorySong = {
   appraisal_score: number;
 };
 
+// HistorySession — tipe data sesi rekomendasi lengkap dengan lagu dan URL export
 type HistorySession = {
   id_session: number;
   activity: string;
@@ -39,18 +42,22 @@ type HistorySession = {
   youtube_exported_at: string | null;
 };
 
+// formatDuration — konversi detik ke format menit:detik
 function formatDuration(sec: number): string {
   const m = Math.floor(sec / 60);
   const s = sec % 60;
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
+// Home — halaman utama beranda dengan flow 2-step (welcome → form konteks)
 export default function Home() {
+  // applyTheme — terapkan tema ke HTML dan simpan ke localStorage
   const applyTheme = (nextTheme: "dark" | "light") => {
     document.documentElement.setAttribute("data-theme", nextTheme);
     localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
   };
 
+  // State tema, inisialisasi dari localStorage
   const [theme, setThemeState] = useState<"dark" | "light">(() => {
     if (typeof window === "undefined") return "dark";
     const saved = localStorage.getItem(THEME_STORAGE_KEY);
@@ -59,6 +66,7 @@ export default function Home() {
     return nextTheme;
   });
 
+  // setTheme — wrapper untuk update state tema + trigger applyTheme
   const setTheme = (updater: "dark" | "light" | ((prev: "dark" | "light") => "dark" | "light")) => {
     const nextTheme = typeof updater === "function" ? updater(theme) : updater;
     applyTheme(nextTheme);
@@ -69,27 +77,35 @@ export default function Home() {
     applyTheme(theme);
   }, [theme]);
 
+  // clearOldFlow — hapus data flow lama saat memulai sesi baru
   const clearOldFlow = useCallback(() => {
     clearActivePlaylistFlow();
     clearPlaylistFlowFinishedFlag();
   }, []);
 
+  // State flow: step 1 = welcome, step 2 = form konteks
   const [step, setStep] = useState(1);
+  // State riwayat sesi rekomendasi dari database
   const [historyItems, setHistoryItems] = useState<HistorySession[]>([]);
+  // State kontrol modal riwayat (list vs detail)
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [selectedSessionId, setSelectedSessionId] = useState<number | null>(null);
 
+  // recentItems — maksimal 3 riwayat terbaru untuk ditampilkan di modal list
   const recentItems = useMemo(() => historyItems.slice(0, 3), [historyItems]);
 
+  // selectedSession — sesi yang sedang dilihat detailnya (dari ID terpilih)
   const selectedSession = selectedSessionId
     ? historyItems.find((s) => s.id_session === selectedSessionId) ?? null
     : null;
 
+  // closeHistory — tutup modal riwayat dan reset pilihan
   const closeHistory = useCallback(() => {
     setShowHistoryModal(false);
     setSelectedSessionId(null);
   }, []);
 
+  // loadHistory — fetch riwayat sesi dari API berdasarkan clientId
   const loadHistory = useCallback(() => {
     const clientId = getOrCreateClientId();
     void fetch(`/api/recommendations/history?clientId=${encodeURIComponent(clientId)}`)
@@ -100,6 +116,7 @@ export default function Home() {
       .catch(() => {});
   }, []);
 
+  // useEffect: cek flag flow selesai, redirect ke step 1; lalu load riwayat
   useEffect(() => {
     if (consumeFinishedPlaylistFlow()) {
       window.history.replaceState({ flowFinished: true }, "", window.location.pathname);

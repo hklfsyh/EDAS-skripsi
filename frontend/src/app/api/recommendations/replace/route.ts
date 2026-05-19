@@ -1,8 +1,10 @@
+// NextResponse untuk respons API, sql untuk database, preferenceMapping + edas untuk ranking
 import { NextResponse } from "next/server";
 import sql from "@/server/db";
 import { mapQuestionnaireToPreferences } from "@/server/utils/preferenceMapping";
 import { runEdasRanking, type SongCandidate } from "@/server/utils/edas";
 
+// ReplaceRequest — tipe payload request untuk mengganti lagu
 type ReplaceRequest = {
   excludedIds: number[];
   answers: number[];
@@ -10,6 +12,7 @@ type ReplaceRequest = {
   gapDurationSec: number;
 };
 
+// ReplacementSong — tipe data lagu pengganti yang dikembalikan ke client
 type ReplacementSong = {
   id_song?: number;
   title: string;
@@ -18,6 +21,7 @@ type ReplacementSong = {
   appraisalScore: number;
 };
 
+// normalizeRow — pastikan semua properti numerik SongCandidate memiliki nilai default
 function normalizeRow(row: SongCandidate & { id_song?: number }): SongCandidate {
   return {
     ...row,
@@ -33,6 +37,7 @@ function normalizeRow(row: SongCandidate & { id_song?: number }): SongCandidate 
   };
 }
 
+// loadCandidates — ambil kandidat lagu dari database, exclude lagu yang sudah dipakai
 async function loadCandidates(
   excludedIds: number[],
   currentPlaylistSongIds: number[],
@@ -59,6 +64,7 @@ async function loadCandidates(
   return rows.map(normalizeRow);
 }
 
+// computeScore — hitung skor komposit antara durasi fit dan kualitas EDAS
 function computeScore(
   edasQuality: number,
   durationDiff: number,
@@ -70,6 +76,7 @@ function computeScore(
   return durationFit * 0.4 + edasQuality * 0.4 + simplicity * 0.2;
 }
 
+// findReplacements — cari lagu terbaik untuk mengisi gap durasi
 function findReplacements(
   ranked: ReturnType<typeof runEdasRanking>,
   gapSec: number,
@@ -90,6 +97,7 @@ function findReplacements(
 
   if (candidates.length === 1) return [candidates[0]];
 
+  // Cari lagu tunggal terbaik (paling mendekati gap)
   let bestSingle = candidates[0];
   let bestSingleDiff = Math.abs(candidates[0].durationSec - gapSec);
   for (const c of candidates) {
@@ -100,6 +108,7 @@ function findReplacements(
     }
   }
 
+  // Coba kombinasi multi-lagu untuk mengisi gap
   const multiResult: ReplacementSong[] = [];
   let multiTotal = 0;
   const tolerance = gapSec < 60 ? Math.max(gapSec * 0.15, 10) : Math.max(gapSec * 0.15, 30);
@@ -116,6 +125,7 @@ function findReplacements(
 
   if (multiResult.length === 0) return [bestSingle];
 
+  // Bandingkan skor single vs multi, pilih yang lebih baik
   const multiDiff = Math.abs(multiTotal - gapSec);
   const multiAvgScore = multiResult.reduce((s, r) => s + r.appraisalScore, 0) / multiResult.length;
 
@@ -125,6 +135,7 @@ function findReplacements(
   return multiScore > singleScore ? multiResult : [bestSingle];
 }
 
+// POST — terima request replace lagu, ranking dengan EDAS, pilih pengganti terbaik
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as ReplaceRequest;

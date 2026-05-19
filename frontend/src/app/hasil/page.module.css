@@ -1,14 +1,17 @@
+/* page — halaman hasil, overflow-x hidden agar tidak scroll horizontal */
 .page {
   overflow-x: hidden;
   overflow-y: visible;
 }
 
+/* layout — grid konten hasil, lebar maksimal 480px */
 .layout {
   display: grid;
   gap: 16px;
   padding-block: 16px 28px;
 }
 
+/* topBar — baris atas (link kembali) */
 .topBar {
   display: flex;
   justify-content: space-between;
@@ -16,6 +19,7 @@
   gap: 10px;
 }
 
+/* backLink / backLinkButton — tautan/tombol kembali */
 .backLink,
 .backLinkButton {
   color: var(--muted-foreground);
@@ -37,6 +41,7 @@
   color: var(--accent-primary);
 }
 
+/* badge — badge kecil (misal "Rekomendasi") */
 .badge {
   border: 1px solid #c9d8c9;
   color: #466e50;
@@ -55,6 +60,7 @@
   background: rgba(30, 215, 96, 0.1);
 }
 
+/* card — kartu konten (ringkasan, lagu, export, dll) */
 .card {
   border-radius: 22px;
   border: 1.5px solid var(--surface-border);
@@ -63,6 +69,7 @@
   padding: 24px;
 }
 
+/* card h1/h2 — judul di dalam kartu */
 .card h1,
 .card h2 {
   color: var(--foreground);
@@ -79,12 +86,14 @@
   font-size: 1.08rem;
 }
 
+/* card p — teks paragraf di dalam kartu */
 .card p {
   margin: 0;
   color: var(--muted-foreground);
   line-height: 1.7;
 }
 
+/* metrics — baris metrik (total lagu, durasi, dll) */
 .metrics {
   margin-top: 14px;
   display: flex;
@@ -102,6 +111,7 @@
   font-weight: 600;
 }
 
+/* songList — daftar lagu hasil rekomendasi */
 .songList {
   margin: 0;
   padding: 0;
@@ -128,17 +138,20 @@
   background: color-mix(in srgb, var(--accent-primary) 8%, var(--surface-subtle));
 }
 
+/* songSelected — lagu yang dipilih (untuk operasi ganti) */
 .songSelected {
   border-color: var(--accent-primary) !important;
   background: var(--success-soft) !important;
 }
 
+/* songCheck — wrapper checkbox di item lagu */
 .songCheck {
   display: flex;
   align-items: center;
   flex-shrink: 0;
 }
 
+/* checkbox — checkbox di item lagu */
 .checkbox {
   width: 18px;
   height: 18px;
@@ -146,6 +159,7 @@
   cursor: pointer;
 }
 
+/* batchBar — bar aksi batch (ganti lagu terpilih) */
 .batchBar {
   display: flex;
   align-items: center;
@@ -158,12 +172,14 @@
   border: 1px solid color-mix(in srgb, var(--accent-primary) 26%, transparent);
 }
 
+/* batchInfo — teks jumlah lagu terpilih */
 .batchInfo {
   font-size: 0.86rem;
   font-weight: 700;
   color: var(--accent-primary);
 }
 
+/* batchButton — tombol ganti lagu terpilih */
 .batchButton {
   border: none;
   border-radius: 10px;
@@ -192,6 +208,7 @@
   cursor: not-allowed;
 }
 
+/* replaceMessage — pesan sukses setelah replace */
 .replaceMessage {
   font-size: 0.83rem;
   color: var(--accent-primary);
@@ -203,17 +220,20 @@
   border: 1px solid color-mix(in srgb, var(--accent-primary) 20%, transparent);
 }
 
+/* songList strong — judul lagu di daftar */
 .songList strong {
   color: var(--foreground);
   font-size: 0.96rem;
 }
 
+/* songList p — teks artis di daftar */
 .songList p {
   margin-top: 2px;
   font-size: 0.84rem;
   color: var(--muted-foreground);
 }
 
+/* songMeta — metadata lagu (durasi, skor) di sebelah kanan */
 .songMeta {
   display: grid;
   gap: 4px;
@@ -222,6 +242,7 @@
   color: var(--muted-foreground);
 }
 
+/* nlgText — teks narasi NLG */
 .nlgText {
   line-height: 1.8;
   font-size: 0.94rem;
@@ -229,6 +250,7 @@
   max-width: 74ch;
 }
 
+/* nlgMeta — metadata NLG (model, durasi) */
 .nlgMeta {
   margin-top: 12px;
   display: flex;
@@ -238,6 +260,7 @@
   color: var(--muted-foreground);
 }
 
+/* nlgBadge — badge kecil untuk informasi NLG */
 .nlgBadge {
   padding: 4px 10px;
   border-radius: 999px;
@@ -245,6 +268,7 @@
   background: var(--surface-subtle);
 }
 
+/* platformGrid — grid tombol export (Spotify / YouTube) */
 .platformGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -252,6 +276,7 @@
   margin-top: 6px;
 }
 
+/* platformCard — kartu untuk export ke satu platform */
 .platformCard {
   border: 1px solid var(--surface-border);
   border-radius: 16px;
@@ -261,23 +286,27 @@
   gap: 12px;
 }
 
+/* platformHeader — header kartu platform (ikon + nama) */
 .platformHeader {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
+/* platformIcon — ikon platform (🎵 / 🎬) */
 .platformIcon {
   font-size: 1.6rem;
   line-height: 1;
 }
 
+/* platformName — teks nama platform */
 .platformName {
   font-size: 1rem;
   font-weight: 800;
   color: var(--foreground);
 }
 
+/* primaryButton — tombol utama gradient (export) */
 .primaryButton {
   border: none;
   border-radius: 12px;
@@ -309,6 +338,7 @@
   cursor: not-allowed;
 }
 
+/* spinner — animasi loading spinner */
 .spinner {
   width: 16px;
   height: 16px;
@@ -330,6 +360,7 @@
   }
 }
 
+/* historyList — daftar histori di halaman hasil (opsional) */
 .historyList {
   list-style: none;
   margin: 0;
@@ -396,6 +427,7 @@
   color: var(--muted-foreground);
 }
 
+/* historyOverlay — overlay modal histori */
 .historyOverlay {
   position: fixed;
   inset: 0;
@@ -541,6 +573,7 @@
   padding: 8px 0;
 }
 
+/* fallback — tampilan fallback (jika tidak ada data) */
 .fallback {
   min-height: 100svh;
   display: grid;
@@ -561,14 +594,14 @@
   font-weight: 700;
 }
 
+/* contextLine — teks konteks di baris ringkasan */
 .contextLine {
   margin: 0 0 10px;
   color: var(--muted-foreground);
   font-size: 0.9rem;
 }
 
-/* ── Step navigation ── */
-
+/* stepNav — navigasi antar step (sebelumnya / selanjutnya) */
 .stepNav {
   margin-top: 18px;
   display: flex;
@@ -576,6 +609,7 @@
   gap: 10px;
 }
 
+/* navButton — tombol navigasi utama */
 .navButton {
   border: none;
   border-radius: 12px;
@@ -596,6 +630,7 @@
   box-shadow: 0 8px 28px color-mix(in srgb, var(--accent-secondary) 22%, transparent);
 }
 
+/* secondaryNavButton — tombol navigasi sekunder */
 .secondaryNavButton {
   border: 1.5px solid var(--surface-border);
   border-radius: 12px;
@@ -615,8 +650,7 @@
   transform: translateY(-1px);
 }
 
-/* ── Step dots indicator ── */
-
+/* stepsDots — indikator dot antar step */
 .stepsDots {
   display: flex;
   justify-content: center;
@@ -626,6 +660,7 @@
   border: none;
 }
 
+/* dot — titik indikator step (aktif / tidak aktif) */
 .dot {
   width: 8px;
   height: 8px;
@@ -647,13 +682,13 @@
   background: var(--muted-foreground);
 }
 
-/* ── History compact row ── */
-
+/* historyRow — baris tombol lihat histori */
 .historyRow {
   margin-top: 16px;
   text-align: center;
 }
 
+/* historyLink — tombol ghost untuk membuka modal histori */
 .historyLink {
   border: 1.5px solid var(--surface-card-border);
   border-radius: 10px;
@@ -673,13 +708,13 @@
   transform: translateY(-1px);
 }
 
-/* ── Layout width for hasil ── */
-
+/* layout — lebar layout hasil */
 .layout {
   width: min(480px, 100%);
   padding-bottom: 20px;
 }
 
+/* Responsif — stack grid platform di layar sempit */
 @media (max-width: 700px) {
   .platformGrid {
     grid-template-columns: 1fr;
