@@ -81,15 +81,36 @@ const QUESTION_MAPPINGS: QuestionMapping[] = [
   },
 ];
 
-function toAnswerArray(answers: Record<number, number> | number[]): number[] {
-  if (Array.isArray(answers)) {
-    return answers;
+export function normalizeQuestionnaireAnswers(
+  answers?: Record<number, number> | number[] | null,
+): number[] {
+  if (!answers) {
+    return [];
   }
 
-  const values: number[] = [];
-  for (let index = 0; index < 14; index += 1) {
-    values[index] = answers[index];
+  if (Array.isArray(answers)) {
+    return answers.map(Number);
   }
+
+  const numericKeys = Object.keys(answers)
+    .map(Number)
+    .filter((key) => Number.isFinite(key))
+    .sort((a, b) => a - b);
+
+  const usesOneBasedIndex =
+    numericKeys.length > 0 &&
+    !numericKeys.includes(0) &&
+    numericKeys.every((key) => key >= 1 && key <= 14);
+
+  const values = new Array<number>(14).fill(Number.NaN);
+
+  for (const key of numericKeys) {
+    const targetIndex = usesOneBasedIndex ? key - 1 : key;
+    if (targetIndex >= 0 && targetIndex < 14) {
+      values[targetIndex] = Number(answers[key]);
+    }
+  }
+
   return values;
 }
 
@@ -127,7 +148,7 @@ export function mapQuestionnaireToPreferences(
   answers: Record<number, number> | number[],
 ): PreferenceResult {
   // Konversi jawaban kuesioner ke preferensi parameter
-  const values = toAnswerArray(answers);
+  const values = normalizeQuestionnaireAnswers(answers);
   validateAnswers(values);
 
   const parameters = {} as Record<PreferenceParameter, ParameterPreference>;

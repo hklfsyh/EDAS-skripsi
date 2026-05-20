@@ -38,6 +38,27 @@ type ScoreRow = {
   appraisalScore: number;
 };
 
+type DurationSelectable = {
+  durationSec: number;
+  appraisalScore: number;
+};
+
+type DurationSelectionOptions = {
+  targetSec: number;
+  candidateLimit: number;
+  maxSongs: number;
+  overshootToleranceSec: number;
+  preferFewerSongs?: boolean;
+};
+
+type DurationState = {
+  sumScore: number;
+  actualTotalSec: number;
+  previousTotalKey: number;
+  previousCount: number;
+  pickedIndex: number;
+};
+
 // Daftar parameter audio untuk perhitungan EDAS
 const PARAMETERS: PreferenceParameter[] = [
   "tempo",
@@ -124,6 +145,132 @@ function normalizeSpSn(spValues: number[], snValues: number[]) {
   return { nsp, nsn, maxSp, maxSn };
 }
 
+function scoreDurationSelection(
+  sumScore: number,
+  actualTotalSec: number,
+  count: number,
+  targetSec: number,
+  preferFewerSongs: boolean,
+): number {
+  if (count <= 0 || targetSec <= 0) {
+    return Number.NEGATIVE_INFINITY;
+  }
+
+  const averageScore = sumScore / count;
+  const durationFit = Math.max(0, 1 - Math.abs(actualTotalSec - targetSec) / targetSec);
+  const coverage = Math.min(actualTotalSec / targetSec, 1);
+  const simplicity = preferFewerSongs ? 1 / Math.sqrt(count) : Math.min(count / 8, 1);
+
+  return (averageScore * 0.5) + (durationFit * 0.35) + (coverage * 0.1) + (simplicity * 0.05);
+}
+
+export function selectRankedSongsForDuration<T extends DurationSelectable>(
+  candidates: T[],
+  options: DurationSelectionOptions,
+): T[] {
+  const targetSec = Math.max(1, Math.round(options.targetSec));
+  const overshootToleranceSec = Math.max(0, Math.round(options.overshootToleranceSec));
+  const maxSongs = Math.max(1, options.maxSongs);
+  const topCandidates = candidates
+    .filter((candidate) => candidate.durationSec > 0)
+    .slice(0, Math.max(1, options.candidateLimit));
+
+  if (topCandidates.length === 0) {
+    return [];
+  }
+
+  const stepSec = 5;
+  const maxTotalSec = Math.max(
+    targetSec,
+    Math.min(
+      topCandidates.reduce((sum, candidate) => sum + candidate.durationSec, 0),
+      targetSec + overshootToleranceSec,
+    ),
+  );
+  const maxTotalKey = Math.max(1, Math.ceil(maxTotalSec / stepSec));
+  const dp: Array<Map<number, DurationState>> = Array.from(
+    { length: maxSongs + 1 },
+    () => new Map<number, DurationState>(),
+  );
+
+  dp[0].set(0, {
+    sumScore: 0,
+    actualTotalSec: 0,
+    previousTotalKey: -1,
+    previousCount: -1,
+    pickedIndex: -1,
+  });
+
+  topCandidates.forEach((candidate, candidateIndex) => {
+    const durationKey = Math.max(1, Math.round(candidate.durationSec / stepSec));
+
+    for (let count = maxSongs - 1; count >= 0; count -= 1) {
+      const states = Array.from(dp[count].entries());
+      for (const [totalKey, state] of states) {
+        const nextTotalKey = totalKey + durationKey;
+        const nextTotalSec = state.actualTotalSec + candidate.durationSec;
+        if (nextTotalKey > maxTotalKey || nextTotalSec > maxTotalSec) {
+          continue;
+        }
+
+        const nextSumScore = state.sumScore + candidate.appraisalScore;
+        const existing = dp[count + 1].get(nextTotalKey);
+        if (!existing || nextSumScore > existing.sumScore) {
+          dp[count + 1].set(nextTotalKey, {
+            sumScore: nextSumScore,
+            actualTotalSec: nextTotalSec,
+            previousTotalKey: totalKey,
+            previousCount: count,
+            pickedIndex: candidateIndex,
+          });
+        }
+      }
+    }
+  });
+
+  let bestCount = 0;
+  let bestTotalKey = 0;
+  let bestObjective = Number.NEGATIVE_INFINITY;
+
+  for (let count = 1; count <= maxSongs; count += 1) {
+    for (const [totalKey, state] of dp[count].entries()) {
+      const objective = scoreDurationSelection(
+        state.sumScore,
+        state.actualTotalSec,
+        count,
+        targetSec,
+        options.preferFewerSongs ?? false,
+      );
+      if (objective > bestObjective) {
+        bestObjective = objective;
+        bestCount = count;
+        bestTotalKey = totalKey;
+      }
+    }
+  }
+
+  if (bestCount === 0) {
+    return [topCandidates[0]];
+  }
+
+  const picked: T[] = [];
+  let count = bestCount;
+  let totalKey = bestTotalKey;
+
+  while (count > 0) {
+    const state = dp[count].get(totalKey);
+    if (!state || state.pickedIndex < 0) {
+      break;
+    }
+
+    picked.push(topCandidates[state.pickedIndex]);
+    totalKey = state.previousTotalKey;
+    count = state.previousCount;
+  }
+
+  return picked.reverse();
+}
+
 export function runEdasRanking(
   candidates: SongCandidate[],
   preferences: PreferenceResult,
@@ -195,32 +342,29 @@ export function buildPlaylistFromRanking(
   targetMinutes: number,
 ): EdasRankedSong[] {
   // Pembentukan playlist berdasarkan target durasi
-  const targetSec = Math.max(15, targetMinutes) * 60;
-  const items: EdasRankedSong[] = [];
-  let totalSec = 0;
+  const targetSec = Math.max(60, Math.round(targetMinutes * 60));
+  const rankedItems = ranked
+    .map((row) => {
+      const candidate = row.candidate;
+      return {
+        id_song: candidate.id_song,
+        title: candidate.title,
+        artist: candidate.artist,
+        durationSec: Math.max(0, Math.round(candidate.duration_ms / 1000)),
+        appraisalScore: row.appraisalScore,
+      };
+    })
+    .filter((item) => item.durationSec > 0);
 
-  for (const row of ranked) {
-    if (totalSec >= targetSec) {
-      break;
-    }
+  const selected = selectRankedSongsForDuration(rankedItems, {
+    targetSec,
+    candidateLimit: 90,
+    maxSongs: Math.max(1, Math.min(20, Math.ceil(targetSec / 90))),
+    overshootToleranceSec: Math.max(90, Math.round(targetSec * 0.12)),
+  });
 
-    const candidate = row.candidate;
-    const durationSec = Math.max(0, Math.round(candidate.duration_ms / 1000));
-    if (durationSec <= 0) {
-      continue;
-    }
-
-    items.push({
-      rank: items.length + 1,
-      id_song: candidate.id_song,
-      title: candidate.title,
-      artist: candidate.artist,
-      durationSec,
-      appraisalScore: row.appraisalScore,
-    });
-
-    totalSec += durationSec;
-  }
-
-  return items;
+  return selected.map((item, index) => ({
+    rank: index + 1,
+    ...item,
+  }));
 }

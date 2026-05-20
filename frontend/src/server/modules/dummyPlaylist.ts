@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 
 import sql from "@/server/db";
-import { mapQuestionnaireToPreferences } from "@/server/utils/preferenceMapping";
+import {
+  mapQuestionnaireToPreferences,
+  normalizeQuestionnaireAnswers,
+} from "@/server/utils/preferenceMapping";
 import { buildPlaylistFromRanking, runEdasRanking, type SongCandidate } from "@/server/utils/edas";
 
 // Normalisasi input jawaban kuesioner
@@ -13,9 +16,11 @@ function normalizeAnswers(raw?: string | string[] | null): number[] | null {
 
   try {
     const parsed = JSON.parse(text);
-    if (Array.isArray(parsed)) return parsed as number[];
-    if (typeof parsed === "object" && parsed) {
-      return Object.values(parsed).map(Number);
+    if (Array.isArray(parsed) || (typeof parsed === "object" && parsed)) {
+      const normalized = normalizeQuestionnaireAnswers(
+        parsed as number[] | Record<number, number>,
+      );
+      return normalized.length > 0 ? normalized : null;
     }
   } catch {
     // fallthrough

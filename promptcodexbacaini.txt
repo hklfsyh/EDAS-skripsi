@@ -1,0 +1,174 @@
+Saya menggunakan mode build, jadi kamu boleh langsung mengubah kode. Namun sebelum mengubah, lakukan audit internal terlebih dahulu terhadap alur generate awal dan endpoint replace. Setelah menemukan masalahnya, revisi hanya bagian yang berkaitan dengan EDAS, preference mapping, replacement selection, dan durasi. Jangan mengubah UI, NLG, database schema, atau fitur platform eksternal kecuali benar-benar diperlukan. Setelah selesai, jalankan npx tsc --noEmit dan berikan ringkasan file yang diubah, masalah yang ditemukan, serta panduan tes manual.
+
+Saya ingin kamu melakukan audit dan revisi pada implementasi EDAS dan fitur ganti lagu di project skripsi saya. Tolong pahami dulu konteks, rumus, alur yang benar, masalah yang terjadi, lalu baru lakukan perubahan jika memang diperlukan.
+
+Konteks project:
+Aplikasi ini adalah sistem rekomendasi playlist musik berbasis konteks aktivitas pengguna menggunakan metode EDAS. User memilih konteks aktivitas, waktu, suasana saat ini, dan durasi target playlist. Setelah itu user mengisi kuesioner preferensi musik. Jawaban kuesioner dikonversi menjadi skor parameter, bobot kriteria, dan jenis kriteria benefit/cost/neutral. Setelah itu sistem menghitung EDAS untuk semua lagu di database, menghasilkan ranking lagu berdasarkan Appraisal Score, lalu membentuk playlist berdasarkan ranking dan durasi target.
+
+Parameter audio yang digunakan:
+
+1. tempo / BPM
+2. energy
+3. danceability
+4. happiness
+5. popularity
+6. acousticness
+7. instrumentalness
+8. speechiness
+
+Prinsip penting:
+
+* Konteks aktivitas, waktu, dan suasana saat ini hanya digunakan sebagai framing saat user menjawab kuesioner, bukan sebagai variabel langsung dalam EDAS.
+* EDAS harus memakai hasil kuesioner user sebagai dasar bobot dan jenis kriteria.
+* NLG hanya explanation layer dan tidak boleh memengaruhi ranking EDAS.
+* Fitur ganti lagu harus tetap menghormati preferensi awal user, hasil EDAS, excluded song, dan target/gap durasi.
+
+Rumus EDAS yang benar:
+Misalkan:
+
+* A_i = alternatif lagu ke-i
+* C_j = kriteria audio ke-j
+* x_ij = nilai lagu i pada kriteria j
+* w_j = bobot kriteria j dari hasil kuesioner
+* AV_j = average solution / rata-rata nilai kriteria j
+* PDA_ij = Positive Distance from Average
+* NDA_ij = Negative Distance from Average
+
+1. Average Solution:
+   AV_j = (sum seluruh x_ij untuk kriteria j) / jumlah alternatif
+
+2. Untuk kriteria benefit:
+   PDA_ij = max(0, x_ij - AV_j) / AV_j
+   NDA_ij = max(0, AV_j - x_ij) / AV_j
+
+3. Untuk kriteria cost:
+   PDA_ij = max(0, AV_j - x_ij) / AV_j
+   NDA_ij = max(0, x_ij - AV_j) / AV_j
+
+4. Weighted Sum:
+   SP_i = sum(w_j * PDA_ij)
+   SN_i = sum(w_j * NDA_ij)
+
+5. Normalisasi:
+   NSP_i = SP_i / max(SP)
+   NSN_i = 1 - (SN_i / max(SN))
+
+Jika max(SP) atau max(SN) bernilai 0, pastikan tidak terjadi division by zero. Gunakan fallback aman agar tidak menghasilkan NaN/Infinity.
+
+6. Appraisal Score:
+   AS_i = (NSP_i + NSN_i) / 2
+
+7. Ranking:
+   Lagu diurutkan berdasarkan Appraisal Score tertinggi ke terendah.
+
+Neutral criterion:
+Jika suatu parameter dari jawaban user berada pada kondisi netral, jangan perlakukan sebagai benefit/cost ekstrem. Tetapi pastikan implementasi neutral konsisten dengan desain project. Jika di kode saat ini neutral memakai pendekatan kedekatan terhadap average solution atau average deviation, jangan ubah sembarangan. Cukup pastikan dia tidak merusak bobot dan tidak membuat ranking menjadi tidak stabil. Jika ada perbedaan dari rumus EDAS klasik, beri catatan jelas.
+
+Alur generate playlist awal yang harus dipastikan:
+
+1. Terima context, answers, dan targetMinutes/durationMinutes.
+2. Mapping answers menggunakan preferenceMapping.
+3. Hasil mapping harus menghasilkan:
+
+   * score tiap parameter
+   * weight tiap parameter
+   * criterion tiap parameter: benefit/cost/neutral
+4. Ambil semua lagu dari database songs.
+5. Hitung EDAS menggunakan nilai audio lagu, weight, dan criterion dari hasil kuesioner.
+6. Urutkan lagu berdasarkan Appraisal Score.
+7. Bentuk playlist berdasarkan ranking dan target durasi user.
+8. Simpan session dan detail lagu ke database.
+9. Return playlist final ke frontend.
+
+Hal yang harus dicek pada generate awal:
+
+* Apakah answers benar-benar dipakai?
+* Apakah preferenceMapping benar-benar dipanggil?
+* Apakah weights benar-benar masuk ke perhitungan EDAS?
+* Apakah benefit/cost/neutral benar-benar memengaruhi PDA/NDA?
+* Apakah target durasi user benar-benar dipakai saat membentuk playlist?
+* Apakah playlist dibentuk dari ranking EDAS, bukan random/shuffle/dummy?
+
+Masalah saat ini pada fitur ganti lagu:
+Fitur ganti lagu sudah berjalan secara UI dan database. User bisa memilih beberapa lagu, lalu sistem mengganti lagu tersebut dan menyimpan playlist final ke database/history. Namun ditemukan masalah:
+
+1. Setelah beberapa kali mengganti lagu pada playlist target 30 menit, total durasi playlist bisa turun jauh menjadi sekitar 15 menit/5 lagu. Ini berarti replacement belum menjaga target/gap durasi dengan baik.
+2. Saya belum yakin endpoint replace benar-benar memakai sistematika EDAS yang sama seperti generate awal.
+3. Ada indikasi lagu pengganti sering berulang atau “itu lagi itu lagi” meskipun jawaban kuesioner berbeda.
+4. Kemungkinan replace hanya mengambil kandidat skor tinggi secara umum, atau memakai EDAS tetapi tidak memakai weights/criteria dari answers dengan benar, atau tidak mempertimbangkan gapDurationSec/targetDurationSec secara kuat.
+
+Alur fitur ganti lagu yang ideal:
+Saat user mengganti lagu, sistem tidak boleh sekadar mengambil lagu random atau lagu teratas global. Replacement harus:
+
+1. Menerima daftar lagu yang ingin diganti.
+2. Menghitung total durasi lagu yang diganti sebagai gapDurationSec.
+3. Mengecualikan lagu yang sudah ada di playlist dan lagu yang sudah pernah diganti/excluded.
+4. Menggunakan answers asli dari sesi tersebut.
+5. Memanggil preferenceMapping yang sama seperti generate awal.
+6. Menghasilkan weights dan criteria yang sama berdasarkan jawaban user.
+7. Menghitung EDAS untuk kandidat lagu yang masih tersedia.
+8. Memilih lagu pengganti dari kandidat ranking EDAS terbaik, tetapi juga mempertimbangkan gapDurationSec.
+9. Playlist final setelah replacement harus tetap mendekati target durasi awal atau minimal mendekati gap durasi lagu yang diganti.
+10. Setelah replacement, rank_order dan appraisal_score harus dirapikan ulang dan disimpan ke database.
+
+Solusi yang saya inginkan:
+Tolong audit dulu endpoint /api/recommendations/replace dan semua modul yang dipakai olehnya. Jangan langsung ubah besar-besaran sebelum tahu masalahnya.
+
+Cek:
+
+* Apakah request replace menerima answers?
+* Apakah answers dipakai sungguhan atau hanya dikirim tetapi tidak memengaruhi perhitungan?
+* Apakah replace memanggil preferenceMapping?
+* Apakah replace menghitung EDAS dengan weights dan criteria dari kuesioner?
+* Apakah replace memakai gapDurationSec?
+* Apakah replace memilih pengganti berdasarkan kombinasi Appraisal Score dan kedekatan durasi?
+* Apakah replace mengecualikan currentPlaylistSongIds dan excludedIds dengan benar?
+* Apakah replace mengembalikan replacements yang jumlah/durasinya masuk akal?
+* Apakah setelah replacement playlist final disimpan ulang ke database dan localStorage dengan rank_order yang benar?
+
+Jika ternyata replace belum memakai EDAS yang benar, revisi agar memakai pipeline yang sama dengan generate awal:
+answers -> preferenceMapping -> weights + criteria -> EDAS ranking candidate songs -> duration-aware replacement selection.
+
+Untuk pemilihan replacement, gunakan pendekatan yang menjaga keseimbangan antara skor EDAS dan durasi. Misalnya:
+
+* Hitung kandidat ranking EDAS setelah exclude.
+* Cari kombinasi 1 sampai beberapa lagu yang total durasinya mendekati gapDurationSec.
+* Kandidat dengan Appraisal Score tinggi tetap diprioritaskan.
+* Tetapi jangan sampai playlist final turun jauh dari target durasi awal.
+* Jika 1 lagu bisa menggantikan 3 lagu dengan durasi mendekati gap, itu boleh.
+* Jika beberapa lagu lebih cocok untuk mendekati gap, itu juga boleh.
+* Batasi pencarian kombinasi agar tetap efisien, misalnya hanya dari top N kandidat EDAS setelah filtering.
+
+Kriteria hasil replacement yang diharapkan:
+
+* Lagu yang dihapus tidak muncul lagi.
+* Lagu yang sudah ada di playlist tidak terduplikasi.
+* Lagu excluded tidak muncul lagi.
+* Total durasi playlist final tetap mendekati target awal.
+* Jika mengganti lagu dengan total 6 menit, replacement sebaiknya totalnya mendekati 6 menit.
+* Jika tidak ada kandidat yang sempurna, pilih kandidat terbaik berdasarkan kombinasi skor EDAS dan kedekatan durasi.
+* Appraisal Score tetap berasal dari EDAS, bukan skor random/dummy.
+
+Tolong laporkan dulu:
+
+1. File apa saja yang terkait generate awal.
+2. File apa saja yang terkait fitur replace/ganti lagu.
+3. Apakah generate awal sudah benar memakai EDAS + bobot + benefit/cost/neutral + durasi.
+4. Apakah fitur replace sudah benar memakai EDAS + bobot + benefit/cost/neutral + durasi.
+5. Jika belum, jelaskan masalahnya.
+6. Setelah itu revisi kode seperlunya.
+7. Jalankan npx tsc --noEmit.
+8. Berikan ringkasan perubahan dan panduan tes manual.
+
+Panduan tes setelah revisi:
+
+1. Generate playlist 30 menit dengan satu set jawaban kuesioner.
+2. Catat total durasi awal dan daftar lagu.
+3. Ganti 1 lagu dengan durasi sekitar 3–4 menit.
+4. Pastikan pengganti punya durasi mendekati gap dan playlist total tetap dekat 30 menit.
+5. Ganti 2–3 lagu sekaligus.
+6. Pastikan sistem bisa mengganti dengan 1 lagu atau beberapa lagu jika durasinya lebih cocok.
+7. Ulangi dengan jawaban kuesioner yang berbeda.
+8. Pastikan kandidat pengganti berubah sesuai preferensi, bukan selalu lagu yang sama.
+9. Cek database recommendation_song untuk memastikan playlist final tersimpan.
+10. Cek history modal untuk memastikan yang tampil adalah playlist final setelah replacement.
