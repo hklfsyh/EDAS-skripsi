@@ -81,6 +81,7 @@ const QUESTION_MAPPINGS: QuestionMapping[] = [
   },
 ];
 
+// Menormalkan jawaban kuesioner dari berbagai format input agar pemetaan preferensi konsisten.
 export function normalizeQuestionnaireAnswers(
   answers?: Record<number, number> | number[] | null,
 ): number[] {
@@ -147,7 +148,8 @@ function classifyCriterion(meanLikert: number): CriterionType {
 export function mapQuestionnaireToPreferences(
   answers: Record<number, number> | number[],
 ): PreferenceResult {
-  // Konversi jawaban kuesioner ke preferensi parameter
+  // Mengubah jawaban kuesioner menjadi skor parameter, bobot kriteria,
+  // dan jenis kriteria yang dipakai pada perhitungan EDAS.
   const values = normalizeQuestionnaireAnswers(answers);
   validateAnswers(values);
 

@@ -5,9 +5,22 @@ import {
   mapQuestionnaireToPreferences,
   normalizeQuestionnaireAnswers,
 } from "@/server/utils/preferenceMapping";
-import { buildPlaylistFromRanking, runEdasRanking, type SongCandidate } from "@/server/utils/edas";
+import {
+  buildEdasDebugSummary,
+  buildPlaylistFromRanking,
+  MIN_PLAYLIST_SONG_DURATION_MS,
+  runEdasRanking,
+  type SongCandidate,
+} from "@/server/utils/edas";
 
-// Normalisasi input jawaban kuesioner
+type DummyPlaylistDebug = {
+  enabled: boolean;
+  normalizedAnswers: number[];
+  preferences: ReturnType<typeof mapQuestionnaireToPreferences>;
+  topSongs: ReturnType<typeof buildEdasDebugSummary>;
+};
+
+// Menormalkan jawaban kuesioner agar endpoint menerima format array maupun object secara konsisten.
 function normalizeAnswers(raw?: string | string[] | null): number[] | null {
   if (!raw) return null;
 
@@ -33,7 +46,8 @@ function normalizeAnswers(raw?: string | string[] | null): number[] | null {
   return parts;
 }
 
-// Ambil daftar lagu dari database
+// Menyaring kandidat lagu agar playlist tidak berisi lagu dengan durasi terlalu pendek.
+// Filter ini merupakan aturan kelayakan kandidat sebelum proses ranking EDAS.
 async function loadTracksFromDatabase(): Promise<{ tracks: SongCandidate[]; source: string }> {
   const rows = await sql<SongCandidate[]>`
     select
@@ -50,7 +64,7 @@ async function loadTracksFromDatabase(): Promise<{ tracks: SongCandidate[]; sour
       instrumentalness,
       speechiness
     from songs
-    where duration_ms > 0
+    where duration_ms >= ${MIN_PLAYLIST_SONG_DURATION_MS}
   `;
 
   const tracks = rows
@@ -66,18 +80,39 @@ async function loadTracksFromDatabase(): Promise<{ tracks: SongCandidate[]; sour
       instrumentalness: row.instrumentalness ?? 0,
       speechiness: row.speechiness ?? 0,
     }))
-    .filter((track) => track.duration_ms > 0);
+    .filter((track) => track.duration_ms >= MIN_PLAYLIST_SONG_DURATION_MS);
 
   return { tracks, source: "songs (database)" };
 }
 
-// Jalankan EDAS lalu bentuk playlist berdasarkan durasi target
-function buildEdasPlaylist(tracks: SongCandidate[], answers: number[], targetMinutes: number) {
+// Menjalankan pipeline generate awal: pembobotan preferensi, ranking EDAS,
+// lalu pembentukan playlist sesuai target durasi.
+function buildEdasPlaylist(
+  tracks: SongCandidate[],
+  answers: number[],
+  targetMinutes: number,
+  debug = false,
+) {
   const preferences = mapQuestionnaireToPreferences(answers);
-  const ranked = runEdasRanking(tracks, preferences);
+  const ranked = runEdasRanking(tracks, preferences, { debug });
   const playlist = buildPlaylistFromRanking(ranked, targetMinutes);
 
-  return { playlist, preferences };
+  const debugPayload: DummyPlaylistDebug | undefined = debug
+    ? {
+        enabled: true,
+        normalizedAnswers: answers,
+        preferences,
+        topSongs: buildEdasDebugSummary(ranked, 10),
+      }
+    : undefined;
+
+  return { playlist, preferences, debug: debugPayload };
+}
+
+// Mengaktifkan debug hanya pada mode development agar tidak tampil pada penggunaan normal.
+function isDebugEnabledFromQuery(raw: string | null): boolean {
+  if (!raw) return false;
+  return raw === "1" || raw.toLowerCase() === "true";
 }
 
 // API dummy playlist (GET)
@@ -85,19 +120,22 @@ export async function handleDummyPlaylistGet(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const targetMinutes = Number(searchParams.get("targetMinutes") ?? 30);
+    const debug = process.env.NODE_ENV !== "production" && isDebugEnabledFromQuery(searchParams.get("debug"));
     const { tracks, source } = await loadTracksFromDatabase();
     const rawAnswers = normalizeAnswers(searchParams.get("answers"));
     const answers = rawAnswers ?? new Array(14).fill(3);
-    const { playlist } = buildEdasPlaylist(
+    const { playlist, debug: debugPayload } = buildEdasPlaylist(
       tracks,
       answers,
       Number.isFinite(targetMinutes) ? targetMinutes : 30,
+      debug,
     );
 
     return NextResponse.json({
       source,
       totalTracks: tracks.length,
       playlist,
+      ...(debugPayload ? { debug: debugPayload } : {}),
     });
   } catch {
     return NextResponse.json(
@@ -113,23 +151,27 @@ export async function handleDummyPlaylistPost(request: Request) {
     const body = (await request.json()) as {
       answers?: number[] | Record<number, number>;
       targetMinutes?: number;
+      debug?: boolean;
     };
 
     const targetMinutes = Number(body.targetMinutes ?? 30);
+    const debug = process.env.NODE_ENV !== "production" && body.debug === true;
     const rawAnswers = normalizeAnswers(JSON.stringify(body.answers ?? []));
     const answers = rawAnswers && rawAnswers.length > 0 ? rawAnswers : new Array(14).fill(3);
 
     const { tracks, source } = await loadTracksFromDatabase();
-    const { playlist } = buildEdasPlaylist(
+    const { playlist, debug: debugPayload } = buildEdasPlaylist(
       tracks,
       answers,
       Number.isFinite(targetMinutes) ? targetMinutes : 30,
+      debug,
     );
 
     return NextResponse.json({
       source,
       totalTracks: tracks.length,
       playlist,
+      ...(debugPayload ? { debug: debugPayload } : {}),
     });
   } catch {
     return NextResponse.json(
