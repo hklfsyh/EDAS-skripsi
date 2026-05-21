@@ -268,6 +268,138 @@
   background: var(--surface-subtle);
 }
 
+.preferenceCard {
+  margin-top: 18px;
+  display: grid;
+  gap: 14px;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--accent-primary) 20%, var(--surface-border));
+  background: color-mix(in srgb, var(--surface-subtle) 82%, transparent);
+  padding: 18px;
+}
+
+.preferenceIntro {
+  display: grid;
+  gap: 8px;
+}
+
+.preferenceIntro h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.preferenceBadge {
+  width: fit-content;
+  border-radius: 999px;
+  padding: 5px 10px;
+  background: color-mix(in srgb, var(--accent-primary) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-primary) 28%, transparent);
+  color: var(--accent-primary);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.preferenceNarrative {
+  font-size: 0.92rem;
+  color: var(--foreground) !important;
+}
+
+.preferenceGrid {
+  display: grid;
+  gap: 10px;
+}
+
+.preferenceAspect {
+  border: 1px solid var(--surface-border);
+  border-radius: 14px;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.preferenceSummaryRow {
+  list-style: none;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 16px;
+  cursor: pointer;
+}
+
+.preferenceSummaryRow::-webkit-details-marker {
+  display: none;
+}
+
+.preferenceSummaryRow strong {
+  color: var(--foreground);
+  font-size: 0.94rem;
+}
+
+.preferenceSummaryRow p {
+  margin-top: 4px;
+  font-size: 0.8rem;
+}
+
+.preferenceMeta {
+  display: grid;
+  gap: 6px;
+  justify-items: end;
+}
+
+.preferenceMeta span {
+  padding: 5px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--surface-border);
+  background: var(--surface-subtle);
+  color: var(--foreground);
+  font-size: 0.73rem;
+  font-weight: 700;
+  text-align: right;
+}
+
+.preferenceDetailBody {
+  display: grid;
+  gap: 8px;
+  padding: 0 16px 16px;
+}
+
+.preferenceDetailBody p {
+  font-size: 0.84rem;
+}
+
+.preferenceActions {
+  display: grid;
+  gap: 10px;
+}
+
+.preferenceLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  min-width: 180px;
+  border-radius: 12px;
+  padding: 11px 16px;
+  background: var(--button-bg);
+  color: var(--button-text);
+  font-weight: 800;
+  font-size: 0.88rem;
+  text-decoration: none;
+  transition: transform 0.18s, background 0.18s, box-shadow 0.18s;
+  box-shadow: 0 4px 18px color-mix(in srgb, var(--accent-secondary) 20%, transparent);
+}
+
+.preferenceLink:hover {
+  transform: translateY(-1px);
+  background: var(--button-bg-hover);
+}
+
+.preferenceNote {
+  font-size: 0.8rem;
+}
+
 /* platformGrid — grid tombol export (Spotify / YouTube) */
 .platformGrid {
   display: grid;
@@ -749,6 +881,14 @@
   .batchBar {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .preferenceSummaryRow {
+    grid-template-columns: 1fr;
+  }
+
+  .preferenceMeta {
+    justify-items: start;
   }
 
   .stepNav {

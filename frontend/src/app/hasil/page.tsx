@@ -12,6 +12,7 @@ import {
   isPlaylistFlowFinished,
   markPlaylistFlowFinished,
 } from "@/lib/playlistFlow";
+import type { PreferenceInterpretation } from "@/server/utils/preferenceSummary";
 import styles from "./page.module.css";
 
 // Kunci localStorage untuk tema dan cache URL export
@@ -53,6 +54,15 @@ type ResultData = {
     fallbackUsed?: boolean;
     reason?: string | null;
   };
+  preferenceSummary?: PreferenceInterpretation & {
+    narrativeText: string;
+    narrativeMeta?: {
+      source?: string;
+      model?: string;
+      fallbackUsed?: boolean;
+      reason?: string | null;
+    };
+  };
 };
 
 // HistorySong — tipe data lagu dalam riwayat sesi (dari database)
@@ -80,6 +90,8 @@ type HistorySession = {
   youtube_playlist_title: string | null;
   youtube_exported_at: string | null;
 };
+
+const UAT_FORM_PLACEHOLDER_URL = "#";
 
 // formatDuration — konversi detik ke format menit:detik
 function formatDuration(sec: number): string {
@@ -214,6 +226,7 @@ export default function HasilPage() {
 
   // currentTotalSec — total durasi playlist saat ini
   const currentTotalSec = useMemo(() => playlist.reduce((sum, s) => sum + s.durationSec, 0), [playlist]);
+  const preferenceSummary = result?.preferenceSummary ?? null;
 
   // Fingerprint playlist + key localStorage untuk cache URL export
   const fp = useMemo(() => playlistFingerprint(playlist), [playlist]);
@@ -394,6 +407,7 @@ export default function HasilPage() {
           answers: answersRaw ? JSON.parse(answersRaw) : [],
           currentPlaylistSongIds: currentIds,
           gapDurationSec,
+          currentPlaylistDurationSec: currentTotalSec,
         }),
       });
 
@@ -529,6 +543,74 @@ export default function HasilPage() {
                   </span>
                 )}
               </div>
+            )}
+
+            {preferenceSummary && (
+              <section className={styles.preferenceCard} aria-labelledby="preference-summary-title">
+                <div className={styles.preferenceIntro}>
+                  <span className={styles.preferenceBadge}>UAT</span>
+                  <h2 id="preference-summary-title">Ringkasan Preferensi Anda</h2>
+                  <p>{preferenceSummary.narrativeSummary.intro}</p>
+                </div>
+
+                <p className={styles.preferenceNarrative}>{preferenceSummary.narrativeText}</p>
+
+                <div className={styles.preferenceGrid}>
+                  {preferenceSummary.aspects.map((aspect) => (
+                    <details key={aspect.parameter} className={styles.preferenceAspect}>
+                      <summary className={styles.preferenceSummaryRow}>
+                        <div>
+                          <strong>{aspect.title}</strong>
+                          <p>{aspect.shortLabel}</p>
+                        </div>
+                        <div className={styles.preferenceMeta}>
+                          <span>{aspect.contributionPercent.toFixed(1)}%</span>
+                          <span>{aspect.criterionLabel}</span>
+                        </div>
+                      </summary>
+                      <div className={styles.preferenceDetailBody}>
+                        <p>{aspect.insight}</p>
+                        <p>{aspect.criterionExplanation}</p>
+                        <p>
+                          Sistem membaca aspek ini sebagai <strong>{aspect.preferenceDirection}</strong>.
+                        </p>
+                      </div>
+                    </details>
+                  ))}
+                </div>
+
+                <div className={styles.preferenceActions}>
+                  <a
+                    href={UAT_FORM_PLACEHOLDER_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles.preferenceLink}
+                  >
+                    Isi Form Evaluasi
+                  </a>
+                  <p className={styles.preferenceNote}>
+                    Saat mengisi bagian UAT, mohon jawab berdasarkan ringkasan preferensi yang ditampilkan di aplikasi.
+                  </p>
+                </div>
+
+                {showNlgDebug && preferenceSummary.narrativeMeta && (
+                  <div className={styles.nlgMeta}>
+                    <span className={styles.nlgBadge}>
+                      Preference source: {preferenceSummary.narrativeMeta.source ?? "unknown"}
+                    </span>
+                    {preferenceSummary.narrativeMeta.model && (
+                      <span className={styles.nlgBadge}>
+                        Preference model: {preferenceSummary.narrativeMeta.model}
+                      </span>
+                    )}
+                    {typeof preferenceSummary.narrativeMeta.fallbackUsed === "boolean" && (
+                      <span className={styles.nlgBadge}>
+                        Preference fallback: {preferenceSummary.narrativeMeta.fallbackUsed ? "yes" : "no"}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </section>
             )}
 
             {/* Indikator step dots */}

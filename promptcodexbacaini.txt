@@ -1,121 +1,99 @@
 Saya menggunakan mode build, jadi kamu boleh langsung mengubah kode. Namun sebelum mengubah, lakukan audit internal terlebih dahulu terhadap alur generate awal dan endpoint replace. Setelah menemukan masalahnya, revisi hanya bagian yang berkaitan dengan EDAS, preference mapping, replacement selection, dan durasi. Jangan mengubah UI, NLG, database schema, atau fitur platform eksternal kecuali benar-benar diperlukan. Setelah selesai, jalankan npx tsc --noEmit dan berikan ringkasan file yang diubah, masalah yang ditemukan, serta panduan tes manual.
 
-Saya ingin melakukan revisi kecil pada project, bukan perubahan besar. Tolong kerjakan dua hal saja:
+Saya ingin menambahkan fitur kecil untuk kebutuhan pengujian UAT pada project skripsi saya. Tolong lakukan perubahan secara surgical dan jangan mengubah flow yang sudah berjalan baik.
 
-1. Tambahkan aturan kelayakan kandidat lagu berdasarkan durasi minimal.
-2. Tambahkan komentar dokumentasi pada kode penting untuk kebutuhan penjelasan paper.
+Konteks project:
+- Project adalah aplikasi rekomendasi playlist musik berbasis konteks aktivitas pengguna menggunakan metode EDAS.
+- Flow utama sekarang sudah berjalan dan jangan dirombak:
+  1. user memilih konteks aktivitas/waktu/suasana saat ini/durasi,
+  2. user mengisi kuesioner preferensi musik,
+  3. sistem menghitung bobot dan jenis kriteria dari kuesioner,
+  4. EDAS melakukan ranking lagu,
+  5. sistem membentuk playlist,
+  6. NLG membuat narasi ringkasan playlist,
+  7. user bisa melihat hasil, detail playlist, mengganti lagu, export Spotify/YouTube, dan melihat history.
+- Jangan ubah algoritma EDAS utama, preference mapping, fitur ganti lagu, history, save session, export Spotify/YouTube, atau NLG playlist yang sudah berjalan.
+- Jangan tampilkan JSON/debug mentah ke user.
+- Jangan expose API key/token/env apa pun di UI, log, atau response client.
 
-Jangan mengubah UI, NLG, schema database, rumus EDAS, preference mapping, atau logika utama yang sudah berjalan, kecuali benar-benar diperlukan untuk menerapkan filter durasi minimum.
+Tujuan perubahan:
+Saya ingin menambahkan ringkasan interpretasi preferensi EDAS yang user-friendly setelah hasil rekomendasi muncul. Ringkasan ini dipakai sebagai acuan responden saat mengisi Google Form UAT. UAT saya sekarang bukan sekadar menilai playlist cocok/tidak, tetapi menilai apakah sistem sudah sesuai dalam membaca preferensi pengguna dari kuesioner menjadi bobot dan arah preferensi EDAS.
 
-Konteks:
-Project ini adalah sistem rekomendasi playlist musik berbasis konteks aktivitas pengguna menggunakan metode EDAS. Saat ini generate awal dan fitur ganti lagu sudah memakai EDAS. Fitur ganti lagu menggunakan opsi replacement reranking, yaitu menghitung ulang kandidat yang tersedia setelah mengecualikan lagu yang sudah ada/excluded, lalu memilih pengganti berdasarkan Appraisal Score dan gap durasi.
+Yang perlu dibuat:
+Tambahkan satu section atau modal kecil di halaman hasil rekomendasi, dengan judul misalnya:
+“Cara namu. Membaca Preferensi Anda”
+atau
+“Ringkasan Preferensi Anda”
 
-Masalah kecil yang ingin diperbaiki:
-Ada beberapa lagu yang durasinya terlalu pendek, misalnya di bawah 90 detik, tetapi bisa muncul di ranking atas karena sangat cocok secara parameter audio. Secara EDAS ini tidak salah, tetapi untuk kualitas playlist aktivitas, lagu yang terlalu pendek bisa terasa kurang representatif. Karena itu saya ingin menambahkan filter durasi minimum.
+Isi ringkasan:
+- Jangan tampilkan istilah teknis secara mentah seperti “tempo”, “energy”, “speechiness” tanpa penjelasan.
+- Gunakan bahasa yang mudah dipahami user awam.
+- Ringkasan boleh tetap mengambil data dari hasil preferenceMapping, seperti:
+  - parameter,
+  - score,
+  - weight,
+  - meanLikert,
+  - criterion benefit/cost/neutral,
+  - related question mapping jika tersedia.
+- Namun tampilannya harus berupa narasi atau kartu yang user-friendly.
+- Contoh gaya bahasa:
+  - “Dari jawaban Anda, sistem melihat bahwa ritme lagu yang lebih cepat cukup berpengaruh terhadap preferensi Anda, dengan kontribusi sekitar 14%.”
+  - “Sistem membaca bahwa musik yang terasa bersemangat menjadi salah satu karakter yang cukup kuat dalam preferensi Anda.”
+  - “Untuk unsur kata-kata atau lirik yang dominan, sistem membaca bahwa bagian ini tidak terlalu diprioritaskan.”
+- Jika tetap menampilkan istilah benefit/cost/neutral, wajib beri penjelasan awam:
+  - Benefit: nilai yang lebih tinggi lebih diprioritaskan.
+  - Cost: nilai yang lebih rendah lebih diprioritaskan.
+  - Neutral: sistem membaca preferensi user pada aspek ini sebagai sedang/netral.
+- Lebih baik gunakan label awam untuk setiap parameter:
+  - tempo = cepat/lambatnya lagu atau ritme lagu
+  - energy = semangat/intensitas lagu
+  - danceability = enaknya ritme untuk diikuti/bergerak
+  - happiness = nuansa ceria/positif
+  - popularity = familiar/tidaknya lagu
+  - acousticness = kesan alami/akustik
+  - instrumentalness = dominasi instrumen dibanding vokal
+  - speechiness = banyak/sedikitnya kata-kata atau lirik dominan
 
-Permintaan 1 — Filter durasi minimum:
-Tambahkan aturan bahwa kandidat lagu yang digunakan untuk generate playlist awal dan fitur ganti lagu harus memiliki durasi minimal 90 detik.
+Pendekatan hybrid yang saya inginkan:
+1. Data teknis tetap dihitung deterministik oleh sistem dari preferenceMapping. Gemini/NLG tidak boleh menentukan bobot, benefit/cost/neutral, atau skor.
+2. Gemini boleh dipakai hanya untuk mengubah data ringkasan preferensi yang sudah dihitung menjadi narasi user-friendly.
+3. Jika Gemini gagal, sistem harus tetap menampilkan fallback berbasis template lokal agar fitur tetap berjalan.
+4. Jangan membuat request Gemini tambahan yang berlebihan. Idealnya cukup satu request untuk satu ringkasan preferensi, atau gunakan template fallback jika lebih aman.
+5. Jangan mengganggu NLG playlist yang sudah ada. Kalau perlu buat fungsi/route/helper terpisah untuk “preference summary narrative”, atau gunakan fungsi NLG existing secara aman tanpa mengubah behavior lama.
 
-Aturan:
+Output UI yang diinginkan:
+Di halaman hasil rekomendasi, tambahkan card kecil setelah ringkasan/narasi rekomendasi atau sebelum tombol evaluasi/export, dengan teks pembuka:
+“Ringkasan ini menjelaskan bagaimana jawaban kuesioner Anda dibaca oleh sistem sebelum playlist dihitung menggunakan EDAS. Gunakan ringkasan ini sebagai acuan saat mengisi bagian evaluasi UAT pada Google Form.”
 
-* Durasi minimal: 90 detik atau 90000 ms.
-* Terapkan pada generate awal.
-* Terapkan juga pada endpoint replace/ganti lagu.
-* Jangan ubah struktur database.
-* Jangan ubah rumus EDAS.
-* Jangan ubah mapping kuesioner.
-* Filter ini diposisikan sebagai tahap penyaringan kandidat lagu sebelum EDAS/playlist selection, bukan sebagai bagian dari rumus EDAS.
-* Jika ada konstanta, buat jelas, misalnya `MIN_PLAYLIST_SONG_DURATION_MS = 90_000` atau `MIN_PLAYLIST_SONG_DURATION_SEC = 90`.
-* Lebih baik gunakan konstanta supaya nanti mudah dijelaskan di paper.
-* Pastikan lagu di bawah 90 detik tidak masuk playlist awal dan tidak masuk hasil replacement.
+Lalu tampilkan:
+- Narasi singkat dari Gemini/template tentang preferensi user.
+- Detail ringkas per aspek musik dalam bentuk card atau accordion kecil.
+- Tombol/link:
+  “Isi Form Evaluasi”
+  atau placeholder link Google Form yang mudah diganti nanti.
+- Tambahkan catatan kecil:
+  “Saat mengisi bagian UAT, mohon jawab berdasarkan ringkasan preferensi yang ditampilkan di aplikasi.”
 
-File yang kemungkinan perlu dicek:
+Catatan penting:
+- Jangan tampilkan raw JSON.
+- Jangan tampilkan PDA/NDA/SP/SN/Appraisal Score lengkap ke user UAT, karena itu terlalu teknis.
+- Jangan ubah rumus EDAS.
+- Jangan ubah mapping kuesioner kecuali benar-benar perlu.
+- Jangan ubah NLG playlist yang sudah ada, karena narasi playlist sudah sengaja dibuat tidak menyebut judul lagu/nama artis agar tetap relevan setelah fitur ganti lagu.
+- Jangan mengubah fitur history, export Spotify/YouTube, replace song, atau save playlist.
+- Jaga UI tetap mobile-first dan konsisten dengan style namu.
+- Nama aplikasi harus tetap “namu.” huruf kecil dengan titik, bukan NAMU.
 
-* `frontend/src/server/modules/dummyPlaylist.ts`
-* `frontend/src/app/api/recommendations/replace/route.ts`
-* `frontend/src/server/utils/edas.ts`
-* file route `/api/dummy-playlist` jika ada
-* file lain yang mengambil kandidat lagu dari tabel `songs`
+Yang perlu dicek setelah implementasi:
+1. Generate playlist normal masih berjalan.
+2. NLG playlist lama masih muncul dan tidak berubah perilakunya.
+3. Ringkasan preferensi baru muncul di halaman hasil.
+4. Ringkasan preferensi memakai bahasa awam, bukan JSON.
+5. Jika Gemini gagal, fallback template tetap muncul.
+6. Fitur ganti lagu tetap berjalan.
+7. History tetap berjalan.
+8. Export Spotify/YouTube tetap berjalan.
+9. Tidak ada API key/token/env yang muncul di client atau console.
+10. npm run lint/build jika memungkinkan.
 
-Implementasi yang saya harapkan:
-
-* Jika filter dilakukan di query database, ubah `where duration_ms > 0` menjadi `where duration_ms >= 90000`.
-* Jika lebih rapi memakai konstanta, gunakan konstanta agar tidak ada magic number.
-* Pastikan filter berlaku konsisten di generate awal dan replace.
-* Jangan filter data pada tabel database secara permanen; cukup filter saat runtime kandidat rekomendasi.
-
-Permintaan 2 — Komentar dokumentasi kode:
-Tambahkan komentar kode untuk bagian-bagian penting agar nanti bisa dipakai untuk memahami snippet paper. Komentar cukup menjelaskan fungsi blok kode, bukan komentar berlebihan pada setiap baris.
-
-Tambahkan komentar sebelum blok kode penting seperti:
-
-* normalisasi jawaban kuesioner,
-* mapping jawaban ke bobot dan jenis kriteria,
-* perhitungan average solution,
-* perhitungan PDA/NDA benefit dan cost,
-* perhitungan neutral jika ada,
-* normalisasi SP/SN,
-* perhitungan Appraisal Score,
-* ranking EDAS,
-* selection playlist berdasarkan target durasi,
-* filtering durasi minimum,
-* replacement selection berdasarkan gap durasi,
-* debug EDAS development-only.
-
-Syarat komentar:
-
-* Komentar boleh dalam bahasa Indonesia.
-* Komentar harus singkat dan akademik.
-* Jangan mengubah kode berjalan hanya demi komentar.
-* Jangan mengubah nama function/variable jika tidak perlu.
-* Komentar ditambahkan sebelum blok/fungsi penting, bukan mengotori semua baris.
-* Tujuannya untuk dokumentasi dan memudahkan pemilihan snippet kode untuk Bab 4.3.2.
-
-Contoh gaya komentar yang diinginkan:
-
-```ts
-// Menyaring kandidat lagu agar playlist tidak berisi lagu dengan durasi terlalu pendek.
-// Filter ini tidak mengubah rumus EDAS, tetapi menjadi aturan kelayakan sebelum pemeringkatan.
-```
-
-```ts
-// Menghitung Average Solution untuk setiap parameter audio sebagai titik pembanding dalam metode EDAS.
-```
-
-```ts
-// Menghitung PDA dan NDA berdasarkan jenis kriteria benefit atau cost.
-```
-
-```ts
-// Membentuk playlist dari hasil ranking EDAS dengan mempertimbangkan target durasi pengguna.
-```
-
-Permintaan 3 — Jangan hapus debug:
-Mode debug EDAS dan replacement yang sudah dibuat jangan dihapus. Debug ini masih saya perlukan untuk audit dan mungkin akan menjadi bahan penjelasan paper. Pastikan debug tetap development-only.
-
-Catatan metodologis:
-Jika nanti ditulis di paper, filter durasi minimal 90 detik akan dijelaskan sebagai aturan kelayakan kandidat lagu agar playlist tidak didominasi potongan lagu yang terlalu pendek. Ini bukan perubahan rumus EDAS.
-
-Output akhir yang saya butuhkan:
-
-1. File apa saja yang diubah.
-2. Di mana konstanta durasi minimal diletakkan.
-3. Apakah filter 90 detik berlaku untuk generate awal dan replace.
-4. Apakah rumus EDAS berubah atau tidak.
-5. Apakah debug EDAS tetap ada.
-6. Ringkasan komentar dokumentasi yang ditambahkan.
-7. Jalankan:
-
-   * `frontend\node_modules\.bin\tsc.cmd --noEmit`
-   * `npm run build` dari folder frontend jika memungkinkan.
-8. Berikan panduan tes manual singkat.
-
-Panduan tes manual:
-
-1. Jalankan generate awal dengan target 30 menit.
-2. Pastikan tidak ada lagu berdurasi di bawah 1:30.
-3. Jalankan debug endpoint dan cek top playlist.
-4. Ganti 1 atau beberapa lagu.
-5. Pastikan replacement juga tidak menghasilkan lagu di bawah 1:30.
-6. Pastikan total durasi playlist tetap mendekati target.
-7. Pastikan UI, history, NLG, dan export tetap normal.
+Tolong implementasikan dengan perubahan seminimal mungkin dan jelaskan file apa saja yang diubah.

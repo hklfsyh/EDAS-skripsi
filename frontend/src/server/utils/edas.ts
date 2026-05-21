@@ -121,6 +121,8 @@ type DurationState = {
   pickedIndex: number;
 };
 
+type DurationSelectionProfile = "playlist" | "replacement";
+
 // Daftar parameter audio untuk perhitungan EDAS
 const PARAMETERS: PreferenceParameter[] = [
   "tempo",
@@ -428,6 +430,29 @@ export function selectRankedSongsForDuration<T extends DurationSelectionCandidat
   return selectRankedSongsForDurationDetailed(candidates, options).selected;
 }
 
+export function createDurationSelectionOptions(
+  targetSec: number,
+  profile: DurationSelectionProfile,
+): DurationSelectionOptions {
+  const safeTargetSec = Math.max(60, Math.round(targetSec));
+  const baseOptions: DurationSelectionOptions = {
+    targetSec: safeTargetSec,
+    candidateLimit: 90,
+    maxSongs: Math.max(1, Math.min(20, Math.ceil(safeTargetSec / 90))),
+    overshootToleranceSec: Math.max(90, Math.round(safeTargetSec * 0.12)),
+  };
+
+  if (profile === "replacement") {
+    return {
+      ...baseOptions,
+      maxSongs: Math.max(1, Math.min(baseOptions.maxSongs, 12)),
+      preferFewerSongs: true,
+    };
+  }
+
+  return baseOptions;
+}
+
 // Menjalankan tahapan inti EDAS: agregasi kontribusi parameter, normalisasi,
 // perhitungan Appraisal Score, lalu pengurutan kandidat dari skor tertinggi.
 export function runEdasRanking(
@@ -555,12 +580,10 @@ export function buildPlaylistFromRanking(
     })
     .filter((item) => item.durationSec > 0);
 
-  const selected = selectRankedSongsForDuration(rankedItems, {
-    targetSec,
-    candidateLimit: 90,
-    maxSongs: Math.max(1, Math.min(20, Math.ceil(targetSec / 90))),
-    overshootToleranceSec: Math.max(90, Math.round(targetSec * 0.12)),
-  });
+  const selected = selectRankedSongsForDuration(
+    rankedItems,
+    createDurationSelectionOptions(targetSec, "playlist"),
+  );
 
   return selected.map((item, index) => ({
     rank: index + 1,

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+
 import { MusicBackground } from "@/components/common/MusicBackground";
 import { MusicCursorTrail } from "@/components/common/MusicCursorTrail";
 import { getOrCreateClientId } from "@/lib/clientId";
@@ -11,17 +12,15 @@ import {
   PLAYLIST_RESULT_STORAGE_KEY,
   isPlaylistFlowFinished,
 } from "@/lib/playlistFlow";
-import { mapQuestionnaireToPreferences, type PreferenceParameter } from "@/server/utils/preferenceMapping";
+import { buildPreferenceInterpretation, type PreferenceInterpretation } from "@/server/utils/preferenceSummary";
 import styles from "./page.module.css";
 
-// Konfigurasi timeout NLG (default 60 detik)
 const THEME_STORAGE_KEY = "playlist-theme-v1";
 const DEFAULT_NLG_TIMEOUT_MS = 60000;
 const NLG_TIMEOUT_MS = Number(
   process.env.NEXT_PUBLIC_NLG_TIMEOUT_MS ?? DEFAULT_NLG_TIMEOUT_MS,
 );
 
-// ContextData — tipe data konteks aktivitas dari localStorage
 type ContextData = {
   activity: string;
   timeOfDay: string;
@@ -31,7 +30,6 @@ type ContextData = {
   createdAt: string;
 };
 
-// PlaylistItem — tipe data satu lagu dalam playlist rekomendasi
 type PlaylistItem = {
   rank: number;
   id_song?: number;
@@ -41,7 +39,6 @@ type PlaylistItem = {
   appraisalScore: number;
 };
 
-// NlgMeta — metadata hasil生成 narasi NLG (sumber, model, fallback)
 type NlgMeta = {
   source: string;
   model?: string;
@@ -49,50 +46,11 @@ type NlgMeta = {
   reason?: string | null;
 };
 
-// PreferenceSummary — ringkasan preferensi musik (primer, sekunder, dihindari)
-type PreferenceSummary = {
-  primary: string[];
-  secondary: string[];
-  avoid: string[];
+type ResultPreferenceSummary = PreferenceInterpretation & {
+  narrativeText: string;
+  narrativeMeta: NlgMeta;
 };
 
-// PREFERENCE_LABELS — mapping parameter preferensi ke label Bahasa Indonesia
-const PREFERENCE_LABELS: Record<PreferenceParameter, { high: string; low: string }> = {
-  tempo: {
-    high: "musik dengan tempo yang terasa lebih cepat",
-    low: "musik dengan tempo yang terasa lebih santai",
-  },
-  energy: {
-    high: "musik yang terasa lebih berenergi",
-    low: "musik yang terasa lebih lembut dan tidak terlalu intens",
-  },
-  danceability: {
-    high: "musik dengan alur ritme yang terasa lebih mengalir dan enak diikuti",
-    low: "musik yang tidak terlalu menonjolkan dorongan untuk ikut bergerak",
-  },
-  happiness: {
-    high: "musik dengan nuansa yang lebih cerah dan positif",
-    low: "musik dengan nuansa yang lebih tenang dan tidak terlalu ceria",
-  },
-  popularity: {
-    high: "lagu-lagu yang terasa lebih familiar di telinga",
-    low: "lagu-lagu yang tidak terlalu bergantung pada kesan familiar",
-  },
-  acousticness: {
-    high: "musik dengan sentuhan akustik yang lebih terasa",
-    low: "musik dengan nuansa yang tidak terlalu menonjolkan unsur akustik",
-  },
-  instrumentalness: {
-    high: "musik yang memberi ruang lebih besar pada instrumen",
-    low: "musik yang lebih menonjolkan unsur vokal",
-  },
-  speechiness: {
-    high: "musik yang unsur lirik atau kata-katanya terasa lebih menonjol",
-    low: "musik yang tidak terlalu padat oleh kata-kata",
-  },
-};
-
-// joinList — gabung array string ke kalimat Bahasa Indonesia (koma + "dan")
 function joinList(items: string[]): string {
   if (items.length === 0) return "";
   if (items.length === 1) return items[0];
@@ -100,35 +58,10 @@ function joinList(items: string[]): string {
   return `${items.slice(0, -1).join(", ")}, dan ${items[items.length - 1]}`;
 }
 
-// buildPreferenceSummary — olah jawaban kuesioner ke ringkasan preferensi
-function buildPreferenceSummary(answers: Record<number, number>): PreferenceSummary {
-  const preferences = mapQuestionnaireToPreferences(answers);
-  const entries = Object.entries(preferences.parameters).map(([parameter, info]) => ({
-    parameter: parameter as PreferenceParameter,
-    meanLikert: info.meanLikert,
-    weight: info.weight,
-  }));
-
-  const sorted = [...entries].sort((a, b) => b.weight - a.weight);
-  const primaryCandidates = sorted.filter((entry) => entry.meanLikert >= 3.2);
-  const secondaryCandidates = sorted.filter((entry) => entry.meanLikert >= 3 && entry.meanLikert < 3.2);
-  const avoidCandidates = sorted.filter((entry) => entry.meanLikert <= 2.6);
-
-  const primary = (primaryCandidates.length > 0 ? primaryCandidates : sorted)
-    .slice(0, 2)
-    .map((entry) => PREFERENCE_LABELS[entry.parameter].high);
-
-  const secondary = secondaryCandidates.slice(0, 2).map((entry) => PREFERENCE_LABELS[entry.parameter].high);
-  const avoid = avoidCandidates.slice(0, 2).map((entry) => PREFERENCE_LABELS[entry.parameter].low);
-
-  return { primary, secondary, avoid };
-}
-
-// buildFallbackNarration — buat narasi rekomendasi lokal (fallback jika NLG gagal)
 function buildFallbackNarration(
   context: ContextData,
   playlist: PlaylistItem[],
-  preferenceSummary: PreferenceSummary,
+  preferenceSummary: PreferenceInterpretation["narrativeSummary"],
 ): string {
   const totalSec = playlist.reduce((sum, item) => sum + item.durationSec, 0);
   const totalMinutes = Math.max(0, Math.round(totalSec / 60));
@@ -153,18 +86,37 @@ function buildFallbackNarration(
 
   return (
     `Untuk sesi ${activity} pada ${timeOfDay} dengan suasana saat ini ${mood}, jawaban kuesionermu menunjukkan kecenderungan ke ${primaryText}.${secondaryText}${avoidText} ` +
-    `Karena itu, playlist ini dipilih dari lagu-lagu yang tingkat kecocokannya paling tinggi dengan kebutuhan sesi ini, sehingga hasilnya tidak terasa dipilih secara acak. ` +
+    "Karena itu, playlist ini dipilih dari lagu-lagu yang tingkat kecocokannya paling tinggi dengan kebutuhan sesi ini, sehingga hasilnya tidak terasa dipilih secara acak. " +
     `Dengan total durasi sekitar ${totalMinutes} menit, playlist ini disusun agar tetap terasa nyambung dan relevan untuk menemani sesi yang kamu pilih.`
   )
     .replace(/\s+/g, " ")
     .trim();
 }
 
-// generateNlgText — panggil API NLG, fallback ke narasi lokal jika gagal
+function buildFallbackPreferenceNarrative(preferenceSummary: PreferenceInterpretation): string {
+  const topAspects = preferenceSummary.aspects.slice(0, 3);
+  if (topAspects.length === 0) {
+    return "Dari jawaban kuesioner Anda, sistem membaca preferensi musik secara cukup seimbang. Ringkasan ini tetap dapat digunakan sebagai acuan saat mengisi evaluasi UAT.";
+  }
+
+  const [first, second, third] = topAspects;
+  const firstSentence = `${first.title} menjadi salah satu aspek yang ${first.priorityLabel}, dengan kontribusi sekitar ${first.contributionPercent.toFixed(1)}%.`;
+  const secondSentence = second
+    ? `${second.title} juga ikut dibaca sebagai ${second.preferenceDirection}.`
+    : "Sistem memakai pembacaan ini untuk menentukan karakter lagu yang lebih sesuai.";
+  const thirdSentence = third
+    ? `${third.title} berada di posisi ${third.criterionLabel}, sehingga sistem tidak memilih lagu secara acak.`
+    : "Pembacaan ini membantu sistem menyusun rekomendasi yang lebih selaras dengan jawaban Anda.";
+
+  return `${firstSentence} ${secondSentence} ${thirdSentence} Ringkasan ini bisa digunakan sebagai acuan saat mengisi evaluasi UAT.`
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 async function generateNlgText(
   context: ContextData,
   playlist: PlaylistItem[],
-  preferenceSummary: PreferenceSummary,
+  preferenceSummary: PreferenceInterpretation["narrativeSummary"],
 ): Promise<{ text: string; meta: NlgMeta }> {
   const fallback = buildFallbackNarration(context, playlist, preferenceSummary);
   const totalDurationSec = playlist.reduce((sum, item) => sum + item.durationSec, 0);
@@ -237,7 +189,72 @@ async function generateNlgText(
   }
 }
 
-// fetchWithTimeout — wrapper fetch dengan AbortController untuk timeout
+async function generatePreferenceNarrative(
+  preferenceSummary: PreferenceInterpretation,
+): Promise<{ text: string; meta: NlgMeta }> {
+  const fallback = buildFallbackPreferenceNarrative(preferenceSummary);
+
+  try {
+    const response = await fetchWithTimeout(
+      "/api/preference-summary/generate",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          aspects: preferenceSummary.aspects,
+        }),
+      },
+      NLG_TIMEOUT_MS,
+    );
+
+    const payload = (await response.json().catch(() => ({}))) as {
+      ok?: boolean;
+      text?: string | null;
+      meta?: {
+        source?: string;
+        model?: string;
+        fallbackUsed?: boolean;
+        reason?: string | null;
+      };
+    };
+
+    if (!response.ok || !payload.ok || !payload.text) {
+      return {
+        text: fallback,
+        meta: {
+          source: "fallback-local",
+          model: payload.meta?.model,
+          fallbackUsed: true,
+          reason: payload.meta?.reason ?? "preference_summary_failed",
+        },
+      };
+    }
+
+    return {
+      text: payload.text.trim(),
+      meta: {
+        source: payload.meta?.source ?? "gemini",
+        model: payload.meta?.model,
+        fallbackUsed: Boolean(payload.meta?.fallbackUsed),
+        reason: payload.meta?.reason ?? null,
+      },
+    };
+  } catch (error) {
+    const isAbort = error instanceof DOMException && error.name === "AbortError";
+    return {
+      text: fallback,
+      meta: {
+        source: "fallback-local",
+        model: undefined,
+        fallbackUsed: true,
+        reason: isAbort ? "timeout" : "network_or_unexpected",
+      },
+    };
+  }
+}
+
 async function fetchWithTimeout(
   input: RequestInfo | URL,
   init: RequestInit,
@@ -256,7 +273,6 @@ async function fetchWithTimeout(
   }
 }
 
-// fetchEdasPlaylist — minta playlist dari API EDAS (dummy/simulasi)
 async function fetchEdasPlaylist(
   targetMinutes: number,
   answers: Record<number, number>,
@@ -287,7 +303,6 @@ async function fetchEdasPlaylist(
   return payload.playlist;
 }
 
-// saveRecommendation — simpan hasil rekomendasi ke database, return id_session
 async function saveRecommendation(
   clientId: string,
   context: ContextData,
@@ -322,17 +337,16 @@ async function saveRecommendation(
   return data?.id_session ? Number(data.id_session) : undefined;
 }
 
-// STATUS_LABELS — label progres untuk tiap langkah proses
 const STATUS_LABELS: Record<number, string> = {
   0: "Membaca konteks aktivitas...",
   1: "Mengonversi jawaban jadi preferensi...",
   2: "Mengambil daftar lagu...",
   3: "Memproses EDAS...",
   4: "Menyusun playlist...",
-  5: "Menyusun penjelasan rekomendasi...",
+  5: "Menyusun penjelasan preferensi...",
+  6: "Menyusun penjelasan rekomendasi...",
 };
 
-// ProsesPage — halaman pemrosesan rekomendasi dengan progress bar
 export default function ProsesPage() {
   const router = useRouter();
   const [progress, setProgress] = useState(8);
@@ -342,7 +356,6 @@ export default function ProsesPage() {
   const isMountedRef = useRef(false);
   const inflightRef = useRef<{ key: string; promise: Promise<PlaylistItem[]> } | null>(null);
 
-  // useEffect: redirect guard + setup clientId
   useEffect(() => {
     const saved = localStorage.getItem(THEME_STORAGE_KEY);
     document.documentElement.dataset.theme = saved === "light" ? "light" : "dark";
@@ -353,7 +366,6 @@ export default function ProsesPage() {
     getOrCreateClientId();
   }, [router]);
 
-  // useEffect utama: orkestrasi proses rekomendasi (playlist → NLG → redirect)
   useEffect(() => {
     isMountedRef.current = true;
     const runId = ++runIdRef.current;
@@ -375,15 +387,14 @@ export default function ProsesPage() {
 
     const context = JSON.parse(contextRaw) as ContextData;
     const answers = JSON.parse(answersRaw) as Record<number, number>;
-    const preferenceSummary = buildPreferenceSummary(answers);
+    const preferenceSummary = buildPreferenceInterpretation(answers);
     const requestKey = `${context.durationMinutes}::${answersRaw}`;
 
-    // Alur proses: generate playlist, simpan ke DB, generate NLG, redirect ke /hasil
     const runFlow = async () => {
       try {
         setCurrentStep(0);
         setProgress(12);
-        // Fetch playlist dari API EDAS
+
         const playlistPromise =
           inflightRef.current?.key === requestKey
             ? inflightRef.current.promise
@@ -394,23 +405,31 @@ export default function ProsesPage() {
         inflightRef.current = { key: requestKey, promise: playlistPromise };
         setCurrentStep(2);
         setProgress(42);
+
         const playlist = await playlistPromise;
         if (!isMountedRef.current || runId !== runIdRef.current) return;
 
         setCurrentStep(3);
         setProgress(55);
         const totalSec = playlist.reduce((sum, item) => sum + item.durationSec, 0);
-        // Buat fallback narasi lokal sambil menunggu NLG
-        const fallbackNarration = buildFallbackNarration(context, playlist, preferenceSummary);
+        const fallbackNarration = buildFallbackNarration(
+          context,
+          playlist,
+          preferenceSummary.narrativeSummary,
+        );
+        const fallbackPreferenceNarration = buildFallbackPreferenceNarrative(preferenceSummary);
         const fallbackMeta: NlgMeta = {
           source: "fallback-local",
           model: undefined,
           fallbackUsed: true,
           reason: "not_generated_yet",
         };
-        // Simpan ke database
+
         const savedSessionId = await saveRecommendation(
-          getOrCreateClientId(), context, answers, playlist,
+          getOrCreateClientId(),
+          context,
+          answers,
+          playlist,
         ).catch(() => undefined);
 
         const resultPayload = {
@@ -425,33 +444,61 @@ export default function ProsesPage() {
           createdAt: new Date().toISOString(),
           nlgText: fallbackNarration,
           nlgMeta: fallbackMeta,
+          preferenceSummary: {
+            ...preferenceSummary,
+            narrativeText: fallbackPreferenceNarration,
+            narrativeMeta: fallbackMeta,
+          } satisfies ResultPreferenceSummary,
           id_session: savedSessionId,
         };
 
         localStorage.setItem(PLAYLIST_RESULT_STORAGE_KEY, JSON.stringify(resultPayload));
         setCurrentStep(4);
-        setProgress(74);
-        setNlgStatusText("Penjelasan rekomendasi sedang disusun.");
+        setProgress(70);
+        setNlgStatusText("Ringkasan preferensi sedang disusun.");
+
         nlgStatusTimer = setTimeout(() => {
           if (!isMountedRef.current || runId !== runIdRef.current) return;
-          setNlgStatusText("Masih mencoba menyusun narasi terbaik...");
+          setNlgStatusText("Masih mencoba menyusun ringkasan terbaik...");
         }, 15000);
-        // Generate narasi via NLG
-        const nlgResult = await generateNlgText(context, playlist, preferenceSummary);
+
+        const preferenceNarrative = await generatePreferenceNarrative(preferenceSummary);
         if (!isMountedRef.current || runId !== runIdRef.current) return;
+
+        const intermediatePayload = {
+          ...resultPayload,
+          preferenceSummary: {
+            ...preferenceSummary,
+            narrativeText: preferenceNarrative.text,
+            narrativeMeta: preferenceNarrative.meta,
+          } satisfies ResultPreferenceSummary,
+        };
+
+        localStorage.setItem(PLAYLIST_RESULT_STORAGE_KEY, JSON.stringify(intermediatePayload));
+        setCurrentStep(5);
+        setProgress(84);
+        setNlgStatusText("Penjelasan rekomendasi sedang disusun.");
+
+        const nlgResult = await generateNlgText(
+          context,
+          playlist,
+          preferenceSummary.narrativeSummary,
+        );
+        if (!isMountedRef.current || runId !== runIdRef.current) return;
+
         if (nlgStatusTimer) clearTimeout(nlgStatusTimer);
         setNlgStatusText("");
 
         const finalPayload = {
-          ...resultPayload,
+          ...intermediatePayload,
           nlgText: nlgResult.text,
           nlgMeta: nlgResult.meta,
         };
+
         localStorage.setItem(PLAYLIST_RESULT_STORAGE_KEY, JSON.stringify(finalPayload));
-        setCurrentStep(5);
+        setCurrentStep(6);
         setProgress(100);
 
-        // Redirect ke /hasil setelah semua selesai
         redirectTimer = setTimeout(() => {
           router.replace("/hasil");
         }, 500);
@@ -490,9 +537,7 @@ export default function ProsesPage() {
         </div>
         <span className={styles.percentLabel}>{Math.min(progress, 100)}%</span>
 
-        {statusText && (
-          <p className={styles.statusText}>{statusText}</p>
-        )}
+        {statusText && <p className={styles.statusText}>{statusText}</p>}
 
         <p className={styles.note}>Kamu akan diarahkan otomatis ke halaman hasil.</p>
         <p className={styles.previewTime}>

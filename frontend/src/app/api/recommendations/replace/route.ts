@@ -7,6 +7,7 @@ import {
 } from "@/server/utils/preferenceMapping";
 import {
   buildEdasDebugSummary,
+  createDurationSelectionOptions,
   MIN_PLAYLIST_SONG_DURATION_MS,
   runEdasRanking,
   selectRankedSongsForDurationDetailed,
@@ -105,21 +106,14 @@ function findReplacements(
     return { replacements: [], debug: null };
   }
 
+  const selectionOptions = createDurationSelectionOptions(gapSec, "replacement");
   const selection = debug
     ? selectRankedSongsForDurationDetailed(candidates, {
-        targetSec: gapSec,
-        candidateLimit: 60,
-        maxSongs: Math.max(1, Math.min(5, Math.ceil(gapSec / 150))),
-        overshootToleranceSec: Math.max(45, Math.round(gapSec * 0.2)),
-        preferFewerSongs: true,
+        ...selectionOptions,
       })
     : {
         selected: selectRankedSongsForDuration(candidates, {
-          targetSec: gapSec,
-          candidateLimit: 60,
-          maxSongs: Math.max(1, Math.min(5, Math.ceil(gapSec / 150))),
-          overshootToleranceSec: Math.max(45, Math.round(gapSec * 0.2)),
-          preferFewerSongs: true,
+          ...selectionOptions,
         }),
         debug: null,
       };
