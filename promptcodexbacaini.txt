@@ -1,99 +1,129 @@
 Saya menggunakan mode build, jadi kamu boleh langsung mengubah kode. Namun sebelum mengubah, lakukan audit internal terlebih dahulu terhadap alur generate awal dan endpoint replace. Setelah menemukan masalahnya, revisi hanya bagian yang berkaitan dengan EDAS, preference mapping, replacement selection, dan durasi. Jangan mengubah UI, NLG, database schema, atau fitur platform eksternal kecuali benar-benar diperlukan. Setelah selesai, jalankan npx tsc --noEmit dan berikan ringkasan file yang diubah, masalah yang ditemukan, serta panduan tes manual.
 
-Saya ingin menambahkan fitur kecil untuk kebutuhan pengujian UAT pada project skripsi saya. Tolong lakukan perubahan secara surgical dan jangan mengubah flow yang sudah berjalan baik.
+Saya ingin polishing kecil terakhir pada section “Ringkasan Preferensi Anda”. Jangan ubah flow utama, jangan ubah EDAS, jangan ubah preferenceMapping, jangan ubah NLG playlist, jangan ubah replace/history/export, jangan ubah posisi step 4, dan jangan ubah layout besar. Fokus hanya pada copywriting label arah dan kalimat detail agar lebih awam.
 
-Konteks project:
-- Project adalah aplikasi rekomendasi playlist musik berbasis konteks aktivitas pengguna menggunakan metode EDAS.
-- Flow utama sekarang sudah berjalan dan jangan dirombak:
-  1. user memilih konteks aktivitas/waktu/suasana saat ini/durasi,
-  2. user mengisi kuesioner preferensi musik,
-  3. sistem menghitung bobot dan jenis kriteria dari kuesioner,
-  4. EDAS melakukan ranking lagu,
-  5. sistem membentuk playlist,
-  6. NLG membuat narasi ringkasan playlist,
-  7. user bisa melihat hasil, detail playlist, mengganti lagu, export Spotify/YouTube, dan melihat history.
-- Jangan ubah algoritma EDAS utama, preference mapping, fitur ganti lagu, history, save session, export Spotify/YouTube, atau NLG playlist yang sudah berjalan.
-- Jangan tampilkan JSON/debug mentah ke user.
-- Jangan expose API key/token/env apa pun di UI, log, atau response client.
+Kondisi saat ini:
+- Dashboard ringkasan preferensi sudah cukup sesuai.
+- Card accordion sudah bisa dibuka dan indikator Detail/Tutup sudah lebih jelas.
+- Namun label seperti “lebih rendah diprioritaskan” dan “lebih tinggi diprioritaskan” masih agak teknis untuk user awam.
+- Beberapa kalimat detail juga masih bisa dibuat lebih langsung.
 
-Tujuan perubahan:
-Saya ingin menambahkan ringkasan interpretasi preferensi EDAS yang user-friendly setelah hasil rekomendasi muncul. Ringkasan ini dipakai sebagai acuan responden saat mengisi Google Form UAT. UAT saya sekarang bukan sekadar menilai playlist cocok/tidak, tetapi menilai apakah sistem sudah sesuai dalam membaca preferensi pengguna dari kuesioner menjadi bobot dan arah preferensi EDAS.
+Tujuan:
+Buat label arah dan kalimat detail lebih mudah dipahami user awam, tanpa menghilangkan makna asli dari hasil preferenceMapping.
 
-Yang perlu dibuat:
-Tambahkan satu section atau modal kecil di halaman hasil rekomendasi, dengan judul misalnya:
-“Cara namu. Membaca Preferensi Anda”
-atau
-“Ringkasan Preferensi Anda”
+A. Revisi label arah di card
+Jangan tampilkan label generik:
+- “lebih tinggi diprioritaskan”
+- “lebih rendah diprioritaskan”
+- “dibaca netral atau sedang”
 
-Isi ringkasan:
-- Jangan tampilkan istilah teknis secara mentah seperti “tempo”, “energy”, “speechiness” tanpa penjelasan.
-- Gunakan bahasa yang mudah dipahami user awam.
-- Ringkasan boleh tetap mengambil data dari hasil preferenceMapping, seperti:
-  - parameter,
-  - score,
-  - weight,
-  - meanLikert,
-  - criterion benefit/cost/neutral,
-  - related question mapping jika tersedia.
-- Namun tampilannya harus berupa narasi atau kartu yang user-friendly.
-- Contoh gaya bahasa:
-  - “Dari jawaban Anda, sistem melihat bahwa ritme lagu yang lebih cepat cukup berpengaruh terhadap preferensi Anda, dengan kontribusi sekitar 14%.”
-  - “Sistem membaca bahwa musik yang terasa bersemangat menjadi salah satu karakter yang cukup kuat dalam preferensi Anda.”
-  - “Untuk unsur kata-kata atau lirik yang dominan, sistem membaca bahwa bagian ini tidak terlalu diprioritaskan.”
-- Jika tetap menampilkan istilah benefit/cost/neutral, wajib beri penjelasan awam:
-  - Benefit: nilai yang lebih tinggi lebih diprioritaskan.
-  - Cost: nilai yang lebih rendah lebih diprioritaskan.
-  - Neutral: sistem membaca preferensi user pada aspek ini sebagai sedang/netral.
-- Lebih baik gunakan label awam untuk setiap parameter:
-  - tempo = cepat/lambatnya lagu atau ritme lagu
-  - energy = semangat/intensitas lagu
-  - danceability = enaknya ritme untuk diikuti/bergerak
-  - happiness = nuansa ceria/positif
-  - popularity = familiar/tidaknya lagu
-  - acousticness = kesan alami/akustik
-  - instrumentalness = dominasi instrumen dibanding vokal
-  - speechiness = banyak/sedikitnya kata-kata atau lirik dominan
+Ganti menjadi label yang lebih langsung berdasarkan aspek dan criterion.
 
-Pendekatan hybrid yang saya inginkan:
-1. Data teknis tetap dihitung deterministik oleh sistem dari preferenceMapping. Gemini/NLG tidak boleh menentukan bobot, benefit/cost/neutral, atau skor.
-2. Gemini boleh dipakai hanya untuk mengubah data ringkasan preferensi yang sudah dihitung menjadi narasi user-friendly.
-3. Jika Gemini gagal, sistem harus tetap menampilkan fallback berbasis template lokal agar fitur tetap berjalan.
-4. Jangan membuat request Gemini tambahan yang berlebihan. Idealnya cukup satu request untuk satu ringkasan preferensi, atau gunakan template fallback jika lebih aman.
-5. Jangan mengganggu NLG playlist yang sudah ada. Kalau perlu buat fungsi/route/helper terpisah untuk “preference summary narrative”, atau gunakan fungsi NLG existing secara aman tanpa mengubah behavior lama.
+Gunakan mapping berikut:
 
-Output UI yang diinginkan:
-Di halaman hasil rekomendasi, tambahkan card kecil setelah ringkasan/narasi rekomendasi atau sebelum tombol evaluasi/export, dengan teks pembuka:
-“Ringkasan ini menjelaskan bagaimana jawaban kuesioner Anda dibaca oleh sistem sebelum playlist dihitung menggunakan EDAS. Gunakan ringkasan ini sebagai acuan saat mengisi bagian evaluasi UAT pada Google Form.”
+tempo:
+- benefit: “lebih suka ritme cepat”
+- cost: “lebih suka ritme santai”
+- neutral: “ritme sedang”
 
-Lalu tampilkan:
-- Narasi singkat dari Gemini/template tentang preferensi user.
-- Detail ringkas per aspek musik dalam bentuk card atau accordion kecil.
-- Tombol/link:
-  “Isi Form Evaluasi”
-  atau placeholder link Google Form yang mudah diganti nanti.
-- Tambahkan catatan kecil:
-  “Saat mengisi bagian UAT, mohon jawab berdasarkan ringkasan preferensi yang ditampilkan di aplikasi.”
+energy:
+- benefit: “lebih suka lagu bersemangat”
+- cost: “lebih suka lagu lembut”
+- neutral: “intensitas sedang”
 
-Catatan penting:
-- Jangan tampilkan raw JSON.
-- Jangan tampilkan PDA/NDA/SP/SN/Appraisal Score lengkap ke user UAT, karena itu terlalu teknis.
-- Jangan ubah rumus EDAS.
-- Jangan ubah mapping kuesioner kecuali benar-benar perlu.
-- Jangan ubah NLG playlist yang sudah ada, karena narasi playlist sudah sengaja dibuat tidak menyebut judul lagu/nama artis agar tetap relevan setelah fitur ganti lagu.
-- Jangan mengubah fitur history, export Spotify/YouTube, replace song, atau save playlist.
-- Jaga UI tetap mobile-first dan konsisten dengan style namu.
-- Nama aplikasi harus tetap “namu.” huruf kecil dengan titik, bukan NAMU.
+danceability:
+- benefit: “ritme enak diikuti”
+- cost: “tidak terlalu ingin bergerak”
+- neutral: “ritme seimbang”
 
-Yang perlu dicek setelah implementasi:
-1. Generate playlist normal masih berjalan.
-2. NLG playlist lama masih muncul dan tidak berubah perilakunya.
-3. Ringkasan preferensi baru muncul di halaman hasil.
-4. Ringkasan preferensi memakai bahasa awam, bukan JSON.
-5. Jika Gemini gagal, fallback template tetap muncul.
-6. Fitur ganti lagu tetap berjalan.
-7. History tetap berjalan.
-8. Export Spotify/YouTube tetap berjalan.
-9. Tidak ada API key/token/env yang muncul di client atau console.
-10. npm run lint/build jika memungkinkan.
+happiness:
+- benefit: “lebih suka nuansa ceria”
+- cost: “lebih suka nuansa tenang”
+- neutral: “nuansa sedang”
 
-Tolong implementasikan dengan perubahan seminimal mungkin dan jelaskan file apa saja yang diubah.
+popularity:
+- benefit: “lebih suka lagu familiar”
+- cost: “tidak harus lagu familiar”
+- neutral: “familiaritas sedang”
+
+acousticness:
+- benefit: “lebih suka kesan akustik”
+- cost: “tidak terlalu akustik”
+- neutral: “kesan akustik sedang”
+
+instrumentalness:
+- benefit: “lebih suka banyak instrumen”
+- cost: “lebih suka vokal terasa”
+- neutral: “instrumen-vokal seimbang”
+
+speechiness:
+- benefit: “lebih suka lirik terasa”
+- cost: “tidak terlalu banyak kata”
+- neutral: “kata-kata sedang”
+
+B. Revisi kalimat detail
+Detail accordion cukup 1 paragraf pendek. Jangan terlalu teknis.
+
+Gunakan pola bahasa:
+“Dari jawaban kamu, sistem melihat [arah preferensi yang mudah dipahami]. [Kalimat pengaruh berdasarkan persentase].”
+
+Contoh:
+Untuk popularity cost:
+“Dari jawaban kamu, sistem melihat kamu tidak terlalu harus mendengarkan lagu yang familiar atau populer. Pengaruhnya kecil, jadi bagian ini tidak terlalu menentukan playlist.”
+
+Untuk acousticness benefit:
+“Dari jawaban kamu, sistem melihat kamu cukup menyukai lagu yang terdengar alami atau akustik. Pengaruhnya cukup besar, jadi bagian ini ikut menentukan playlist.”
+
+Untuk instrumentalness cost:
+“Dari jawaban kamu, sistem melihat kamu lebih cocok dengan lagu yang vokalnya masih terasa. Pengaruhnya kecil, jadi bagian ini tidak terlalu menentukan playlist.”
+
+Untuk speechiness cost:
+“Dari jawaban kamu, sistem melihat kamu lebih cocok dengan lagu yang tidak terlalu banyak kata-kata. Pengaruhnya kecil, jadi bagian ini tidak terlalu menentukan playlist.”
+
+C. Kalimat pengaruh berdasarkan persentase
+Gunakan aturan ini:
+- contributionPercent >= 14:
+  “Pengaruhnya cukup besar, jadi bagian ini ikut menentukan playlist.”
+- contributionPercent >= 11:
+  “Pengaruhnya cukup terasa dalam pembentukan playlist.”
+- contributionPercent >= 9:
+  “Pengaruhnya ada, tapi bukan yang paling utama.”
+- contributionPercent < 9:
+  “Pengaruhnya kecil, jadi bagian ini tidak terlalu menentukan playlist.”
+
+D. Yang tetap dipertahankan
+- Persentase kontribusi tetap tampil.
+- Label prioritas seperti “cukup dominan”, “cukup diperhatikan”, “pendukung”, “tidak terlalu diprioritaskan” boleh tetap tampil.
+- Semua 8 aspek tetap tampil, termasuk yang 0%.
+- Tombol “Isi Form Evaluasi” tetap membuka https://tiny.cc/evaluasiNamuAPP di tab baru.
+- Accordion tetap ada, tapi jangan ubah layout besar.
+
+E. File yang kemungkinan perlu diubah
+- frontend/src/server/utils/preferenceSummary.ts
+  Tambahkan helper label awam, misalnya buildUserFriendlyDirectionLabel(aspect), dan revisi buildPreferenceAspectMeaning agar memakai bahasa sederhana.
+- frontend/src/app/hasil/page.tsx
+  Pastikan card memakai label awam baru, bukan criterionLabel teknis.
+  Detail accordion hanya menampilkan 1 paragraf dari helper makna aspek.
+- frontend/src/app/hasil/page.module.css hanya jika butuh penyesuaian kecil.
+
+F. Jangan ubah
+- rumus EDAS
+- preferenceMapping
+- playlist generation
+- NLG playlist
+- replace song
+- history
+- export
+- save session
+- route API
+- jumlah request Gemini
+- posisi step 4
+
+G. Verifikasi
+1. Generate playlist normal.
+2. Masuk step 4 Ringkasan Preferensi Anda.
+3. Tidak ada lagi label “lebih tinggi diprioritaskan” atau “lebih rendah diprioritaskan”.
+4. Label arah sudah user-friendly, misalnya “tidak harus lagu familiar”, “lebih suka kesan akustik”, “lebih suka vokal terasa”.
+5. Detail accordion hanya 1 paragraf pendek dan mudah dipahami.
+6. Semua 8 aspek tetap tampil.
+7. Build tetap lulus.

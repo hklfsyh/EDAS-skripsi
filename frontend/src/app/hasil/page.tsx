@@ -12,7 +12,7 @@ import {
   isPlaylistFlowFinished,
   markPlaylistFlowFinished,
 } from "@/lib/playlistFlow";
-import type { PreferenceInterpretation } from "@/server/utils/preferenceSummary";
+import { buildPreferenceAspectMeaning, type PreferenceInterpretation } from "@/server/utils/preferenceSummary";
 import styles from "./page.module.css";
 
 // Kunci localStorage untuk tema dan cache URL export
@@ -56,6 +56,7 @@ type ResultData = {
   };
   preferenceSummary?: PreferenceInterpretation & {
     narrativeText: string;
+    aspectNarratives: Partial<Record<string, string>>;
     narrativeMeta?: {
       source?: string;
       model?: string;
@@ -91,7 +92,7 @@ type HistorySession = {
   youtube_exported_at: string | null;
 };
 
-const UAT_FORM_PLACEHOLDER_URL = "#";
+const UAT_FORM_PLACEHOLDER_URL = "https://tiny.cc/evaluasiNamuAPP";
 
 // formatDuration — konversi detik ke format menit:detik
 function formatDuration(sec: number): string {
@@ -135,7 +136,7 @@ export default function HasilPage() {
   const [excludedSongIds, setExcludedSongIds] = useState<Set<number>>(new Set());
   const [isReplacing, setIsReplacing] = useState(false);
   const [replaceMessage, setReplaceMessage] = useState<string | null>(null);
-  // State navigasi section step (1=ringkasan, 2=playlist, 3=export)
+  // State navigasi section step (1=ringkasan, 2=playlist, 3=export, 4=evaluasi)
   const [sectionStep, setSectionStep] = useState(1);
   // State hasil rekomendasi dari localStorage
   const [result, setResult] = useState<ResultData | null>(null);
@@ -545,77 +546,10 @@ export default function HasilPage() {
               </div>
             )}
 
-            {preferenceSummary && (
-              <section className={styles.preferenceCard} aria-labelledby="preference-summary-title">
-                <div className={styles.preferenceIntro}>
-                  <span className={styles.preferenceBadge}>UAT</span>
-                  <h2 id="preference-summary-title">Ringkasan Preferensi Anda</h2>
-                  <p>{preferenceSummary.narrativeSummary.intro}</p>
-                </div>
-
-                <p className={styles.preferenceNarrative}>{preferenceSummary.narrativeText}</p>
-
-                <div className={styles.preferenceGrid}>
-                  {preferenceSummary.aspects.map((aspect) => (
-                    <details key={aspect.parameter} className={styles.preferenceAspect}>
-                      <summary className={styles.preferenceSummaryRow}>
-                        <div>
-                          <strong>{aspect.title}</strong>
-                          <p>{aspect.shortLabel}</p>
-                        </div>
-                        <div className={styles.preferenceMeta}>
-                          <span>{aspect.contributionPercent.toFixed(1)}%</span>
-                          <span>{aspect.criterionLabel}</span>
-                        </div>
-                      </summary>
-                      <div className={styles.preferenceDetailBody}>
-                        <p>{aspect.insight}</p>
-                        <p>{aspect.criterionExplanation}</p>
-                        <p>
-                          Sistem membaca aspek ini sebagai <strong>{aspect.preferenceDirection}</strong>.
-                        </p>
-                      </div>
-                    </details>
-                  ))}
-                </div>
-
-                <div className={styles.preferenceActions}>
-                  <a
-                    href={UAT_FORM_PLACEHOLDER_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={styles.preferenceLink}
-                  >
-                    Isi Form Evaluasi
-                  </a>
-                  <p className={styles.preferenceNote}>
-                    Saat mengisi bagian UAT, mohon jawab berdasarkan ringkasan preferensi yang ditampilkan di aplikasi.
-                  </p>
-                </div>
-
-                {showNlgDebug && preferenceSummary.narrativeMeta && (
-                  <div className={styles.nlgMeta}>
-                    <span className={styles.nlgBadge}>
-                      Preference source: {preferenceSummary.narrativeMeta.source ?? "unknown"}
-                    </span>
-                    {preferenceSummary.narrativeMeta.model && (
-                      <span className={styles.nlgBadge}>
-                        Preference model: {preferenceSummary.narrativeMeta.model}
-                      </span>
-                    )}
-                    {typeof preferenceSummary.narrativeMeta.fallbackUsed === "boolean" && (
-                      <span className={styles.nlgBadge}>
-                        Preference fallback: {preferenceSummary.narrativeMeta.fallbackUsed ? "yes" : "no"}
-                      </span>
-                    )}
-                  </div>
-                )}
-              </section>
-            )}
-
             {/* Indikator step dots */}
             <div className={styles.stepsDots}>
               <span className={`${styles.dot} ${styles.dotActive}`} />
+              <span className={`${styles.dot} ${styles.dotInactive}`} />
               <span className={`${styles.dot} ${styles.dotInactive}`} />
               <span className={`${styles.dot} ${styles.dotInactive}`} />
             </div>
@@ -703,6 +637,7 @@ export default function HasilPage() {
               <span className={`${styles.dot} ${styles.dotInactive}`} onClick={() => setSectionStep(1)} />
               <span className={`${styles.dot} ${styles.dotActive}`} />
               <span className={`${styles.dot} ${styles.dotInactive}`} onClick={() => setSectionStep(3)} />
+              <span className={`${styles.dot} ${styles.dotInactive}`} onClick={() => setSectionStep(4)} />
             </div>
             <div className={styles.stepNav}>
               <button
@@ -782,6 +717,7 @@ export default function HasilPage() {
               <span className={`${styles.dot} ${styles.dotInactive}`} onClick={() => setSectionStep(2)} />
               <span className={`${styles.dot} ${styles.dotInactive}`} onClick={() => setSectionStep(2)} />
               <span className={`${styles.dot} ${styles.dotActive}`} />
+              <span className={`${styles.dot} ${styles.dotInactive}`} onClick={() => setSectionStep(4)} />
             </div>
             <div className={styles.stepNav}>
               <button
@@ -790,6 +726,97 @@ export default function HasilPage() {
                 onClick={() => setSectionStep(2)}
               >
                 ← Playlist
+              </button>
+              <button
+                type="button"
+                className={styles.navButton}
+                onClick={() => setSectionStep(4)}
+              >
+                Lanjut ke evaluasi →
+              </button>
+            </div>
+          </section>
+        )}
+
+        {sectionStep === 4 && preferenceSummary && (
+          <section className={styles.card}>
+            <section className={styles.preferenceCard} aria-labelledby="preference-summary-title">
+                <div className={styles.preferenceIntro}>
+                  <span className={styles.preferenceBadge}>UAT</span>
+                  <h2 id="preference-summary-title">Ringkasan Preferensi Anda</h2>
+                  <p>Gunakan ringkasan ini sebagai acuan saat mengisi evaluasi UAT.</p>
+                </div>
+
+              <div className={styles.preferenceGrid}>
+                {preferenceSummary.aspects.map((aspect) => (
+                  <details key={aspect.parameter} className={styles.preferenceAspect}>
+                    <summary className={styles.preferenceSummaryRow}>
+                      <div className={styles.preferenceSummaryMain}>
+                        <strong>{aspect.title}</strong>
+                        <p>{aspect.shortLabel}</p>
+                        <div className={styles.preferenceMeta}>
+                          <span>{aspect.contributionPercent.toFixed(1)}% · {aspect.priorityLabel}</span>
+                          <span>{aspect.userFriendlyDirection}</span>
+                        </div>
+                      </div>
+                      <div className={styles.preferenceToggleHint}>
+                        <span className={styles.preferenceToggleClosed}>Detail ˅</span>
+                        <span className={styles.preferenceToggleOpen}>Tutup ˄</span>
+                      </div>
+                    </summary>
+                    <div className={styles.preferenceDetailBody}>
+                      <p>{buildPreferenceAspectMeaning(aspect)}</p>
+                    </div>
+                  </details>
+                ))}
+              </div>
+
+              <div className={styles.preferenceActions}>
+                <a
+                  href={UAT_FORM_PLACEHOLDER_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={styles.preferenceLink}
+                >
+                  Isi Form Evaluasi
+                </a>
+                <p className={styles.preferenceNote}>
+                  Saat mengisi bagian UAT, mohon jawab berdasarkan ringkasan preferensi yang ditampilkan di aplikasi.
+                </p>
+              </div>
+
+              {showNlgDebug && preferenceSummary.narrativeMeta && (
+                <div className={styles.nlgMeta}>
+                  <span className={styles.nlgBadge}>
+                    Preference source: {preferenceSummary.narrativeMeta.source ?? "unknown"}
+                  </span>
+                  {preferenceSummary.narrativeMeta.model && (
+                    <span className={styles.nlgBadge}>
+                      Preference model: {preferenceSummary.narrativeMeta.model}
+                    </span>
+                  )}
+                  {typeof preferenceSummary.narrativeMeta.fallbackUsed === "boolean" && (
+                    <span className={styles.nlgBadge}>
+                      Preference fallback: {preferenceSummary.narrativeMeta.fallbackUsed ? "yes" : "no"}
+                    </span>
+                  )}
+                </div>
+              )}
+            </section>
+
+            <div className={styles.stepsDots}>
+              <span className={`${styles.dot} ${styles.dotInactive}`} onClick={() => setSectionStep(1)} />
+              <span className={`${styles.dot} ${styles.dotInactive}`} onClick={() => setSectionStep(2)} />
+              <span className={`${styles.dot} ${styles.dotInactive}`} onClick={() => setSectionStep(3)} />
+              <span className={`${styles.dot} ${styles.dotActive}`} />
+            </div>
+            <div className={styles.stepNav}>
+              <button
+                type="button"
+                className={styles.secondaryNavButton}
+                onClick={() => setSectionStep(3)}
+              >
+                ← Export 
               </button>
               <button
                 type="button"

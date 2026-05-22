@@ -323,7 +323,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
-  align-items: center;
+  align-items: start;
   padding: 14px 16px;
   cursor: pointer;
 }
@@ -337,15 +337,20 @@
   font-size: 0.94rem;
 }
 
+.preferenceSummaryMain {
+  display: grid;
+  gap: 6px;
+}
+
 .preferenceSummaryRow p {
-  margin-top: 4px;
+  margin-top: 0;
   font-size: 0.8rem;
 }
 
 .preferenceMeta {
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
   gap: 6px;
-  justify-items: end;
 }
 
 .preferenceMeta span {
@@ -359,6 +364,28 @@
   text-align: right;
 }
 
+.preferenceToggleHint {
+  align-self: center;
+  min-width: 74px;
+  color: var(--accent-primary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.preferenceToggleOpen {
+  display: none;
+}
+
+.preferenceAspect[open] .preferenceToggleClosed {
+  display: none;
+}
+
+.preferenceAspect[open] .preferenceToggleOpen {
+  display: inline;
+}
+
 .preferenceDetailBody {
   display: grid;
   gap: 8px;
@@ -367,6 +394,7 @@
 
 .preferenceDetailBody p {
   font-size: 0.84rem;
+  color: var(--foreground);
 }
 
 .preferenceActions {
@@ -887,8 +915,8 @@
     grid-template-columns: 1fr;
   }
 
-  .preferenceMeta {
-    justify-items: start;
+  .preferenceToggleHint {
+    text-align: left;
   }
 
   .stepNav {

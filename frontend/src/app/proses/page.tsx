@@ -12,7 +12,12 @@ import {
   PLAYLIST_RESULT_STORAGE_KEY,
   isPlaylistFlowFinished,
 } from "@/lib/playlistFlow";
-import { buildPreferenceInterpretation, type PreferenceInterpretation } from "@/server/utils/preferenceSummary";
+import {
+  buildPreferenceAspectNarratives,
+  buildPreferenceInterpretation,
+  type PreferenceAspectNarratives,
+  type PreferenceInterpretation,
+} from "@/server/utils/preferenceSummary";
 import styles from "./page.module.css";
 
 const THEME_STORAGE_KEY = "playlist-theme-v1";
@@ -48,6 +53,7 @@ type NlgMeta = {
 
 type ResultPreferenceSummary = PreferenceInterpretation & {
   narrativeText: string;
+  aspectNarratives: PreferenceAspectNarratives;
   narrativeMeta: NlgMeta;
 };
 
@@ -89,26 +95,6 @@ function buildFallbackNarration(
     "Karena itu, playlist ini dipilih dari lagu-lagu yang tingkat kecocokannya paling tinggi dengan kebutuhan sesi ini, sehingga hasilnya tidak terasa dipilih secara acak. " +
     `Dengan total durasi sekitar ${totalMinutes} menit, playlist ini disusun agar tetap terasa nyambung dan relevan untuk menemani sesi yang kamu pilih.`
   )
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function buildFallbackPreferenceNarrative(preferenceSummary: PreferenceInterpretation): string {
-  const topAspects = preferenceSummary.aspects.slice(0, 3);
-  if (topAspects.length === 0) {
-    return "Dari jawaban kuesioner Anda, sistem membaca preferensi musik secara cukup seimbang. Ringkasan ini tetap dapat digunakan sebagai acuan saat mengisi evaluasi UAT.";
-  }
-
-  const [first, second, third] = topAspects;
-  const firstSentence = `${first.title} menjadi salah satu aspek yang ${first.priorityLabel}, dengan kontribusi sekitar ${first.contributionPercent.toFixed(1)}%.`;
-  const secondSentence = second
-    ? `${second.title} juga ikut dibaca sebagai ${second.preferenceDirection}.`
-    : "Sistem memakai pembacaan ini untuk menentukan karakter lagu yang lebih sesuai.";
-  const thirdSentence = third
-    ? `${third.title} berada di posisi ${third.criterionLabel}, sehingga sistem tidak memilih lagu secara acak.`
-    : "Pembacaan ini membantu sistem menyusun rekomendasi yang lebih selaras dengan jawaban Anda.";
-
-  return `${firstSentence} ${secondSentence} ${thirdSentence} Ringkasan ini bisa digunakan sebagai acuan saat mengisi evaluasi UAT.`
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -172,72 +158,6 @@ async function generateNlgText(
         source: payload.meta?.source ?? "gemini",
         model: payload.meta?.model,
         fallbackUsed: false,
-        reason: payload.meta?.reason ?? null,
-      },
-    };
-  } catch (error) {
-    const isAbort = error instanceof DOMException && error.name === "AbortError";
-    return {
-      text: fallback,
-      meta: {
-        source: "fallback-local",
-        model: undefined,
-        fallbackUsed: true,
-        reason: isAbort ? "timeout" : "network_or_unexpected",
-      },
-    };
-  }
-}
-
-async function generatePreferenceNarrative(
-  preferenceSummary: PreferenceInterpretation,
-): Promise<{ text: string; meta: NlgMeta }> {
-  const fallback = buildFallbackPreferenceNarrative(preferenceSummary);
-
-  try {
-    const response = await fetchWithTimeout(
-      "/api/preference-summary/generate",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          aspects: preferenceSummary.aspects,
-        }),
-      },
-      NLG_TIMEOUT_MS,
-    );
-
-    const payload = (await response.json().catch(() => ({}))) as {
-      ok?: boolean;
-      text?: string | null;
-      meta?: {
-        source?: string;
-        model?: string;
-        fallbackUsed?: boolean;
-        reason?: string | null;
-      };
-    };
-
-    if (!response.ok || !payload.ok || !payload.text) {
-      return {
-        text: fallback,
-        meta: {
-          source: "fallback-local",
-          model: payload.meta?.model,
-          fallbackUsed: true,
-          reason: payload.meta?.reason ?? "preference_summary_failed",
-        },
-      };
-    }
-
-    return {
-      text: payload.text.trim(),
-      meta: {
-        source: payload.meta?.source ?? "gemini",
-        model: payload.meta?.model,
-        fallbackUsed: Boolean(payload.meta?.fallbackUsed),
         reason: payload.meta?.reason ?? null,
       },
     };
@@ -343,8 +263,7 @@ const STATUS_LABELS: Record<number, string> = {
   2: "Mengambil daftar lagu...",
   3: "Memproses EDAS...",
   4: "Menyusun playlist...",
-  5: "Menyusun penjelasan preferensi...",
-  6: "Menyusun penjelasan rekomendasi...",
+  5: "Menyusun penjelasan rekomendasi...",
 };
 
 export default function ProsesPage() {
@@ -417,7 +336,6 @@ export default function ProsesPage() {
           playlist,
           preferenceSummary.narrativeSummary,
         );
-        const fallbackPreferenceNarration = buildFallbackPreferenceNarrative(preferenceSummary);
         const fallbackMeta: NlgMeta = {
           source: "fallback-local",
           model: undefined,
@@ -446,7 +364,8 @@ export default function ProsesPage() {
           nlgMeta: fallbackMeta,
           preferenceSummary: {
             ...preferenceSummary,
-            narrativeText: fallbackPreferenceNarration,
+            narrativeText: "",
+            aspectNarratives: buildPreferenceAspectNarratives(preferenceSummary),
             narrativeMeta: fallbackMeta,
           } satisfies ResultPreferenceSummary,
           id_session: savedSessionId,
@@ -454,30 +373,13 @@ export default function ProsesPage() {
 
         localStorage.setItem(PLAYLIST_RESULT_STORAGE_KEY, JSON.stringify(resultPayload));
         setCurrentStep(4);
-        setProgress(70);
-        setNlgStatusText("Ringkasan preferensi sedang disusun.");
+        setProgress(74);
+        setNlgStatusText("Penjelasan rekomendasi sedang disusun.");
 
         nlgStatusTimer = setTimeout(() => {
           if (!isMountedRef.current || runId !== runIdRef.current) return;
-          setNlgStatusText("Masih mencoba menyusun ringkasan terbaik...");
+          setNlgStatusText("Masih mencoba menyusun narasi terbaik...");
         }, 15000);
-
-        const preferenceNarrative = await generatePreferenceNarrative(preferenceSummary);
-        if (!isMountedRef.current || runId !== runIdRef.current) return;
-
-        const intermediatePayload = {
-          ...resultPayload,
-          preferenceSummary: {
-            ...preferenceSummary,
-            narrativeText: preferenceNarrative.text,
-            narrativeMeta: preferenceNarrative.meta,
-          } satisfies ResultPreferenceSummary,
-        };
-
-        localStorage.setItem(PLAYLIST_RESULT_STORAGE_KEY, JSON.stringify(intermediatePayload));
-        setCurrentStep(5);
-        setProgress(84);
-        setNlgStatusText("Penjelasan rekomendasi sedang disusun.");
 
         const nlgResult = await generateNlgText(
           context,
@@ -490,13 +392,13 @@ export default function ProsesPage() {
         setNlgStatusText("");
 
         const finalPayload = {
-          ...intermediatePayload,
+          ...resultPayload,
           nlgText: nlgResult.text,
           nlgMeta: nlgResult.meta,
         };
 
         localStorage.setItem(PLAYLIST_RESULT_STORAGE_KEY, JSON.stringify(finalPayload));
-        setCurrentStep(6);
+        setCurrentStep(5);
         setProgress(100);
 
         redirectTimer = setTimeout(() => {
