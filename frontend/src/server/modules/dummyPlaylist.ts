@@ -106,7 +106,7 @@ function buildEdasPlaylist(
       }
     : undefined;
 
-  return { playlist, preferences, debug: debugPayload };
+  return { playlist, preferences, ranked, debug: debugPayload };
 }
 
 // Mengaktifkan debug hanya pada mode development agar tidak tampil pada penggunaan normal.
@@ -124,18 +124,42 @@ export async function handleDummyPlaylistGet(request: Request) {
     const { tracks, source } = await loadTracksFromDatabase();
     const rawAnswers = normalizeAnswers(searchParams.get("answers"));
     const answers = rawAnswers ?? new Array(14).fill(3);
-    const { playlist, debug: debugPayload } = buildEdasPlaylist(
+    const { playlist, preferences, ranked, debug: debugPayload } = buildEdasPlaylist(
       tracks,
       answers,
       Number.isFinite(targetMinutes) ? targetMinutes : 30,
       debug,
     );
 
+    let table48: unknown[] | undefined;
+    let table49: unknown[] | undefined;
+    if (debugPayload) {
+      table48 = Object.entries(preferences.parameters).map(([parameter, data]) => ({
+        parameter,
+        score: Number(data.score.toFixed(4)),
+        weight: Number(data.weight.toFixed(4)),
+        meanLikert: Number(data.meanLikert.toFixed(4)),
+        criterion: data.criterion,
+      }));
+      table49 = ranked.slice(0, 5).map((row, index) => ({
+        rank: index + 1,
+        title: row.candidate.title,
+        artist: row.candidate.artist,
+        SP: Number(row.sp.toFixed(4)),
+        SN: Number(row.sn.toFixed(4)),
+        NSP: Number(row.nsp.toFixed(4)),
+        NSN: Number(row.nsn.toFixed(4)),
+        appraisalScore: Number(row.appraisalScore.toFixed(4)),
+      }));
+    }
+
     return NextResponse.json({
       source,
       totalTracks: tracks.length,
       playlist,
       ...(debugPayload ? { debug: debugPayload } : {}),
+      ...(table48 ? { table48 } : {}),
+      ...(table49 ? { table49 } : {}),
     });
   } catch {
     return NextResponse.json(
@@ -160,18 +184,42 @@ export async function handleDummyPlaylistPost(request: Request) {
     const answers = rawAnswers && rawAnswers.length > 0 ? rawAnswers : new Array(14).fill(3);
 
     const { tracks, source } = await loadTracksFromDatabase();
-    const { playlist, debug: debugPayload } = buildEdasPlaylist(
+    const { playlist, preferences, ranked, debug: debugPayload } = buildEdasPlaylist(
       tracks,
       answers,
       Number.isFinite(targetMinutes) ? targetMinutes : 30,
       debug,
     );
 
+    let table48: unknown[] | undefined;
+    let table49: unknown[] | undefined;
+    if (debugPayload) {
+      table48 = Object.entries(preferences.parameters).map(([parameter, data]) => ({
+        parameter,
+        score: Number(data.score.toFixed(4)),
+        weight: Number(data.weight.toFixed(4)),
+        meanLikert: Number(data.meanLikert.toFixed(4)),
+        criterion: data.criterion,
+      }));
+      table49 = ranked.slice(0, 5).map((row, index) => ({
+        rank: index + 1,
+        title: row.candidate.title,
+        artist: row.candidate.artist,
+        SP: Number(row.sp.toFixed(4)),
+        SN: Number(row.sn.toFixed(4)),
+        NSP: Number(row.nsp.toFixed(4)),
+        NSN: Number(row.nsn.toFixed(4)),
+        appraisalScore: Number(row.appraisalScore.toFixed(4)),
+      }));
+    }
+
     return NextResponse.json({
       source,
       totalTracks: tracks.length,
       playlist,
       ...(debugPayload ? { debug: debugPayload } : {}),
+      ...(table48 ? { table48 } : {}),
+      ...(table49 ? { table49 } : {}),
     });
   } catch {
     return NextResponse.json(
