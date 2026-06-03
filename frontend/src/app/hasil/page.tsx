@@ -159,7 +159,19 @@ export default function HasilPage() {
     }
 
     try {
-      setResult(JSON.parse(raw) as ResultData);
+      const parsed = JSON.parse(raw) as ResultData;
+      if (Array.isArray(parsed.playlist)) {
+        const seen = new Set<number>();
+        const deduped: PlaylistItem[] = [];
+        for (const item of parsed.playlist) {
+          if (item.id_song === undefined || !seen.has(item.id_song)) {
+            if (item.id_song !== undefined) seen.add(item.id_song);
+            deduped.push(item);
+          }
+        }
+        parsed.playlist = deduped.map((item, idx) => ({ ...item, rank: idx + 1 }));
+      }
+      setResult(parsed);
       setIsRouteReady(true);
     } catch {
       router.replace("/");
@@ -282,13 +294,19 @@ export default function HasilPage() {
     const label = platform === "spotify" ? "Spotify" : "YouTube";
 
     setLoading(true);
+    const exportTab = window.open('', '_blank', 'noopener,noreferrer');
+    const openTab = (url: string) => {
+      if (exportTab) exportTab.location.href = url;
+      else redirectToUrl(url);
+    };
+
     try {
       // Cek database dulu
       const { url: dbUrl } = await checkExternalUrlDb(platform);
       if (dbUrl) {
         localStorage.setItem(extKey, dbUrl);
         console.log(`[${label} Export] Reuse database ${label} playlist \u2014 ${dbUrl}`);
-        redirectToUrl(dbUrl);
+        openTab(dbUrl);
         return;
       }
 
@@ -299,7 +317,7 @@ export default function HasilPage() {
           saveExternalUrlDb(platform, cached, generatePlaylistName(result.context));
         }
         console.log(`[${label} Export] Reuse cached ${label} playlist \u2014 ${cached}`);
-        redirectToUrl(cached);
+        openTab(cached);
         return;
       }
 
@@ -319,7 +337,7 @@ export default function HasilPage() {
         localStorage.setItem(extKey, data.publicUrl);
         saveExternalUrlDb(platform, data.publicUrl, playlistName);
         console.log(`[${label} Export] Created new playlist \u2014 ${data.publicUrl}`);
-        redirectToUrl(data.publicUrl);
+        openTab(data.publicUrl);
       } else {
         alert(data.error || `Gagal export ke ${label}.`);
       }
@@ -392,7 +410,9 @@ export default function HasilPage() {
     setIsReplacing(true);
     setReplaceMessage(null);
 
-    const gapDurationSec = songsToRemove.reduce((sum, s) => sum + s.durationSec, 0);
+    const removeDur = songsToRemove.reduce((sum, s) => sum + s.durationSec, 0);
+    const sisaKeTarget = Math.max(0, result!.summary.targetDurationSec - currentTotalSec);
+    const gapDurationSec = removeDur + sisaKeTarget;
     const removedIds = songsToRemove.map((s) => s.id_song!).filter(Boolean);
     const currentIds = playlist.map((s) => s.id_song!).filter(Boolean);
     const allExcluded = [...new Set([...excludedSongIds, ...removedIds])];
@@ -442,7 +462,14 @@ export default function HasilPage() {
         (a, b) => b.appraisalScore - a.appraisalScore,
       );
 
-      const reRanked = merged.map((item, idx) => ({ ...item, rank: idx + 1 }));
+      const dedupSeen = new Set<number>();
+      const dedupedMerge = merged.filter((item) => {
+        if (item.id_song === undefined || dedupSeen.has(item.id_song)) return false;
+        dedupSeen.add(item.id_song);
+        return true;
+      });
+
+      const reRanked = dedupedMerge.map((item, idx) => ({ ...item, rank: idx + 1 }));
 
       const newTotalSec = reRanked.reduce((sum, s) => sum + s.durationSec, 0);
       const updatedResult: ResultData = {

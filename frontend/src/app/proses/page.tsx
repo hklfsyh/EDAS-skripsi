@@ -325,8 +325,14 @@ export default function ProsesPage() {
         setCurrentStep(2);
         setProgress(42);
 
-        const playlist = await playlistPromise;
+        const rawPlaylist = await playlistPromise;
         if (!isMountedRef.current || runId !== runIdRef.current) return;
+        const seenIds = new Set<number>();
+        const playlist = rawPlaylist.filter((item) => {
+          if (item.id_song === undefined || seenIds.has(item.id_song)) return false;
+          seenIds.add(item.id_song);
+          return true;
+        }).map((item, idx) => ({ ...item, rank: idx + 1 }));
 
         setCurrentStep(3);
         setProgress(55);
