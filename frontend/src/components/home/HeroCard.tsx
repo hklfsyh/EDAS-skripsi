@@ -1,6 +1,6 @@
 import styles from "./HeroCard.module.css";
 
-// HeroCard — komponen sambutan beranda (badge, judul, deskripsi singkat)
+// komponen sambutan di beranda
 export function HeroCard() {
   return (
     <section className={styles.heroCard}>

@@ -1,4 +1,4 @@
-// NextResponse untuk respons API, sql untuk database, preferenceMapping + edas untuk ranking
+// NextResponse buat response, sql buat database, preferenceMapping + edas buat ranking
 import { NextResponse } from "next/server";
 import sql from "@/server/db";
 import {
@@ -15,7 +15,7 @@ import {
   type SongCandidate,
 } from "@/server/utils/edas";
 
-// ReplaceRequest — tipe payload request untuk mengganti lagu
+// payload yang dikirim pas ganti lagu
 type ReplaceRequest = {
   excludedIds: number[];
   answers?: number[] | Record<number, number>;
@@ -25,7 +25,7 @@ type ReplaceRequest = {
   currentPlaylistDurationSec?: number;
 };
 
-// ReplacementSong — tipe data lagu pengganti yang dikembalikan ke client
+// data lagu pengganti yang dikirim balik ke client
 type ReplacementSong = {
   id_song?: number;
   title: string;
@@ -34,7 +34,7 @@ type ReplacementSong = {
   appraisalScore: number;
 };
 
-// normalizeRow — pastikan semua properti numerik SongCandidate memiliki nilai default
+// pastiin semua properti numerik punya nilai default
 function normalizeRow(row: SongCandidate & { id_song?: number }): SongCandidate {
   return {
     ...row,
@@ -50,8 +50,8 @@ function normalizeRow(row: SongCandidate & { id_song?: number }): SongCandidate 
   };
 }
 
-// Menyiapkan kandidat replacement dari database dengan dua aturan awal:
-// mengecualikan lagu yang sudah terpakai dan menyaring lagu di bawah durasi minimum.
+// siapin kandidat lagu pengganti dari database, aturannya:
+// exclude lagu yang udah kepake sama filter durasi minimum.
 async function loadCandidates(
   excludedIds: number[],
   currentPlaylistSongIds: number[],
@@ -78,8 +78,8 @@ async function loadCandidates(
   return rows.map(normalizeRow);
 }
 
-// Memilih lagu pengganti dari kandidat teratas hasil reranking EDAS
-// dengan mempertimbangkan gap durasi sesi yang sedang diperbaiki.
+// milih lagu pengganti dari kandidat teratas hasil reranking edas,
+// sambil ngitung gap durasi sesi yang lagi diperbaiki.
 function findReplacements(
   ranked: ReturnType<typeof runEdasRanking>,
   gapSec: number,
@@ -121,7 +121,7 @@ function findReplacements(
   return { replacements: selection.selected, debug: selection.debug };
 }
 
-// Menjaga mode debug tetap development-only agar data audit tidak terekspos pada mode produksi.
+// mode debug cuma buat development biar data audit ga bocor pas produksi.
 function isDebugEnabled(raw: string | null | undefined, bodyDebug: boolean | undefined): boolean {
   if (process.env.NODE_ENV === "production") {
     return false;
@@ -138,8 +138,8 @@ function isDebugEnabled(raw: string | null | undefined, bodyDebug: boolean | und
   return raw === "1" || raw.toLowerCase() === "true";
 }
 
-// Endpoint replacement: memuat kandidat yang layak, menghitung ulang ranking EDAS,
-// lalu memilih kombinasi pengganti yang paling sesuai terhadap gap durasi.
+// endpoint ganti lagu: load kandidat, hitung ulang ranking edas,
+// terus milih kombinasi pengganti yang paling cocok sama gap durasi.
 export async function POST(request: Request) {
   try {
     const url = new URL(request.url);

@@ -1,12 +1,12 @@
-// handleDummyPlaylistGet / handleDummyPlaylistPost — logika playlist dummy untuk pengujian
+// handle dummy playlist buat pengujian
 import { handleDummyPlaylistGet, handleDummyPlaylistPost } from "@/server/modules/dummyPlaylist";
 
-// GET — ambil playlist rekomendasi dummy melalui API
+// ambil playlist rekomendasi dummy lewat api
 export async function GET(request: Request) {
   return handleDummyPlaylistGet(request);
 }
 
-// POST — proses playlist rekomendasi dummy melalui API
+// proses playlist rekomendasi dummy lewat api
 export async function POST(request: Request) {
   return handleDummyPlaylistPost(request);
 }

@@ -8,18 +8,18 @@ import {
 } from "@/lib/playlistFlow";
 import styles from "./ContextFormCard.module.css";
 
-// ContextFormCard — form pengisian konteks aktivitas (activity, time, mood, duration)
+// form isi konteks aktivitas
 export function ContextFormCard() {
   const router = useRouter();
 
-  // State untuk tiap field form
+  // state buat tiap field form
   const [activity, setActivity] = useState("");
   const [timeOfDay, setTimeOfDay] = useState("");
   const [mood, setMood] = useState("");
   const [durationMinutes, setDurationMinutes] = useState<number | "">("");
   const [isIncomplete, setIsIncomplete] = useState(false);
 
-  // handleSubmit — validasi, simpan ke localStorage, redirect ke /kuesioner
+  // validasi, simpen ke localstorage, redirect ke kuesioner
   const handleSubmit: React.ComponentProps<"form">["onSubmit"] = (event) => {
     event.preventDefault();
 

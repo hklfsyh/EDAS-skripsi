@@ -1,7 +1,7 @@
-/* Import font Figtree dan Space Grotesk dari Google Fonts */
+/* import font figtree sama space grotesk dari google fonts */
 @import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
-/* :root — variabel CSS global untuk tema dark (default) */
+/* :root — variable css global buat tema dark (default) */
 :root {
   --background: #0d0d14;
   --background-elevated: #141421;
@@ -37,7 +37,7 @@
   --scroll-thumb-hover: #00c3ff;
 }
 
-/* data-theme="light" — override variabel untuk tema terang */
+/* data-theme="light" — ganti variable buat tema terang */
 :root[data-theme="light"] {
   --background: #f6f6ff;
   --background-elevated: #ffffff;
@@ -74,31 +74,31 @@
   --eq-color: #8b5cf6;
 }
 
-/* Reset box-sizing untuk semua elemen */
+/* reset box-sizing buat semua elemen */
 *, *::before, *::after {
   box-sizing: border-box;
   padding: 0;
   margin: 0;
 }
 
-/* html — tinggi penuh + color-scheme default dark */
+/* html — tinggi penuh, color-scheme default dark */
 html {
   height: 100%;
   color-scheme: dark;
 }
 
-/* html[data-theme="light"] — ganti color-scheme untuk light mode */
+/* html[data-theme="light"] — ganti color-scheme pas light mode */
 html[data-theme="light"] {
   color-scheme: light;
 }
 
-/* html, body — cegah horizontal scroll */
+/* html, body — cegah scroll horizontal */
 html, body {
   max-width: 100vw;
   overflow-x: hidden;
 }
 
-/* body — layout kolom, warna foreground, background solid, font Figtree */
+/* body — layout kolom, pake font figtree */
 body {
   min-height: 100%;
   display: flex;
@@ -110,20 +110,20 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Sembunyikan kursor default di perangkat dengan mouse (custom cursor via JS) */
+/* sembunyiin kursor default kalo pake mouse (cursor custom dari js) */
 @media (hover: hover) and (pointer: fine) {
   body {
     cursor: none;
   }
 }
 
-/* Link — tanpa dekorasi, warisi warna teks */
+/* link — tanpa dekorasi, ikutin warna teks */
 a {
   color: inherit;
   text-decoration: none;
 }
 
-/* Scrollbar kustom — track, thumb dengan gradient */
+/* scrollbar kustom — track, thumb pake gradient */
 ::-webkit-scrollbar { width: 10px; }
 ::-webkit-scrollbar-track { background: var(--scroll-track); }
 ::-webkit-scrollbar-thumb {
@@ -135,14 +135,14 @@ a {
   background: linear-gradient(180deg, var(--scroll-thumb-hover), var(--scroll-thumb));
 }
 
-/* app-shell — wrapper halaman dengan padding minimal */
+/* app-shell — wrapper halaman pake padding minimal */
 .app-shell {
   position: relative;
   min-height: 100svh;
   padding: 24px;
 }
 
-/* app-container — lebar maksimal 480px, di tengah */
+/* app-container — lebar maks 480px, di tengah */
 .app-container {
   position: relative;
   z-index: 1;
@@ -150,7 +150,7 @@ a {
   margin: 0 auto;
 }
 
-/* app-panel — panel dengan surface, border, blur, dan shadow */
+/* app-panel — panel pake surface, border, blur, shadow */
 .app-panel {
   background: var(--surface);
   border: 1.5px solid var(--surface-border);
@@ -159,7 +159,7 @@ a {
   box-shadow: var(--surface-shadow);
 }
 
-/* Responsif — padding lebih kecil di layar sempit */
+/* responsif — padding dikecilin kalo layar sempit */
 @media (max-width: 680px) {
   .app-shell {
     padding: 14px;

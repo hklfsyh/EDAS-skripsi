@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 
-// Particle — tipe data partikel cursor trail (dot, ring, note, spark)
+// tipe data partikel cursor trail
 type Particle = {
   id: number;
   x: number;
@@ -18,30 +18,30 @@ type Particle = {
   char?: string;
 };
 
-// Warna partikel untuk mode dark
+// warna partikel buat mode dark
 const COLORS_DARK = [
   "#1ed760", "#ff2d78", "#00c3ff", "#9747ff",
   "#ffb800", "#b5ff2d", "#ff5f5f", "#ff6b35",
 ];
 
-// Warna partikel untuk mode light
+// warna partikel buat mode light
 const COLORS_LIGHT = [
   "#6FA37B", "#8D7AAE", "#C9A56A", "#D8A0A8",
   "#8FAFD1", "#6FA37B", "#C9A56A", "#8D7AAE",
 ];
 
-// Simbol not balok untuk partikel tipe "note"
+// simbol not balok buat partikel tipe note
 const NOTES = ["♪", "♫", "♩", "♬", "🎵", "🎶"];
 
 let nextId = 0;
 
-// getColors — ambil palet warna sesuai tema aktif
+// ambil warna sesuai tema yang aktif
 function getColors(): string[] {
   if (typeof window === "undefined") return COLORS_DARK;
   return document.documentElement.dataset.theme === "light" ? COLORS_LIGHT : COLORS_DARK;
 }
 
-// MusicCursorTrail — animasi partikel mengikuti kursor mouse/sentuhan
+// animasi partikel ngikutin kursor
 export function MusicCursorTrail() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const particles = useRef<Particle[]>([]);
@@ -50,14 +50,14 @@ export function MusicCursorTrail() {
   const isDrawing = useRef(false);
   const lastSpawnAt = useRef(0);
 
-  // useEffect: setup canvas, event listener, dan loop partikel
+  // setup canvas, event listener, & loop partikel
   useEffect(() => {
     const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const prefersCoarsePointer = window.matchMedia("(pointer: coarse)").matches;
     const isLowPowerMode = prefersReducedMotion || prefersCoarsePointer;
     const maxParticles = prefersCoarsePointer ? 36 : 96;
 
-    // Custom cursor dot (lingkaran kecil di posisi kursor)
+    // cursor dot custom (lingkaran kecil di posisi kursor)
     let dot: HTMLDivElement | null = null;
     if (!prefersCoarsePointer) {
       dot = document.createElement("div");
@@ -104,7 +104,7 @@ export function MusicCursorTrail() {
     resize();
     window.addEventListener("resize", resize);
 
-    // spawnParticles — buat partikel baru di posisi pointer
+    // bikin partikel baru di posisi pointer
     const spawnParticles = (x: number, y: number, speed: number, burst = false) => {
       const now = performance.now();
       const minGap = prefersCoarsePointer ? 150 : 24;
@@ -134,7 +134,7 @@ export function MusicCursorTrail() {
         return;
       }
 
-      // Ring particle (lingkaran meluas) — hanya jika gerakan cepat
+      // ring particle (lingkaran meluas) — cuma kalo gerakan cepet
       if (speed > 18 && Math.random() < (prefersCoarsePointer ? 0.18 : 0.26)) {
         particles.current.push({
           id: nextId++,
@@ -151,7 +151,7 @@ export function MusicCursorTrail() {
         });
       }
 
-      // Note particle (simbol not) — hanya jika tidak low power
+      // note particle (simbol not) — cuma kalo gak low power
       if (!isLowPowerMode && speed > 10 && Math.random() < 0.18) {
         particles.current.push({
           id: nextId++,
@@ -169,7 +169,7 @@ export function MusicCursorTrail() {
         });
       }
 
-      // Spark partikel — hanya saat burst (touchstart)
+      // spark partikel — cuma pas burst (touchstart)
       if (!isLowPowerMode && burst) {
         const sparkCount = 2;
         for (let index = 0; index < sparkCount; index++) {
@@ -227,7 +227,7 @@ export function MusicCursorTrail() {
       activateTrail(touch.clientX, touch.clientY, 22, true);
     };
 
-    // draw — loop animasi partikel (update posisi + render ke canvas)
+    // loop animasi partikel (update posisi + render)
     function draw() {
       const now = performance.now();
       renderingContext.clearRect(0, 0, width, height);

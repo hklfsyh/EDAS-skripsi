@@ -1,9 +1,9 @@
-// NextResponse untuk mengirim respons HTTP API, sql untuk query database
+// NextResponse buat kirim response api, sql buat query database
 import { NextResponse } from "next/server";
 
 import sql from "@/server/db";
 
-// GET — ambil riwayat rekomendasi berdasarkan client_id
+// ambil riwayat rekomendasi berdasarkan client id
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -13,7 +13,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "clientId wajib diisi." }, { status: 400 });
     }
 
-    // Ambil 5 sesi terbaru milik client ini
+    // ambil 5 sesi terbaru milik client ini
     const sessions = await sql<{
       id_session: number;
       activity: string;
@@ -43,7 +43,7 @@ export async function GET(request: Request) {
 
     const sessionIds = sessions.map((session) => session.id_session);
 
-    // Ambil daftar lagu untuk semua sesi tersebut
+    // ambil daftar lagu buat semua sesi
     const songs = await sql<{
       id_session: number;
       id_song: number;
@@ -59,7 +59,7 @@ export async function GET(request: Request) {
       order by rs.id_session desc, rs.rank_order asc
     `;
 
-    // Mapping lagu ke sesi rekomendasi (grup berdasarkan id_session)
+    // grup lagu berdasarkan id_session
     const songMap = new Map<number, (typeof songs)[number][]>();
     for (const song of songs) {
       const existing = songMap.get(song.id_session);
@@ -70,7 +70,7 @@ export async function GET(request: Request) {
       }
     }
 
-    // Gabungkan data sesi dengan lagu-lagunya
+    // gabung data sesi sama lagu-lagunya
     const history = sessions.map((session) => ({
       ...session,
       songs: songMap.get(session.id_session) ?? [],

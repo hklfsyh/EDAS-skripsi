@@ -28,7 +28,7 @@ async function getResponseTextSafe(response: Response): Promise<string> {
   }
 }
 
-// Cari URI track Spotify berdasarkan judul + artis
+// cari uri track spotify dari judul + artis
 async function spotifySearchTrackUri(track: ExportTrack, accessToken: string): Promise<string | null> {
   const queries = [
     `track:"${track.title}" artist:"${track.artist}"`,
@@ -64,7 +64,7 @@ async function spotifySearchTrackUri(track: ExportTrack, accessToken: string): P
   return null;
 }
 
-// Tambahkan track ke playlist Spotify
+// tambahin track ke playlist spotify
 async function spotifyAddTracks(
   playlistId: string,
   uris: string[],
@@ -121,7 +121,7 @@ async function spotifyAddTracks(
   return { addedUris, failedUris };
 }
 
-// Resolusi URI untuk seluruh track yang akan diexport
+// resolve uri buat semua track yang mau diexport
 async function resolveTrackUris(
   tracks: ExportTrack[],
   accessToken: string,
@@ -151,8 +151,8 @@ async function resolveTrackUris(
 }
 
 // ============================================================
-// PROJECT ACCOUNT EXPORT (server-side, kalskripdas@gmail.com)
-// Token dari environment — tanpa cookie OAuth user.
+// EXPORT PAKE AKUN PROJECT (server-side, kalskripdas@gmail.com)
+// token dari env, bukan cookie oauth user
 // ============================================================
 
 function formatPlaylistTitle(): string {
@@ -171,7 +171,7 @@ export type ProjectExportResponse = {
   error: string | null;
 };
 
-// Buat playlist publik di akun project Spotify
+// bikin playlist publik di akun project spotify
 async function spotifyCreatePublicPlaylist(playlistName: string, accessToken: string): Promise<{ id: string; external_urls?: { spotify?: string } }> {
   const response = await fetch("https://api.spotify.com/v1/me/playlists", {
     method: "POST",

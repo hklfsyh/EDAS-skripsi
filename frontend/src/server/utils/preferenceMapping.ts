@@ -29,7 +29,7 @@ type QuestionMapping = {
   questions: Array<{ index: number; reverse: boolean }>;
 };
 
-// Mapping butir kuesioner ke parameter audio
+// Mapping pertanyaan kuesioner ke parameter audio
 const QUESTION_MAPPINGS: QuestionMapping[] = [
   {
     parameter: "tempo",
@@ -81,7 +81,7 @@ const QUESTION_MAPPINGS: QuestionMapping[] = [
   },
 ];
 
-// Menormalkan jawaban kuesioner dari berbagai format input agar pemetaan preferensi konsisten.
+// Normalisasi jawaban kuesioner dari berbagai format biar mapping preferensinya konsisten.
 export function normalizeQuestionnaireAnswers(
   answers?: Record<number, number> | number[] | null,
 ): number[] {
@@ -115,7 +115,7 @@ export function normalizeQuestionnaireAnswers(
   return values;
 }
 
-// Validasi jawaban kuesioner 1-5
+// Validasi jawaban kuesioner (nilai 1-5)
 function validateAnswers(values: number[]): void {
   if (values.length < 14) {
     throw new Error("Jawaban kuesioner harus berisi 14 butir.");
@@ -128,7 +128,7 @@ function validateAnswers(values: number[]): void {
   });
 }
 
-// Reverse scoring untuk butir terbalik
+// Reverse scoring buat pertanyaan yang dibalik
 function adjustLikert(value: number, reverse: boolean): number {
   return reverse ? 6 - value : value;
 }
@@ -138,7 +138,7 @@ function likertToScore(value: number): number {
   return Number((normalized * 100).toFixed(2));
 }
 
-// Klasifikasi benefit / cost / neutral
+// Ngeklasifikasi jadi benefit / cost / neutral
 function classifyCriterion(meanLikert: number): CriterionType {
   if (meanLikert > 3) return "benefit";
   if (meanLikert < 3) return "cost";
@@ -148,8 +148,8 @@ function classifyCriterion(meanLikert: number): CriterionType {
 export function mapQuestionnaireToPreferences(
   answers: Record<number, number> | number[],
 ): PreferenceResult {
-  // Mengubah jawaban kuesioner menjadi skor parameter, bobot kriteria,
-  // dan jenis kriteria yang dipakai pada perhitungan EDAS.
+  // Ubah jawaban kuesioner jadi skor parameter, bobot kriteria,
+  // sama jenis kriteria yang dipake di perhitungan EDAS.
   const values = normalizeQuestionnaireAnswers(answers);
   validateAnswers(values);
 
@@ -157,7 +157,7 @@ export function mapQuestionnaireToPreferences(
   let scoreSum = 0;
 
   for (const mapping of QUESTION_MAPPINGS) {
-    // Agregasi nilai Likert per parameter
+    // Gabungin nilai Likert tiap parameter
     const adjustedValues = mapping.questions.map(({ index, reverse }) => {
       const raw = values[index - 1];
       return adjustLikert(raw, reverse);
@@ -184,7 +184,7 @@ export function mapQuestionnaireToPreferences(
 
   const fallbackWeight = Number((1 / QUESTION_MAPPINGS.length).toFixed(6));
 
-  // Normalisasi bobot parameter
+  // Normalisasi bobot tiap parameter
   for (const mapping of QUESTION_MAPPINGS) {
     const parameter = mapping.parameter;
     const score = parameters[parameter].score;

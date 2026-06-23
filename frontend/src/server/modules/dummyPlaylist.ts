@@ -20,7 +20,7 @@ type DummyPlaylistDebug = {
   topSongs: ReturnType<typeof buildEdasDebugSummary>;
 };
 
-// Menormalkan jawaban kuesioner agar endpoint menerima format array maupun object secara konsisten.
+// normalize jawaban kuisioner biar endpoint bisa nerima format array ataupun object
 function normalizeAnswers(raw?: string | string[] | null): number[] | null {
   if (!raw) return null;
 
@@ -36,7 +36,7 @@ function normalizeAnswers(raw?: string | string[] | null): number[] | null {
       return normalized.length > 0 ? normalized : null;
     }
   } catch {
-    // fallthrough
+    // skip aja
   }
 
   const parts = text.split(",").map((value) => Number(value.trim()));
@@ -46,8 +46,8 @@ function normalizeAnswers(raw?: string | string[] | null): number[] | null {
   return parts;
 }
 
-// Menyaring kandidat lagu agar playlist tidak berisi lagu dengan durasi terlalu pendek.
-// Filter ini merupakan aturan kelayakan kandidat sebelum proses ranking EDAS.
+// saring kandidat lagu biar playlist gak ada lagu yang durasinya terlalu pendek
+// ini aturan kelayakan sebelum ranking pake edas
 async function loadTracksFromDatabase(): Promise<{ tracks: SongCandidate[]; source: string }> {
   const rows = await sql<SongCandidate[]>`
     select
@@ -85,8 +85,8 @@ async function loadTracksFromDatabase(): Promise<{ tracks: SongCandidate[]; sour
   return { tracks, source: "songs (database)" };
 }
 
-// Menjalankan pipeline generate awal: pembobotan preferensi, ranking EDAS,
-// lalu pembentukan playlist sesuai target durasi.
+// jalanin pipeline awal: hitung preferensi, ranking pake edas,
+// terus bikin playlist sesuai target durasi
 function buildEdasPlaylist(
   tracks: SongCandidate[],
   answers: number[],
@@ -109,13 +109,13 @@ function buildEdasPlaylist(
   return { playlist, preferences, ranked, debug: debugPayload };
 }
 
-// Mengaktifkan debug hanya pada mode development agar tidak tampil pada penggunaan normal.
+// debug cuma nyala di mode development biar gak kelihatan pas dipake normal
 function isDebugEnabledFromQuery(raw: string | null): boolean {
   if (!raw) return false;
   return raw === "1" || raw.toLowerCase() === "true";
 }
 
-// API dummy playlist (GET)
+// api dummy playlist (get)
 export async function handleDummyPlaylistGet(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -169,7 +169,7 @@ export async function handleDummyPlaylistGet(request: Request) {
   }
 }
 
-// API dummy playlist (POST)
+// api dummy playlist (post)
 export async function handleDummyPlaylistPost(request: Request) {
   try {
     const body = (await request.json()) as {

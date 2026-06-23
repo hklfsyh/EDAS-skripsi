@@ -28,7 +28,7 @@ async function getResponseTextSafe(response: Response): Promise<string> {
   }
 }
 
-// Cari video YouTube berdasarkan judul + artis
+// cari video youtube dari judul + artis
 async function youtubeSearchVideoId(track: ExportTrack, accessToken: string): Promise<string | null> {
   const queries = [`${track.title} ${track.artist}`, `${track.title}`];
 
@@ -132,8 +132,8 @@ async function resolveVideoIds(
 }
 
 // ============================================================
-// PROJECT ACCOUNT EXPORT (server-side, kalskripdas@gmail.com)
-// Token dari environment — tanpa cookie OAuth user.
+// EXPORT PAKE AKUN PROJECT (server-side, kalskripdas@gmail.com)
+// token dari env, bukan cookie oauth user
 // ============================================================
 
 function formatPlaylistTitle(): string {
@@ -144,7 +144,7 @@ function formatPlaylistTitle(): string {
   return `Rekomendasi Playlist - ${dd}/${mm}/${yyyy}`;
 }
 
-// Buat playlist publik di akun project YouTube
+// bikin playlist publik di akun project youtube
 async function youtubeCreatePublicPlaylist(playlistName: string, accessToken: string): Promise<{ id: string }> {
   const response = await fetch("https://www.googleapis.com/youtube/v3/playlists?part=snippet,status", {
     method: "POST",

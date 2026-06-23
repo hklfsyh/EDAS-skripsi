@@ -1,7 +1,7 @@
 import type { PreferenceParameter, PreferenceResult } from "@/server/utils/preferenceMapping";
 
-// Aturan kelayakan kandidat lagu agar playlist tidak didominasi potongan audio yang terlalu pendek.
-// Filter ini diterapkan sebelum pemeringkatan EDAS dan tidak mengubah rumus perhitungan.
+// Biar playlist-nya nggak dipenuhi potongan lagu yang terlalu pendek aja.
+// Filter ini kepake sebelum ranking EDAS, nggak ngaruh ke rumus hitunganya.
 export const MIN_PLAYLIST_SONG_DURATION_MS = 90_000;
 export const MIN_PLAYLIST_SONG_DURATION_SEC = 90;
 
@@ -123,7 +123,7 @@ type DurationState = {
 
 type DurationSelectionProfile = "playlist" | "replacement";
 
-// Daftar parameter audio untuk perhitungan EDAS
+// Parameter audio yang dipake buat hitung EDAS
 const PARAMETERS: PreferenceParameter[] = [
   "tempo",
   "energy",
@@ -142,8 +142,8 @@ function normalizeValue(value: number | null): number {
   return Math.max(0, value ?? 0);
 }
 
-// Menghitung Average Solution dan Average Deviation untuk setiap parameter audio
-// sebagai titik pembanding pada tahap evaluasi EDAS.
+// Ngitung Average Solution sama Average Deviation buat tiap parameter audio
+// sebagai patokan di tahap evaluasi EDAS.
 function calculateCriterionStats(candidates: SongCandidate[]): Record<PreferenceParameter, CriterionStats> {
   const stats = {} as Record<PreferenceParameter, CriterionStats>;
 
@@ -163,7 +163,7 @@ function calculateCriterionStats(candidates: SongCandidate[]): Record<Preference
   return stats;
 }
 
-// Menghitung PDA dan NDA berdasarkan jenis kriteria benefit atau cost.
+// Ngitung PDA dan NDA berdasarkan jenis kriterianya (benefit apa cost).
 function computePdaNda(
   value: number,
   average: number,
@@ -186,7 +186,7 @@ function computePdaNda(
   };
 }
 
-// Menangani kriteria netral dengan pendekatan deviasi terhadap rata-rata parameter.
+// Ngurusin kriteria netral pake pendekatan deviasi dari rata-rata parameter.
 function computeNeutralPdaNda(value: number, averageDeviation: number, average: number) {
   const deviation = Math.abs(value - average);
   if (!Number.isFinite(averageDeviation) || averageDeviation === 0) {
@@ -199,7 +199,7 @@ function computeNeutralPdaNda(value: number, averageDeviation: number, average: 
   };
 }
 
-// Menormalisasi SP dan SN agar seluruh kandidat berada pada skala appraisal yang sebanding.
+// Normalisasi SP dan SN biar semua kandidat punya skala appraisal yang setara.
 function normalizeSpSn(spValues: number[], snValues: number[]) {
   const maxSp = Math.max(...spValues);
   const maxSn = Math.max(...snValues);
@@ -210,7 +210,7 @@ function normalizeSpSn(spValues: number[], snValues: number[]) {
   return { nsp, nsn, maxSp, maxSn };
 }
 
-// Memberi skor objektif untuk kombinasi lagu berdasarkan kualitas EDAS dan kedekatan terhadap target durasi.
+// Ngasih skor objektif buat kombinasi lagu berdasarkan kualitas EDAS sama kedekatan sama target durasi.
 function scoreDurationSelection(
   sumScore: number,
   actualTotalSec: number,
@@ -231,7 +231,7 @@ function scoreDurationSelection(
   return (averageScore * 0.4) + (durationFit * 0.4) + (coverage * 0.15) + (simplicity * 0.05) - underCoveragePenalty;
 }
 
-// Merangkum metrik kombinasi durasi agar proses pemilihan playlist dan replacement dapat diaudit.
+// Ngerangkum metrik kombinasi durasi biar proses milih playlist sama replacement gampang diaudit.
 function buildDurationCombination<T extends DurationSelectionCandidate>(
   songs: T[],
   targetSec: number,
@@ -265,7 +265,7 @@ function buildDurationCombination<T extends DurationSelectionCandidate>(
   };
 }
 
-// Menelusuri ulang state DP untuk memperoleh kombinasi kandidat yang dipilih.
+// Ngelacak balik state DP buat dapetin kombinasi kandidat yang kepilih.
 function reconstructDurationSelection<T extends DurationSelectionCandidate>(
   dp: Array<Map<number, DurationState>>,
   count: number,
@@ -294,8 +294,8 @@ export function selectRankedSongsForDurationDetailed<T extends DurationSelection
   candidates: T[],
   options: DurationSelectionOptions,
 ): { selected: T[]; debug: DurationSelectionDebug<T> } {
-  // Memilih kombinasi lagu dari kandidat teratas agar durasi mendekati target pengguna
-  // sambil tetap mempertahankan kualitas appraisal score.
+  // Milih kombinasi lagu dari kandidat teratas biar durasinya mendekati target user
+  // tapi tetep jaga kualitas appraisal score.
   const targetSec = Math.max(1, Math.round(options.targetSec));
   const overshootToleranceSec = Math.max(0, Math.round(options.overshootToleranceSec));
   const maxSongs = Math.max(1, options.maxSongs);
@@ -453,14 +453,14 @@ export function createDurationSelectionOptions(
   return baseOptions;
 }
 
-// Menjalankan tahapan inti EDAS: agregasi kontribusi parameter, normalisasi,
-// perhitungan Appraisal Score, lalu pengurutan kandidat dari skor tertinggi.
+// Jalanin inti EDAS: gabungin kontribusi parameter, normalisasi,
+// hitung Appraisal Score, terus urutin kandidat dari skor tertinggi.
 export function runEdasRanking(
   candidates: SongCandidate[],
   preferences: PreferenceResult,
   options?: { debug?: boolean },
 ): EdasScoreRow[] {
-  // Perhitungan appraisal score dan ranking EDAS
+  // Ngitung appraisal score dan ranking EDAS
   if (candidates.length === 0) {
     return [];
   }
@@ -473,7 +473,7 @@ export function runEdasRanking(
     const parameterDebug: EdasParameterDebug[] = [];
 
     for (const parameter of PARAMETERS) {
-      // Menggabungkan kontribusi setiap parameter audio menggunakan bobot hasil kuesioner.
+      // Gabungin kontribusi tiap parameter audio pake bobot dari hasil kuesioner.
       const weight = preferences.weights[parameter] ?? 0;
       const criterion = preferences.criteria[parameter] ?? "neutral";
       const value = normalizeValue(candidate[parameter]);
@@ -525,7 +525,7 @@ export function runEdasRanking(
 
   return rows
     .map((row, index) => {
-      // Appraisal score final
+      // Appraisal score akhir
       const nsp = nspList[index];
       const nsn = nsnList[index];
       const appraisalScore = Number(((nsp + nsn) / 2).toFixed(6));
@@ -545,7 +545,7 @@ export function buildEdasDebugSummary(
   ranked: EdasScoreRow[],
   limit = 10,
 ): EdasSongDebug[] {
-  // Menyusun ringkasan debug development-only untuk menelusuri kontribusi tiap parameter per lagu.
+  // Nyusun ringkasan debug (cuma buat development) buat ngeliat kontribusi tiap parameter per lagu.
   return ranked.slice(0, Math.max(1, limit)).map((row, index) => ({
     rank: index + 1,
     id_song: row.candidate.id_song,
@@ -565,7 +565,7 @@ export function buildPlaylistFromRanking(
   ranked: EdasScoreRow[],
   targetMinutes: number,
 ): EdasRankedSong[] {
-  // Membentuk playlist dari hasil ranking EDAS dengan mempertimbangkan target durasi pengguna.
+  // Bikin playlist dari hasil ranking EDAS dengan ngeliat target durasi user.
   const targetSec = Math.max(60, Math.round(targetMinutes * 60));
   const rankedItems = ranked
     .map((row) => {

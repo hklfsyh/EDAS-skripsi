@@ -13,10 +13,10 @@ import {
 } from "@/lib/playlistFlow";
 import styles from "./page.module.css";
 
-// Kunci localStorage untuk tema
+// kunci localstorage buat tema
 const THEME_STORAGE_KEY = "playlist-theme-v1";
 
-// questions — daftar 14 pertanyaan kuesioner preferensi musik
+// 14 pertanyaan kuesioner preferensi musik
 const questions = [
   "Saya lebih suka musik yang terasa cepat dan bikin suasana jadi lebih hidup.",
   "Saya lebih nyaman dengan musik yang terdengar santai dan mengalir pelan.",
@@ -36,7 +36,7 @@ const questions = [
 
 const TOTAL_QUESTIONS = questions.length;
 
-// choiceLabels — opsi jawaban Likert 1–5 dengan label Bahasa Indonesia
+// label jawaban likert 1-5
 const choiceLabels = [
   { value: 1, label: "Nggak banget" },
   { value: 2, label: "Kurang" },
@@ -45,7 +45,7 @@ const choiceLabels = [
   { value: 5, label: "Banget" },
 ] as const;
 
-// ContextData — tipe data konteks aktivitas dari localStorage
+// data konteks aktivitas dari localstorage
 type ContextData = {
   activity: string;
   timeOfDay: string;
@@ -53,20 +53,20 @@ type ContextData = {
   durationMinutes: number;
 };
 
-// KuesionerPage — halaman kuesioner 1 soal per layar dengan auto-advance
+// halaman kuesioner 1 soal per layar dengan auto-advance
 export default function KuesionerPage() {
   const router = useRouter();
-  // Timer untuk auto-advance ke soal berikutnya
+  // timer auto-advance buat lanjut ke soal berikutnya
   const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isRouteReady, setIsRouteReady] = useState(false);
 
-  // State tema, dibaca dari localStorage saat mount
+  // state tema, dibaca dari localstorage pas mount
   const [theme, setTheme] = useState<"dark" | "light">(() => {
     if (typeof window === "undefined") return "dark";
     return (localStorage.getItem(THEME_STORAGE_KEY) === "light" ? "light" : "dark") as "dark" | "light";
   });
 
-  // toggleTheme — saklar dark/light mode
+  // tukar dark/light mode
   const toggleTheme = () => {
     const next = theme === "dark" ? "light" : "dark";
     setTheme(next);
@@ -74,12 +74,12 @@ export default function KuesionerPage() {
     document.documentElement.dataset.theme = next;
   };
 
-  // Sinkronisasi tema ke HTML
+  // nyocokin tema ke html
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
 
-  // Guard: redirect ke beranda jika flow sudah selesai atau konteks belum diisi
+  // guard: redirect ke beranda kalo flow udah selesai atau konteks belum diisi
   useEffect(() => {
     if (isPlaylistFlowFinished()) {
       router.replace("/");
@@ -94,7 +94,7 @@ export default function KuesionerPage() {
     setIsRouteReady(true);
   }, [router]);
 
-  // contextData — baca konteks aktivitas dari localStorage
+  // baca konteks aktivitas dari localstorage
   const contextData = useMemo(() => {
     try {
       const saved = localStorage.getItem(PLAYLIST_CONTEXT_STORAGE_KEY);
@@ -105,7 +105,7 @@ export default function KuesionerPage() {
     }
   }, []);
 
-  // framingText — kalimat narasi konteks yang ditampilkan di atas soal
+  // narasi konteks yang muncul di atas soal
   const framingText = useMemo(() => {
     if (!contextData) {
       return "Jawab pertanyaan berikut berdasarkan konteks aktivitas yang kamu pilih sebelumnya.";
@@ -116,16 +116,16 @@ export default function KuesionerPage() {
     return `Bayangkan kamu sedang ${activity} pada ${time} dengan suasana saat ini ${mood}. Jawab pertanyaan berikut berdasarkan konteks tersebut.`;
   }, [contextData]);
 
-  // State jawaban kuesioner (key = index soal, value = skor 1–5)
+  // state jawaban kuesioner (key = index soal, value = skor 1-5)
   const [answers, setAnswers] = useState<Record<number, number>>({});
-  // State index soal yang sedang aktif
+  // index soal yang lagi aktif
   const [currentIndex, setCurrentIndex] = useState(0);
-  // Flag apakah jawaban sudah disimpan dan siap redirect ke /proses
+  // flag apakah jawaban udah disimpan dan siap redirect ke /proses
   const [isSaved, setIsSaved] = useState(false);
-  // Flag layar completion (semua soal terjawab)
+  // flag layar completion (semua soal terjawab)
   const [showCompletion, setShowCompletion] = useState(false);
 
-  // answeredCount — jumlah soal yang sudah dijawab
+  // jumlah soal yang udah dijawab
   const answeredCount = useMemo(
     () => Object.values(answers).filter((v) => v >= 1 && v <= 5).length,
     [answers],
@@ -135,7 +135,7 @@ export default function KuesionerPage() {
   const currentQuestion = questions[currentIndex];
   const currentAnswer = answers[currentIndex];
 
-  // handleSelect — simpan jawaban dan auto-advance 300ms ke soal berikutnya
+  // simpen jawaban lalu otomatis lanjut 300ms ke soal berikutnya
   const handleSelect = (value: number) => {
     setAnswers((prev) => ({ ...prev, [currentIndex]: value }));
 
@@ -150,14 +150,14 @@ export default function KuesionerPage() {
     }
   };
 
-  // useEffect: tampilkan layar completion saat semua soal terjawab
+  // tampilin layar completion pas semua soal terjawab
   useEffect(() => {
     if (!showCompletion && answeredCount === TOTAL_QUESTIONS && currentIndex >= TOTAL_QUESTIONS - 1) {
       setShowCompletion(true);
     }
   }, [answeredCount, currentIndex, showCompletion]);
 
-  // handlePrevious — kembali ke soal sebelumnya
+  // balik ke soal sebelumnya
   const handlePrevious = () => {
     if (advanceTimerRef.current) {
       clearTimeout(advanceTimerRef.current);
@@ -167,14 +167,14 @@ export default function KuesionerPage() {
     setCurrentIndex((p) => Math.max(0, p - 1));
   };
 
-  // handleSaveAndContinue — simpan jawaban ke localStorage lalu redirect
+  // simpen jawaban ke localstorage lalu redirect
   const handleSaveAndContinue = () => {
     if (answeredCount !== TOTAL_QUESTIONS) return;
     localStorage.setItem(PLAYLIST_QUESTIONNAIRE_STORAGE_KEY, JSON.stringify(answers));
     setIsSaved(true);
   };
 
-  // Cleanup timer saat komponen unmount
+  // bersihin timer pas komponen unmount
   useEffect(() => {
     return () => {
       if (advanceTimerRef.current) {
@@ -187,7 +187,7 @@ export default function KuesionerPage() {
     return null;
   }
 
-  // Layar "jawaban tersimpan" → redirect ke /proses
+  // layar "jawaban tersimpan" → redirect ke /proses
   if (isSaved) {
     return (
       <main className={`app-shell ${styles.page}`} data-theme={theme}>
@@ -220,7 +220,7 @@ export default function KuesionerPage() {
     );
   }
 
-  // Layar completion (semua soal terjawab, tapi belum disimpan)
+  // layar completion (semua soal udah dijawab, tapi belum disimpen)
   if (showCompletion) {
     return (
       <main className={`app-shell ${styles.page}`} data-theme={theme}>
@@ -262,7 +262,7 @@ export default function KuesionerPage() {
     );
   }
 
-  // Layar utama: 1 soal + 5 pilihan jawaban
+  // layar utama: 1 soal + 5 pilihan jawaban
   return (
     <main className={`app-shell ${styles.page}`} data-theme={theme}>
       <MusicBackground />

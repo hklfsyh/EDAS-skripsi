@@ -1,7 +1,7 @@
-// handleYouTubeProjectExport — logika export playlist ke YouTube (akun project)
+// export playlist ke youtube pake akun project
 import { handleYouTubeProjectExport } from "@/server/modules/youtubeExport";
 
-// POST — endpoint untuk mengekspor playlist ke YouTube
+// endpoint buat export playlist ke youtube
 export async function POST(request: Request) {
   return handleYouTubeProjectExport(request);
 }

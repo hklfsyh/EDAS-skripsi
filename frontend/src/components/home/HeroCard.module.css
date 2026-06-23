@@ -1,4 +1,4 @@
-/* heroCard — kartu hero di halaman beranda (deskripsi aplikasi) */
+/* heroCard — kartu hero di beranda */
 .heroCard {
   background: var(--surface);
   border: 1.5px solid var(--surface-border);
@@ -12,7 +12,7 @@
   box-shadow: var(--surface-shadow);
 }
 
-/* heroCard::before — efek sorotan di pojok kanan atas */
+/* heroCard::before — efek sorotan pojok kanan atas */
 .heroCard::before {
   content: "";
   position: absolute;
@@ -27,7 +27,7 @@
   background: radial-gradient(circle, rgba(93, 143, 104, 0.12), transparent 70%);
 }
 
-/* badge — badge di atas judul hero */
+/* badge — badge judul hero */
 .badge {
   display: inline-flex;
   align-items: center;
@@ -50,7 +50,7 @@
   color: #466e50;
 }
 
-/* title — judul utama hero */
+/* title — judul hero */
 .title {
   margin: 0 0 8px;
   color: var(--text-primary);
@@ -60,7 +60,7 @@
   letter-spacing: -0.03em;
 }
 
-/* highlight — teks dengan gradient pada judul */
+/* highlight — teks pake gradient di judul */
 .highlight {
   background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
   -webkit-background-clip: text;
@@ -75,7 +75,7 @@
   background-clip: text;
 }
 
-/* body — teks deskripsi hero */
+/* body — deskripsi hero */
 .body {
   margin: 0;
   color: var(--text-secondary);
@@ -84,7 +84,7 @@
   max-width: 480px;
 }
 
-/* Responsif — padding lebih kecil di layar sempit */
+/* responsif — padding dikecilin kalo layar sempit */
 @media (max-width: 600px) {
   .heroCard { padding: 18px; }
   .title { font-size: 1.4rem; }

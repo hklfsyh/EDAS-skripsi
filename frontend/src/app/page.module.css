@@ -1,4 +1,4 @@
-/* page — halaman beranda, overflow hidden, font Figtree, variabel lokal */
+/* page — halaman beranda, overflow hidden */
 .page {
   overflow: hidden;
   font-family: var(--font-figtree), 'Figtree', system-ui, sans-serif;
@@ -13,12 +13,12 @@
   --accent: var(--accent-primary);
 }
 
-/* page[data-theme="light"] — override surface-hover untuk light mode */
+/* page[data-theme="light"] — ganti surface-hover buat light mode */
 .page[data-theme="light"] {
   --surface-hover: #efe8e0;
 }
 
-/* main — grid konten utama, lebar maksimal 480px */
+/* main — grid konten utama, lebar maks 480px */
 .main {
   display: grid;
   width: min(480px, 100%);
@@ -27,7 +27,7 @@
   padding-block: 12px 28px;
 }
 
-/* topBar — baris atas (logo + theme toggle) */
+/* topBar — barisan atas (logo + theme toggle) */
 .topBar {
   display: flex;
   align-items: center;
@@ -36,7 +36,7 @@
   padding-inline: 2px;
 }
 
-/* logo — logo aplikasi dengan ikon dan teks */
+/* logo — logo aplikasi pake ikon dan teks */
 .logo {
   display: flex;
   align-items: center;
@@ -47,12 +47,12 @@
   letter-spacing: -0.01em;
 }
 
-/* logoIcon — ikon di samping logo */
+/* logoIcon — ikon samping logo */
 .logoIcon {
   font-size: 1.4rem;
 }
 
-/* themeToggle — tombol toggle tema dengan border dan backdrop blur */
+/* themeToggle — tombol ganti tema pake border dan backdrop blur */
 .themeToggle {
   border: 1.5px solid var(--surface-card-border);
   background: var(--surface-card);
@@ -73,7 +73,7 @@
   background: var(--surface-hover);
 }
 
-/* stepActions — wrapper tombol aksi (buat playlist, lihat riwayat) */
+/* stepActions — wrapper tombol aksi (buat playlist, liat riwayat) */
 .stepActions {
   display: flex;
   flex-direction: column;
@@ -81,7 +81,7 @@
   width: 100%;
 }
 
-/* primaryButton — tombol utama gradient */
+/* primaryButton — tombol utama pake gradient */
 .primaryButton {
   width: 100%;
   height: 50px;
@@ -103,7 +103,7 @@
   box-shadow: 0 8px 28px color-mix(in srgb, var(--accent-secondary) 28%, transparent);
 }
 
-/* ghostButton — tombol sekunder dengan border saja */
+/* ghostButton — tombol sekunder pake border aja */
 .ghostButton {
   width: 100%;
   height: 46px;
@@ -124,7 +124,7 @@
   transform: translateY(-1px);
 }
 
-/* overlay — latar modal histori dengan backdrop blur */
+/* overlay — latar modal pake backdrop blur */
 .overlay {
   position: fixed;
   inset: 0;
@@ -135,7 +135,7 @@
   backdrop-filter: blur(8px);
 }
 
-/* backdrop — area klik di luar modal untuk menutup */
+/* backdrop — area klik di luar modal buat nutup */
 .backdrop {
   position: absolute;
   inset: 0;
@@ -144,7 +144,7 @@
   cursor: pointer;
 }
 
-/* modal — kotak modal histori */
+/* modal — kotak modal */
 .modal {
   width: min(480px, 100%);
   max-height: min(80vh, 600px);
@@ -160,7 +160,7 @@
   z-index: 1;
 }
 
-/* modalHeader — header modal dengan judul dan tombol tutup */
+/* modalHeader — header modal pake judul dan tombol tutup */
 .modalHeader {
   display: flex;
   align-items: center;
@@ -176,7 +176,7 @@
   font-size: 1rem;
 }
 
-/* modalClose — tombol tutup modal */
+/* modalClose — tombol tutup */
 .modalClose {
   border: none;
   border-radius: 10px;
@@ -193,7 +193,7 @@
   background: var(--button-bg-hover);
 }
 
-/* modalBody — area konten di dalam modal */
+/* modalBody — area konten di dalem modal */
 .modalBody {
   padding: 14px 18px 18px;
   display: grid;
@@ -201,14 +201,14 @@
   overflow: hidden;
 }
 
-/* modalContext — teks konteks sesi di modal */
+/* modalContext — teks konteks sesi */
 .modalContext {
   margin: 0;
   color: var(--muted-foreground);
   font-size: 0.9rem;
 }
 
-/* modalMeta — metadata sesi (aktivitas, waktu, suasana) */
+/* modalMeta — metadata sesi */
 .modalMeta {
   display: flex;
   flex-wrap: wrap;
@@ -217,7 +217,7 @@
   color: var(--muted-foreground);
 }
 
-/* modalList — daftar lagu di dalam modal */
+/* modalList — daftar lagu di dalem modal */
 .modalList {
   list-style: none;
   margin: 0;
@@ -241,7 +241,7 @@
   font-size: 0.85rem;
 }
 
-/* extLinks — wrapper tautan export Spotify/YouTube */
+/* extLinks — wrapper link export spotify/youtube */
 .extLinks {
   display: flex;
   flex-wrap: wrap;
@@ -249,7 +249,7 @@
   padding-top: 4px;
 }
 
-/* extLink — tombol tautan export ke platform eksternal */
+/* extLink — tombol link export ke platform */
 .extLink {
   display: inline-flex;
   align-items: center;
@@ -272,7 +272,7 @@
   background: var(--button-bg-hover);
 }
 
-/* extMuted — teks placeholder jika belum ada export */
+/* extMuted — teks placeholder kalo belum ada export */
 .extMuted {
   font-size: 0.78rem;
   color: var(--muted-foreground);
@@ -280,14 +280,14 @@
   padding: 7px 0;
 }
 
-/* modalHeaderLeft — sisi kiri header modal (back button + judul) */
+/* modalHeaderLeft — sisi kiri header modal */
 .modalHeaderLeft {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-/* backButton — tombol kembali di header modal detail */
+/* backButton — tombol balik di header modal detail */
 .backButton {
   border: none;
   background: transparent;
@@ -305,7 +305,7 @@
   background: var(--surface-hover);
 }
 
-/* historyList — daftar item histori di modal */
+/* historyList — daftar item histori */
 .historyList {
   list-style: none;
   margin: 0;
@@ -314,7 +314,7 @@
   gap: 8px;
 }
 
-/* historyItemButton — tombol item histori (klik untuk lihat detail) */
+/* historyItemButton — tombol item histori */
 .historyItemButton {
   width: 100%;
   border: 1px solid var(--surface-border);
@@ -334,34 +334,34 @@
   background: var(--surface-hover);
 }
 
-/* historyItemTitle — judul item histori (nama aktivitas) */
+/* historyItemTitle — judul item histori */
 .historyItemTitle {
   font-weight: 700;
   font-size: 0.93rem;
   color: var(--foreground);
 }
 
-/* historyItemMeta — metadata item histori */
+/* historyItemMeta — metadata histori */
 .historyItemMeta {
   font-size: 0.78rem;
   color: var(--muted-foreground);
 }
 
-/* historyEmpty — teks saat histori kosong */
+/* historyEmpty — teks pas histori kosong */
 .historyEmpty {
   color: var(--muted-foreground);
   font-size: 0.9rem;
   margin: 0;
 }
 
-/* formStep — step form dalam alur pembuatan playlist */
+/* formStep — step form dalem alur bikin playlist */
 .formStep {
   display: grid;
   gap: 10px;
   width: 100%;
 }
 
-/* backLinkButton — tombol kembali ke halaman sebelumnya */
+/* backLinkButton — tombol balik ke halaman sebelumnya */
 .backLinkButton {
   border: 1.5px solid var(--surface-card-border);
   border-radius: 12px;
@@ -381,7 +381,7 @@
   border-color: var(--accent-primary);
 }
 
-/* Responsif — padding/gap lebih kecil di layar sempit */
+/* responsif — padding/gap dikecilin kalo layar sempit */
 @media (max-width: 600px) {
   .main {
     gap: 14px;

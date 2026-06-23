@@ -1,4 +1,4 @@
-/* container — area fixed untuk partikel cursor trail */
+/* container — area fixed buat partikel cursor trail */
 .container {
   position: fixed;
   inset: 0;
@@ -7,7 +7,7 @@
   overflow: hidden;
 }
 
-/* particle — partikel individual (posisi absolut via JS) */
+/* particle — partikel individual (posisi absolut dari js) */
 .particle {
   position: fixed;
   top: 0;
@@ -18,24 +18,24 @@
   transform-origin: center center;
 }
 
-/* note — partikel simbol not balok */
+/* note — partikel not balok */
 .note {
   font-family: Georgia, serif;
   line-height: 1;
   font-weight: 400;
 }
 
-/* ring — partikel cincin meluas */
+/* ring — partikel cincin */
 .ring {
   border-radius: 50%;
 }
 
-/* dot — partikel titik biasa */
+/* dot — partikel titik */
 .dot {
   border-radius: 50%;
 }
 
-/* spark — partikel percikan */
+/* spark — partikel kilat */
 .spark {
   border-radius: 2px;
   transform-origin: center top;

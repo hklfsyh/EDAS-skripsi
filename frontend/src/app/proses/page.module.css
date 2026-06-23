@@ -1,11 +1,11 @@
-/* page — halaman proses, flex column dengan overflow hidden */
+/* page — halaman proses, flex column overflow hidden */
 .page {
   display: flex;
   align-items: flex-start;
   overflow: hidden;
 }
 
-/* card — kartu status proses dengan surface, border, blur, shadow */
+/* card — kartu status proses */
 .card {
   width: min(480px, 100%);
   margin-top: 6vh;
@@ -17,7 +17,7 @@
   padding: 24px;
 }
 
-/* card h1 — judul halaman proses */
+/* card h1 — judul proses */
 .card h1 {
   margin: 0 0 8px;
   font-size: clamp(1.2rem, 3vw, 1.6rem);
@@ -25,7 +25,7 @@
   letter-spacing: -0.02em;
 }
 
-/* desc — teks deskripsi proses */
+/* desc — deskripsi proses */
 .desc {
   margin: 0;
   color: var(--muted-foreground);
@@ -33,7 +33,7 @@
   font-size: 0.9rem;
 }
 
-/* progressWrap — wrapper progress bar */
+/* progressWrap — wrapper progress */
 .progressWrap {
   margin-top: 18px;
   height: 8px;
@@ -42,14 +42,14 @@
   overflow: hidden;
 }
 
-/* progressFill — isian progress bar dengan gradient tiga warna */
+/* progressFill — isian progress bar pake gradient 3 warna */
 .progressFill {
   height: 100%;
   background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary), var(--accent-tertiary));
   transition: width 180ms linear;
 }
 
-/* percentLabel — teks persentase progress */
+/* percentLabel — teks persen progress */
 .percentLabel {
   margin-top: 8px;
   display: inline-block;
@@ -58,7 +58,7 @@
   color: var(--accent-primary);
 }
 
-/* statusText — teks status proses (misal "Menganalisis preferensi...") */
+/* statusText — teks status proses */
 .statusText {
   margin-top: 12px !important;
   font-size: 0.88rem;
@@ -66,21 +66,21 @@
   font-weight: 600;
 }
 
-/* note — catatan tambahan saat proses */
+/* note — catatan tambahan pas proses */
 .note {
   margin-top: 14px !important;
   font-size: 0.85rem;
   color: var(--foreground) !important;
 }
 
-/* previewTime — perkiraan waktu sisa */
+/* previewTime — perkiraan sisa waktu */
 .previewTime {
   margin-top: 4px !important;
   font-size: 0.8rem;
   color: var(--muted-foreground) !important;
 }
 
-/* Responsif — margin/padding lebih kecil di layar sempit */
+/* responsif — margin/padding dikecilin kalo layar sempit */
 @media (max-width: 640px) {
   .card {
     margin-top: 4vh;

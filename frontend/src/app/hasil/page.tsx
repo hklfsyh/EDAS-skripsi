@@ -15,11 +15,11 @@ import {
 import { buildPreferenceAspectMeaning, type PreferenceInterpretation } from "@/server/utils/preferenceSummary";
 import styles from "./page.module.css";
 
-// Kunci localStorage untuk tema dan cache URL export
+// kunci localstorage buat tema dan cache url export
 const THEME_STORAGE_KEY = "playlist-theme-v1";
 const EXT_PREFIX = "ext-url-v2";
 
-// ContextData — tipe data konteks aktivitas dari localStorage
+// data konteks aktivitas dari localstorage
 type ContextData = {
   activity: string;
   timeOfDay: string;
@@ -27,7 +27,7 @@ type ContextData = {
   durationMinutes: number;
 };
 
-// PlaylistItem — tipe data satu lagu dalam playlist rekomendasi
+// data satu lagu di playlist rekomendasi
 type PlaylistItem = {
   rank: number;
   id_song?: number;
@@ -37,7 +37,7 @@ type PlaylistItem = {
   appraisalScore: number;
 };
 
-// ResultData — tipe data hasil rekomendasi lengkap (konteks, playlist, NLG)
+// data hasil rekomendasi lengkap (konteks, playlist, nlg)
 type ResultData = {
   id_session?: number;
   context: ContextData;
@@ -66,7 +66,7 @@ type ResultData = {
   };
 };
 
-// HistorySong — tipe data lagu dalam riwayat sesi (dari database)
+// data lagu di riwayat sesi (dari database)
 type HistorySong = {
   id_song: number;
   title: string;
@@ -75,7 +75,7 @@ type HistorySong = {
   appraisal_score: number;
 };
 
-// HistorySession — tipe data sesi riwayat lengkap (dari database)
+// data sesi riwayat lengkap (dari database)
 type HistorySession = {
   id_session: number;
   activity: string;
@@ -94,19 +94,19 @@ type HistorySession = {
 
 const UAT_FORM_PLACEHOLDER_URL = "https://tiny.cc/evaluasiNamuAPP";
 
-// formatDuration — konversi detik ke format menit:detik
+// ubah detik jadi menit:detik
 function formatDuration(sec: number): string {
   const m = Math.floor(sec / 60);
   const s = sec % 60;
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
-// generatePlaylistName — buat nama playlist dari konteks aktivitas
+// bikin nama playlist dari konteks aktivitas
 function generatePlaylistName(ctx: ContextData): string {
   return `${ctx.activity} \u2022 ${ctx.mood} \u2022 ${ctx.timeOfDay}`;
 }
 
-// playlistFingerprint — hash sederhana dari daftar lagu untuk cache URL export
+// hash sederhana dari daftar lagu buat cache url export
 function playlistFingerprint(tracks: PlaylistItem[]): string {
   const data = tracks.map((t) => `${t.title}|${t.artist}`).sort().join("||");
   let hash = 0;
@@ -118,31 +118,31 @@ function playlistFingerprint(tracks: PlaylistItem[]): string {
   return Math.abs(hash).toString(36);
 }
 
-// HasilPage — halaman hasil rekomendasi dengan 3 step (ringkasan, playlist, export)
+// halaman hasil rekomendasi dengan 3 step (ringkasan, playlist, export)
 export default function HasilPage() {
   const router = useRouter();
-  // State loading export Spotify/YouTube
+  // state loading export spotify/youtube
   const [spotifyLoading, setSpotifyLoading] = useState(false);
   const [youtubeLoading, setYoutubeLoading] = useState(false);
-  // State riwayat sesi dari database
+  // state riwayat sesi dari database
   const [historyItems, setHistoryItems] = useState<HistorySession[]>([]);
   const [, setHistoryLoading] = useState(true);
   const [, setHistoryError] = useState<string | null>(null);
-  // State modal detail riwayat
+  // state modal detail riwayat
   const [selectedSessionId, setSelectedSessionId] = useState<number | null>(null);
-  // State playlist dan seleksi lagu untuk ganti
+  // state playlist dan seleksi lagu buat ganti
   const [playlist, setPlaylist] = useState<PlaylistItem[]>([]);
   const [selectedSongIds, setSelectedSongIds] = useState<Set<number>>(new Set());
   const [excludedSongIds, setExcludedSongIds] = useState<Set<number>>(new Set());
   const [isReplacing, setIsReplacing] = useState(false);
   const [replaceMessage, setReplaceMessage] = useState<string | null>(null);
-  // State navigasi section step (1=ringkasan, 2=playlist, 3=export, 4=evaluasi)
+  // state navigasi section step (1=ringkasan, 2=playlist, 3=export, 4=evaluasi)
   const [sectionStep, setSectionStep] = useState(1);
-  // State hasil rekomendasi dari localStorage
+  // state hasil rekomendasi dari localstorage
   const [result, setResult] = useState<ResultData | null>(null);
   const [isRouteReady, setIsRouteReady] = useState(false);
 
-  // useEffect: guard redirect + baca result dari localStorage
+  // guard redirect + baca result dari localstorage
   useEffect(() => {
     const saved = localStorage.getItem(THEME_STORAGE_KEY);
     document.documentElement.dataset.theme = saved === "light" ? "light" : "dark";
@@ -178,7 +178,7 @@ export default function HasilPage() {
     }
   }, [router]);
 
-  // loadHistory — fetch riwayat sesi dari API
+  // ambil riwayat sesi dari api
   const loadHistory = useCallback(() => {
     const clientId = getOrCreateClientId();
     setHistoryLoading(true);
@@ -198,31 +198,31 @@ export default function HasilPage() {
       });
   }, []);
 
-  // useEffect: load history setelah route siap
+  // load history setelah route siap
   useEffect(() => {
     if (isRouteReady) {
       loadHistory();
     }
   }, [isRouteReady, loadHistory]);
 
-  // selectedSession — sesi yang sedang dilihat detailnya
+  // sesi yang lagi dilihat detailnya
   const selectedSession = useMemo(
     () => historyItems.find((session) => session.id_session === selectedSessionId) ?? null,
     [historyItems, selectedSessionId],
   );
 
-  // showNlgDebug — tampilkan debug info NLG di development
+  // tampilin debug info nlg di development
   const showNlgDebug =
     process.env.NEXT_PUBLIC_NLG_DEBUG === "true" || process.env.NODE_ENV !== "production";
 
-  // useEffect: sync playlist dari result
+  // sync playlist dari result
   useEffect(() => {
     if (result) {
       setPlaylist(result.playlist);
     }
   }, [result]);
 
-  // useEffect: baca excluded song IDs dari localStorage
+  // baca excluded song ids dari localstorage
   useEffect(() => {
     const saved = localStorage.getItem(PLAYLIST_EXCLUDED_IDS_STORAGE_KEY);
     if (saved) {
@@ -237,11 +237,11 @@ export default function HasilPage() {
     }
   }, []);
 
-  // currentTotalSec — total durasi playlist saat ini
+  // total durasi playlist saat ini
   const currentTotalSec = useMemo(() => playlist.reduce((sum, s) => sum + s.durationSec, 0), [playlist]);
   const preferenceSummary = result?.preferenceSummary ?? null;
 
-  // Fingerprint playlist + key localStorage untuk cache URL export
+  // fingerprint playlist + key localstorage buat cache url export
   const fp = useMemo(() => playlistFingerprint(playlist), [playlist]);
   const extKeySpotify = `${EXT_PREFIX}-spotify-${fp}`;
   const extKeyYoutube = `${EXT_PREFIX}-youtube-${fp}`;
@@ -252,12 +252,12 @@ export default function HasilPage() {
 
   const overDuration = Math.max(0, currentTotalSec - result.summary.targetDurationSec);
 
-  // redirectToUrl — redirect browser ke URL eksternal
+  // redirect browser ke url eksternal
   const redirectToUrl = (url: string) => {
     window.location.href = url;
   };
 
-  // checkExternalUrlDb — cek URL playlist yang sudah pernah di-export dari database
+  // cek url playlist yang udah pernah di-export dari database
   const checkExternalUrlDb = async (platform: string): Promise<{ url: string | null; title: string | null }> => {
     if (!result?.id_session) return { url: null, title: null };
     try {
@@ -271,7 +271,7 @@ export default function HasilPage() {
     }
   };
 
-  // saveExternalUrlDb — simpan URL hasil export ke database
+  // simpen url hasil export ke database
   const saveExternalUrlDb = (platform: string, url: string, title: string) => {
     if (!result?.id_session) return;
     fetch("/api/recommendations/external-url", {
@@ -286,7 +286,7 @@ export default function HasilPage() {
     }).catch(() => console.warn(`Gagal simpan URL ${platform} ke database.`));
   };
 
-  // openOrCreate — buka playlist yang sudah ada atau buat baru di Spotify/YouTube
+  // buka playlist yang udah ada atau buat baru di spotify/youtube
   const openOrCreate = async (platform: "spotify" | "youtube") => {
     const extKey = platform === "spotify" ? extKeySpotify : extKeyYoutube;
     const setLoading = platform === "spotify" ? setSpotifyLoading : setYoutubeLoading;
@@ -301,7 +301,7 @@ export default function HasilPage() {
     };
 
     try {
-      // Cek database dulu
+      // cek database dulu
       const { url: dbUrl } = await checkExternalUrlDb(platform);
       if (dbUrl) {
         localStorage.setItem(extKey, dbUrl);
@@ -310,7 +310,7 @@ export default function HasilPage() {
         return;
       }
 
-      // Cek localStorage cache
+      // cek localstorage cache
       const cached = localStorage.getItem(extKey);
       if (cached) {
         if (result?.id_session) {
@@ -321,7 +321,7 @@ export default function HasilPage() {
         return;
       }
 
-      // Buat playlist baru via API export
+      // buat playlist baru via api export
       console.log(`[${label} Export] No existing URL \u2014 creating new playlist`);
       const playlistName = generatePlaylistName(result.context);
       const res = await fetch(endpoint, {
@@ -351,7 +351,7 @@ export default function HasilPage() {
   const handleExportSpotify = () => openOrCreate("spotify");
   const handleExportYoutube = () => openOrCreate("youtube");
 
-  // finishFlowAndGoHome — simpan playlist final, tandai flow selesai, redirect ke /
+  // simpen playlist final, tandain flow selesai, redirect ke /
   const finishFlowAndGoHome = async () => {
     if (result?.id_session) {
       const safePlaylist = playlist
@@ -375,7 +375,7 @@ export default function HasilPage() {
             console.warn("Safety save playlist gagal:", res.status);
           }
         } catch {
-          // Safety net
+          // safety net
         }
       }
     }
@@ -383,12 +383,12 @@ export default function HasilPage() {
     router.replace("/");
   };
 
-  // handleCloseHistory — tutup modal detail riwayat
+  // tutup modal detail riwayat
   const handleCloseHistory = () => {
     setSelectedSessionId(null);
   };
 
-  // toggleSelectSong — centang/batal centang lagu untuk di-replace
+  // centang/batal centang lagu buat di-replace
   const toggleSelectSong = (id: number | undefined) => {
     if (id === undefined) return;
     setSelectedSongIds((prev) => {
@@ -402,7 +402,7 @@ export default function HasilPage() {
     });
   };
 
-  // handleBatchReplace — ganti lagu terpilih dengan lagu baru dari API replace
+  // ganti lagu yang dipilih sama lagu baru dari api replace
   const handleBatchReplace = async () => {
     const songsToRemove = playlist.filter((s) => s.id_song !== undefined && selectedSongIds.has(s.id_song!));
     if (songsToRemove.length === 0) return;
@@ -453,7 +453,7 @@ export default function HasilPage() {
         return;
       }
 
-      // Gabung lagu yang tidak dipilih + lagu pengganti, urutkan ulang
+      // gabung lagu yang gak dipilih + lagu pengganti, urutin ulang
       const keptPlaylist = playlist.filter(
         (s) => !(s.id_song !== undefined && selectedSongIds.has(s.id_song)),
       );
@@ -492,7 +492,7 @@ export default function HasilPage() {
       setExcludedSongIds(new Set(allExcluded));
       setSelectedSongIds(new Set());
 
-      // Simpan perubahan ke database
+      // simpen perubahan ke database
       let dbSaveFailed = false;
       if (result?.id_session) {
         try {
@@ -543,7 +543,7 @@ export default function HasilPage() {
           <span className={styles.badge}>Hasil Rekomendasi</span>
         </header>
 
-        {/* Section 1: Ringkasan + NLG */}
+        {/* section 1: ringkasan + nlg */}
         {sectionStep === 1 && (
           <section className={styles.card}>
             <h1>Hasil rekomendasi playlist</h1>
@@ -573,7 +573,7 @@ export default function HasilPage() {
               </div>
             )}
 
-            {/* Indikator step dots */}
+            {/* indikator step dots */}
             <div className={styles.stepsDots}>
               <span className={`${styles.dot} ${styles.dotActive}`} />
               <span className={`${styles.dot} ${styles.dotInactive}`} />
@@ -593,7 +593,7 @@ export default function HasilPage() {
           </section>
         )}
 
-        {/* Section 2: Playlist + Ganti Lagu */}
+        {/* section 2: playlist + ganti lagu */}
         {sectionStep === 2 && (
           <section className={styles.card}>
             <h2>Top playlist</h2>
@@ -659,7 +659,7 @@ export default function HasilPage() {
               })}
             </ul>
 
-            {/* Indikator step dots */}
+            {/* indikator step dots */}
             <div className={styles.stepsDots}>
               <span className={`${styles.dot} ${styles.dotInactive}`} onClick={() => setSectionStep(1)} />
               <span className={`${styles.dot} ${styles.dotActive}`} />
@@ -685,7 +685,7 @@ export default function HasilPage() {
           </section>
         )}
 
-        {/* Section 3: Export + Riwayat */}
+        {/* section 3: export + riwayat */}
         {sectionStep === 3 && (
           <section className={styles.card}>
             <h2>Simpan ke platform musik</h2>
@@ -739,7 +739,7 @@ export default function HasilPage() {
               </button>
             </div>
 
-            {/* Indikator step dots */}
+            {/* indikator step dots */}
             <div className={styles.stepsDots}>
               <span className={`${styles.dot} ${styles.dotInactive}`} onClick={() => setSectionStep(2)} />
               <span className={`${styles.dot} ${styles.dotInactive}`} onClick={() => setSectionStep(2)} />
@@ -856,7 +856,7 @@ export default function HasilPage() {
           </section>
         )}
 
-        {/* Modal detail riwayat sesi */}
+        {/* modal detail riwayat sesi */}
         {selectedSession && (
           <div className={styles.historyOverlay}>
             <button

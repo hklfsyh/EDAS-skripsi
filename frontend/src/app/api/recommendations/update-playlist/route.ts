@@ -1,39 +1,39 @@
-// NextResponse untuk mengirim respons HTTP API, sql untuk query database
+// NextResponse buat kirim response api, sql buat query database
 import { NextResponse } from "next/server";
 import sql from "@/server/db";
 
-// PlaylistItem — tipe data item playlist yang dikirim dari client
+// data item playlist yang dikirim dari client
 type PlaylistItem = {
   id_song: number;
   rank: number;
   appraisalScore: number;
 };
 
-// UpdatePlaylistRequest — tipe payload request update playlist
+// payload yang dikirim pas update playlist
 type UpdatePlaylistRequest = {
   id_session: number;
   playlist: PlaylistItem[];
 };
 
-// POST — update daftar lagu untuk sesi rekomendasi yang sudah ada
+// update daftar lagu buat sesi rekomendasi yang udah ada
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as UpdatePlaylistRequest;
     const { id_session, playlist } = body;
 
-    // Validasi id_session harus angka positif
+    // validasi id_session harus angka positif
     if (!Number.isFinite(id_session) || id_session <= 0) {
       return NextResponse.json({ error: "id_session tidak valid." }, { status: 400 });
     }
 
-    // Validasi playlist tidak boleh kosong
+    // validasi playlist ga boleh kosong
     if (!Array.isArray(playlist) || playlist.length === 0) {
       return NextResponse.json({ error: "Playlist tidak boleh kosong." }, { status: 400 });
     }
 
     const normalizedPlaylist: { id_song: number; rank: number; appraisalScore: number }[] = [];
 
-    // Normalisasi dan validasi tiap item playlist
+    // normalisasi dan validasi tiap item playlist
     for (const item of playlist) {
       const idSong = Number(item.id_song);
       const rank = Number(item.rank);
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
       normalizedPlaylist.push({ id_song: idSong, rank, appraisalScore });
     }
 
-    // Cek apakah sesi dengan id_session tersebut ada di database
+    // cek apa sesi dengan id_session ini ada di database
     const sessions = await sql<{ id_session: number }[]>`
       select id_session from recommendation_session where id_session = ${id_session}
     `;
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Session tidak ditemukan." }, { status: 404 });
     }
 
-    // Hapus lagu lama lalu insert ulang dengan urutan baru
+    // hapus lagu lama terus insert ulang dengan urutan baru
     await sql`delete from recommendation_song where id_session = ${id_session}`;
 
     const songRows = normalizedPlaylist.map((item) => ({
@@ -75,7 +75,7 @@ export async function POST(request: Request) {
       insert into recommendation_song ${sql(songRows, "id_session", "id_song", "rank_order", "appraisal_score")}
     `;
 
-    // Update timestamp sesi
+    // update timestamp sesi
     await sql`
       update recommendation_session set updated_at = now() where id_session = ${id_session}
     `;
