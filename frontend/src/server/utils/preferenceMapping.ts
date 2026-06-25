@@ -81,7 +81,7 @@ const QUESTION_MAPPINGS: QuestionMapping[] = [
   },
 ];
 
-// Normalisasi jawaban kuesioner dari berbagai format biar mapping preferensinya konsisten.
+// Normalisasi jawaban kuesioner dari berbagai format biar mapping preferensinya konsisten
 export function normalizeQuestionnaireAnswers(
   answers?: Record<number, number> | number[] | null,
 ): number[] {
