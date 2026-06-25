@@ -252,11 +252,6 @@ export default function HasilPage() {
 
   const overDuration = Math.max(0, currentTotalSec - result.summary.targetDurationSec);
 
-  // redirect browser ke url eksternal
-  const redirectToUrl = (url: string) => {
-    window.location.href = url;
-  };
-
   // cek url playlist yang udah pernah di-export dari database
   const checkExternalUrlDb = async (platform: string): Promise<{ url: string | null; title: string | null }> => {
     if (!result?.id_session) return { url: null, title: null };
@@ -294,11 +289,6 @@ export default function HasilPage() {
     const label = platform === "spotify" ? "Spotify" : "YouTube";
 
     setLoading(true);
-    const exportTab = window.open('', '_blank', 'noopener,noreferrer');
-    const openTab = (url: string) => {
-      if (exportTab) exportTab.location.href = url;
-      else redirectToUrl(url);
-    };
 
     try {
       // cek database dulu
@@ -306,7 +296,7 @@ export default function HasilPage() {
       if (dbUrl) {
         localStorage.setItem(extKey, dbUrl);
         console.log(`[${label} Export] Reuse database ${label} playlist \u2014 ${dbUrl}`);
-        openTab(dbUrl);
+        window.location.href = dbUrl;
         return;
       }
 
@@ -317,7 +307,7 @@ export default function HasilPage() {
           saveExternalUrlDb(platform, cached, generatePlaylistName(result.context));
         }
         console.log(`[${label} Export] Reuse cached ${label} playlist \u2014 ${cached}`);
-        openTab(cached);
+        window.location.href = cached;
         return;
       }
 
@@ -337,7 +327,7 @@ export default function HasilPage() {
         localStorage.setItem(extKey, data.publicUrl);
         saveExternalUrlDb(platform, data.publicUrl, playlistName);
         console.log(`[${label} Export] Created new playlist \u2014 ${data.publicUrl}`);
-        openTab(data.publicUrl);
+        window.location.href = data.publicUrl;
       } else {
         alert(data.error || `Gagal export ke ${label}.`);
       }
