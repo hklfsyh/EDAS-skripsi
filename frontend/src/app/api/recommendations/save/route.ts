@@ -9,6 +9,7 @@ type SaveRequest = {
   clientId?: string;
   context?: {
     activity?: string;
+    time_category?: string;
     timeOfDay?: string;
     mood?: string;
     durationMinutes?: number;
@@ -25,7 +26,7 @@ type SaveRequest = {
 type FingerprintInput = {
   context: {
     activity: string;
-    timeOfDay: string;
+    time_category: string;
     mood: string;
     durationMinutes: number;
   };
@@ -69,12 +70,36 @@ export async function POST(request: Request) {
     }
 
     const activity = context.activity?.trim() ?? "";
-    const timeCategory = context.timeOfDay?.trim() ?? "";
+    const timeCategory = (context.time_category ?? context.timeOfDay ?? "").trim();
     const mood = context.mood?.trim() ?? "";
     const durationTarget = Number(context.durationMinutes ?? 0);
 
     if (!activity || !timeCategory || !mood || !Number.isFinite(durationTarget) || durationTarget <= 0) {
       return NextResponse.json({ error: "Context tidak valid." }, { status: 400 });
+    }
+
+    // Validasi context value ke tabel context_option
+    const validContexts = await sql<{ category: string; value: string }[]>`
+      SELECT category, value FROM context_option
+      WHERE is_active = true
+        AND (
+          (category = 'activity' AND value = ${activity})
+          OR (category = 'time_category' AND value = ${timeCategory})
+          OR (category = 'mood' AND value = ${mood})
+        )
+    `;
+
+    const validSet = new Set(validContexts.map((r) => `${r.category}:${r.value}`));
+    const contextErrors: string[] = [];
+    if (!validSet.has(`activity:${activity}`)) contextErrors.push(`activity "${activity}"`);
+    if (!validSet.has(`time_category:${timeCategory}`)) contextErrors.push(`time_category "${timeCategory}"`);
+    if (!validSet.has(`mood:${mood}`)) contextErrors.push(`mood "${mood}"`);
+
+    if (contextErrors.length > 0) {
+      return NextResponse.json(
+        { error: `Nilai konteks tidak valid: ${contextErrors.join(", ")}.` },
+        { status: 400 },
+      );
     }
 
     const normalizedPlaylist = playlist.map((item) => ({
@@ -87,7 +112,7 @@ export async function POST(request: Request) {
     const fingerprintPayload: FingerprintInput = {
       context: {
         activity,
-        timeOfDay: timeCategory,
+        time_category: timeCategory,
         mood,
         durationMinutes: durationTarget,
       },

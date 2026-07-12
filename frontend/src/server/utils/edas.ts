@@ -1,7 +1,5 @@
-import type { PreferenceParameter, PreferenceResult } from "@/server/utils/preferenceMapping";
+import type { CriterionType, PreferenceParameter, PreferenceResult } from "@/server/utils/preferenceMapping";
 
-// Biar playlist-nya nggak dipenuhi potongan lagu yang terlalu pendek aja.
-// Filter ini kepake sebelum ranking EDAS, nggak ngaruh ke rumus hitunganya.
 export const MIN_PLAYLIST_SONG_DURATION_MS = 90_000;
 export const MIN_PLAYLIST_SONG_DURATION_SEC = 90;
 
@@ -40,7 +38,7 @@ export type EdasParameterDebug = {
   average: number;
   averageDeviation: number;
   weight: number;
-  criterion: "benefit" | "cost" | "neutral";
+  criterion: CriterionType | null;
   pda: number;
   nda: number;
   weightedPda: number;
@@ -123,7 +121,6 @@ type DurationState = {
 
 type DurationSelectionProfile = "playlist" | "replacement";
 
-// Parameter audio yang dipake buat hitung EDAS
 const PARAMETERS: PreferenceParameter[] = [
   "tempo",
   "energy",
@@ -142,12 +139,13 @@ function normalizeValue(value: number | null): number {
   return Math.max(0, value ?? 0);
 }
 
-// Ngitung Average Solution sama Average Deviation buat tiap parameter audio
-// sebagai patokan di tahap evaluasi EDAS.
-function calculateCriterionStats(candidates: SongCandidate[]): Record<PreferenceParameter, CriterionStats> {
+function calculateCriterionStats(
+  candidates: SongCandidate[],
+  activeParameters: PreferenceParameter[],
+): Record<PreferenceParameter, CriterionStats> {
   const stats = {} as Record<PreferenceParameter, CriterionStats>;
 
-  for (const parameter of PARAMETERS) {
+  for (const parameter of activeParameters) {
     const values = candidates.map((candidate) => normalizeValue(candidate[parameter]));
     const average = values.reduce((sum, value) => sum + value, 0) / values.length;
     const deviations = values.map((value) => Math.abs(value - average));
@@ -163,11 +161,10 @@ function calculateCriterionStats(candidates: SongCandidate[]): Record<Preference
   return stats;
 }
 
-// Ngitung PDA dan NDA berdasarkan jenis kriterianya (benefit apa cost).
 function computePdaNda(
   value: number,
   average: number,
-  criterion: "benefit" | "cost",
+  criterion: CriterionType,
 ): { pda: number; nda: number } {
   if (!Number.isFinite(average) || average === 0) {
     return { pda: 0, nda: 0 };
@@ -186,20 +183,6 @@ function computePdaNda(
   };
 }
 
-// Ngurusin kriteria netral pake pendekatan deviasi dari rata-rata parameter.
-function computeNeutralPdaNda(value: number, averageDeviation: number, average: number) {
-  const deviation = Math.abs(value - average);
-  if (!Number.isFinite(averageDeviation) || averageDeviation === 0) {
-    return { pda: 0, nda: 0 };
-  }
-
-  return {
-    pda: Math.max(0, (averageDeviation - deviation) / averageDeviation),
-    nda: Math.max(0, (deviation - averageDeviation) / averageDeviation),
-  };
-}
-
-// Normalisasi SP dan SN biar semua kandidat punya skala appraisal yang setara.
 function normalizeSpSn(spValues: number[], snValues: number[]) {
   const maxSp = Math.max(...spValues);
   const maxSn = Math.max(...snValues);
@@ -210,7 +193,6 @@ function normalizeSpSn(spValues: number[], snValues: number[]) {
   return { nsp, nsn, maxSp, maxSn };
 }
 
-// Ngasih skor objektif buat kombinasi lagu berdasarkan kualitas EDAS sama kedekatan sama target durasi.
 function scoreDurationSelection(
   sumScore: number,
   actualTotalSec: number,
@@ -231,7 +213,6 @@ function scoreDurationSelection(
   return (averageScore * 0.4) + (durationFit * 0.4) + (coverage * 0.15) + (simplicity * 0.05) - underCoveragePenalty;
 }
 
-// Ngerangkum metrik kombinasi durasi biar proses milih playlist sama replacement gampang diaudit.
 function buildDurationCombination<T extends DurationSelectionCandidate>(
   songs: T[],
   targetSec: number,
@@ -265,7 +246,6 @@ function buildDurationCombination<T extends DurationSelectionCandidate>(
   };
 }
 
-// Ngelacak balik state DP buat dapetin kombinasi kandidat yang kepilih.
 function reconstructDurationSelection<T extends DurationSelectionCandidate>(
   dp: Array<Map<number, DurationState>>,
   count: number,
@@ -294,8 +274,6 @@ export function selectRankedSongsForDurationDetailed<T extends DurationSelection
   candidates: T[],
   options: DurationSelectionOptions,
 ): { selected: T[]; debug: DurationSelectionDebug<T> } {
-  // Milih kombinasi lagu dari kandidat teratas biar durasinya mendekati target user
-  // tapi tetep jaga kualitas appraisal score.
   const targetSec = Math.max(1, Math.round(options.targetSec));
   const overshootToleranceSec = Math.max(0, Math.round(options.overshootToleranceSec));
   const maxSongs = Math.max(1, options.maxSongs);
@@ -453,40 +431,45 @@ export function createDurationSelectionOptions(
   return baseOptions;
 }
 
-// Jalanin inti EDAS: gabungin kontribusi parameter, normalisasi,
-// hitung Appraisal Score, terus urutin kandidat dari skor tertinggi.
 export function runEdasRanking(
   candidates: SongCandidate[],
   preferences: PreferenceResult,
   options?: { debug?: boolean },
 ): EdasScoreRow[] {
-  // Ngitung appraisal score dan ranking EDAS
   if (candidates.length === 0) {
     return [];
   }
 
-  const criterionStats = calculateCriterionStats(candidates);
+  const { activeParameters } = preferences;
+
+  if (activeParameters.length === 0) {
+    return candidates.map((candidate) => ({
+      candidate,
+      sp: 0,
+      sn: 0,
+      nsp: 0,
+      nsn: 0,
+      appraisalScore: 0,
+      debug: options?.debug ? { parameters: [] } : undefined,
+    }));
+  }
+
+  const criterionStats = calculateCriterionStats(candidates, activeParameters);
 
   const rows = candidates.map((candidate) => {
     let sp = 0;
     let sn = 0;
     const parameterDebug: EdasParameterDebug[] = [];
 
-    for (const parameter of PARAMETERS) {
-      // Gabungin kontribusi tiap parameter audio pake bobot dari hasil kuesioner.
+    for (const parameter of activeParameters) {
       const weight = preferences.weights[parameter] ?? 0;
-      const criterion = preferences.criteria[parameter] ?? "neutral";
+      const criterion = preferences.criteria[parameter];
+      if (!criterion) continue;
+
       const value = normalizeValue(candidate[parameter]);
       const { average, averageDeviation } = criterionStats[parameter];
 
-      let pda = 0;
-      let nda = 0;
-
-      if (criterion === "neutral") {
-        ({ pda, nda } = computeNeutralPdaNda(value, averageDeviation, average));
-      } else {
-        ({ pda, nda } = computePdaNda(value, average, criterion));
-      }
+      const { pda, nda } = computePdaNda(value, average, criterion);
 
       sp += weight * pda;
       sn += weight * nda;
@@ -525,7 +508,6 @@ export function runEdasRanking(
 
   return rows
     .map((row, index) => {
-      // Appraisal score akhir
       const nsp = nspList[index];
       const nsn = nsnList[index];
       const appraisalScore = Number(((nsp + nsn) / 2).toFixed(6));
@@ -545,7 +527,6 @@ export function buildEdasDebugSummary(
   ranked: EdasScoreRow[],
   limit = 10,
 ): EdasSongDebug[] {
-  // Nyusun ringkasan debug (cuma buat development) buat ngeliat kontribusi tiap parameter per lagu.
   return ranked.slice(0, Math.max(1, limit)).map((row, index) => ({
     rank: index + 1,
     id_song: row.candidate.id_song,
@@ -565,9 +546,18 @@ export function buildPlaylistFromRanking(
   ranked: EdasScoreRow[],
   targetMinutes: number,
 ): EdasRankedSong[] {
-  // Bikin playlist dari hasil ranking EDAS dengan ngeliat target durasi user.
   const targetSec = Math.max(60, Math.round(targetMinutes * 60));
+  // dedup id_song sebelum DP — normalisasi pake String() karena PG bisa balikin string
+  const seenIds = new Set<string>();
   const rankedItems = ranked
+    .filter((row) => {
+      const id = row.candidate.id_song;
+      if (id == null) return true;
+      const key = String(id);
+      if (seenIds.has(key)) return false;
+      seenIds.add(key);
+      return true;
+    })
     .map((row) => {
       const candidate = row.candidate;
       return {
@@ -585,7 +575,33 @@ export function buildPlaylistFromRanking(
     createDurationSelectionOptions(targetSec, "playlist"),
   );
 
-  return selected.map((item, index) => ({
+  // safety dedup final + backfill (tanpa rank, rank di-set di map akhir)
+  const finalSeen = new Set<string>();
+  const picked: DurationSelectionCandidate[] = [];
+
+  for (const item of selected) {
+    const key = item.id_song != null ? String(item.id_song) : `_${item.title}_${item.artist}`;
+    if (!finalSeen.has(key)) {
+      finalSeen.add(key);
+      picked.push(item);
+    }
+  }
+
+  // backfill dari rankedItems berikutnya kalau durasi masih kurang dari target
+  const finalTotal = picked.reduce((s, i) => s + i.durationSec, 0);
+  if (finalTotal < targetSec * 0.9) {
+    for (const candidate of rankedItems) {
+      if (picked.length >= 20) break;
+      const key = candidate.id_song != null ? String(candidate.id_song) : `_${candidate.title}_${candidate.artist}`;
+      if (!finalSeen.has(key)) {
+        finalSeen.add(key);
+        picked.push(candidate);
+        if (picked.reduce((s, i) => s + i.durationSec, 0) >= targetSec) break;
+      }
+    }
+  }
+
+  return picked.map((item, index) => ({
     rank: index + 1,
     ...item,
   }));

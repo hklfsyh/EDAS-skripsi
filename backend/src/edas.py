@@ -49,7 +49,17 @@ def run_edas(
     if missing_types:
         raise ValueError(f"Jenis kriteria untuk kolom berikut belum tersedia: {missing_types}")
 
-    weights_series = pd.Series({column: float(weights[column]) for column in criteria})
+    # Filter hanya kriteria aktif (benefit/cost), skip inactive
+    active_criteria = [
+        column for column in criteria
+        if str(criteria_types.get(column, "inactive")).lower().strip() != "inactive"
+    ]
+
+    if not active_criteria:
+        raise ValueError("Tidak ada kriteria aktif untuk perhitungan EDAS.")
+
+    active_weights = {column: float(weights[column]) for column in active_criteria}
+    weights_series = pd.Series(active_weights)
     total_weight = float(weights_series.sum())
     if total_weight <= 0:
         raise ValueError("Total bobot harus lebih dari 0.")
@@ -57,14 +67,14 @@ def run_edas(
     # Normalisasi bobot kriteria
     weights_series = weights_series / total_weight
 
-    matrix = decision_matrix[criteria].astype(float)
+    matrix = decision_matrix[active_criteria].astype(float)
     # Average solution untuk tiap kriteria
     average_solution = matrix.mean(axis=0)
 
-    pda = pd.DataFrame(0.0, index=matrix.index, columns=criteria)
-    nda = pd.DataFrame(0.0, index=matrix.index, columns=criteria)
+    pda = pd.DataFrame(0.0, index=matrix.index, columns=active_criteria)
+    nda = pd.DataFrame(0.0, index=matrix.index, columns=active_criteria)
 
-    for criterion in criteria:
+    for criterion in active_criteria:
         # Perhitungan PDA dan NDA per kriteria
         av = average_solution[criterion]
         values = matrix[criterion]

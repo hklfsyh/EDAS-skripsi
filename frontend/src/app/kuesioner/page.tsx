@@ -48,7 +48,8 @@ const choiceLabels = [
 // data konteks aktivitas dari localstorage
 type ContextData = {
   activity: string;
-  timeOfDay: string;
+  time_category: string;
+  timeOfDay?: string;
   mood: string;
   durationMinutes: number;
 };
@@ -111,7 +112,7 @@ export default function KuesionerPage() {
       return "Jawab pertanyaan berikut berdasarkan konteks aktivitas yang kamu pilih sebelumnya.";
     }
     const activity = contextData.activity || "aktivitas pilihanmu";
-    const time = contextData.timeOfDay || "waktu yang kamu tentukan";
+    const time = (contextData.time_category ?? contextData.timeOfDay) || "waktu yang kamu tentukan";
     const mood = contextData.mood || "suasana yang kamu pilih";
     return `Bayangkan kamu sedang ${activity} pada ${time} dengan suasana saat ini ${mood}. Jawab pertanyaan berikut berdasarkan konteks tersebut.`;
   }, [contextData]);
@@ -156,6 +157,17 @@ export default function KuesionerPage() {
       setShowCompletion(true);
     }
   }, [answeredCount, currentIndex, showCompletion]);
+
+  // maju ke soal berikutnya (manual, bukan auto-next)
+  const goToNext = () => {
+    if (advanceTimerRef.current) {
+      clearTimeout(advanceTimerRef.current);
+      advanceTimerRef.current = null;
+    }
+    if (currentIndex < TOTAL_QUESTIONS - 1) {
+      setCurrentIndex((p) => p + 1);
+    }
+  };
 
   // balik ke soal sebelumnya
   const handlePrevious = () => {
@@ -317,6 +329,16 @@ export default function KuesionerPage() {
             {currentIndex > 0 && (
               <button type="button" className={styles.ghostButton} onClick={handlePrevious}>
                 ← Sebelumnya
+              </button>
+            )}
+            {currentIndex < TOTAL_QUESTIONS - 1 && (
+              <button
+                type="button"
+                className={currentAnswer !== undefined ? styles.saveButton : styles.ghostButton}
+                disabled={currentAnswer === undefined}
+                onClick={goToNext}
+              >
+                Lanjut →
               </button>
             )}
           </div>

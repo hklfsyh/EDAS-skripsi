@@ -12,6 +12,7 @@ import {
   PLAYLIST_RESULT_STORAGE_KEY,
   isPlaylistFlowFinished,
 } from "@/lib/playlistFlow";
+import { humanizeSlug } from "@/lib/contextLabels";
 import {
   buildPreferenceAspectNarratives,
   buildPreferenceInterpretation,
@@ -28,7 +29,8 @@ const NLG_TIMEOUT_MS = Number(
 
 type ContextData = {
   activity: string;
-  timeOfDay: string;
+  time_category: string;
+  timeOfDay?: string;
   mood: string;
   durationMinutes: number;
   profileName: string;
@@ -71,9 +73,10 @@ function buildFallbackNarration(
 ): string {
   const totalSec = playlist.reduce((sum, item) => sum + item.durationSec, 0);
   const totalMinutes = Math.max(0, Math.round(totalSec / 60));
-  const activity = context.activity || "aktivitas";
-  const timeOfDay = context.timeOfDay || "waktu yang dipilih";
-  const mood = context.mood || "netral";
+  const activity = context.activity ? humanizeSlug(context.activity) : "aktivitas";
+  const tc = context.time_category ?? context.timeOfDay ?? "";
+  const timeOfDay = tc ? humanizeSlug(tc) : "waktu yang dipilih";
+  const mood = context.mood ? humanizeSlug(context.mood) : "Netral";
 
   const primaryText =
     preferenceSummary.primary.length > 0
@@ -82,16 +85,16 @@ function buildFallbackNarration(
 
   const secondaryText =
     preferenceSummary.secondary.length > 0
-      ? ` Selain itu, sesi ini juga cenderung cocok dengan ${joinList(preferenceSummary.secondary)}.`
+      ? ` Di sisi lain, sistem tidak terlalu memprioritaskan ${joinList(preferenceSummary.secondary)} pada sesi ini.`
       : "";
 
-  const avoidText =
-    preferenceSummary.avoid.length > 0
-      ? ` Di sisi lain, sistem tidak terlalu memprioritaskan ${joinList(preferenceSummary.avoid)} pada sesi ini.`
+  const inactiveText =
+    preferenceSummary.inactive.length > 0
+      ? ` Sementara itu, ${joinList(preferenceSummary.inactive)} tidak dihitung dalam EDAS karena posisi jawabanmu tepat di titik tengah skala.`
       : "";
 
   return (
-    `Untuk sesi ${activity} pada ${timeOfDay} dengan suasana saat ini ${mood}, jawaban kuesionermu menunjukkan kecenderungan ke ${primaryText}.${secondaryText}${avoidText} ` +
+    `Untuk sesi ${activity} pada ${timeOfDay} dengan suasana saat ini ${mood}, jawaban kuesionermu menunjukkan kecenderungan ke ${primaryText}.${secondaryText}${inactiveText} ` +
     "Karena itu, playlist ini dipilih dari lagu-lagu yang tingkat kecocokannya paling tinggi dengan kebutuhan sesi ini, sehingga hasilnya tidak terasa dipilih secara acak. " +
     `Dengan total durasi sekitar ${totalMinutes} menit, playlist ini disusun agar tetap terasa nyambung dan relevan untuk menemani sesi yang kamu pilih.`
   )
@@ -118,7 +121,7 @@ async function generateNlgText(
         body: JSON.stringify({
           context: {
             activity: context.activity,
-            timeOfDay: context.timeOfDay,
+            time_category: context.time_category,
             mood: context.mood,
           },
           targetDurationSec: context.durationMinutes * 60,
@@ -233,7 +236,7 @@ async function saveRecommendation(
     clientId,
     context: {
       activity: context.activity,
-      timeOfDay: context.timeOfDay,
+      time_category: context.time_category,
       mood: context.mood,
       durationMinutes: context.durationMinutes,
     },
@@ -271,6 +274,7 @@ export default function ProsesPage() {
   const [progress, setProgress] = useState(8);
   const [currentStep, setCurrentStep] = useState(0);
   const [nlgStatusText, setNlgStatusText] = useState("");
+  const [guardMessage, setGuardMessage] = useState<string | null>(null);
   const runIdRef = useRef(0);
   const isMountedRef = useRef(false);
   const inflightRef = useRef<{ key: string; promise: Promise<PlaylistItem[]> } | null>(null);
@@ -311,6 +315,12 @@ export default function ProsesPage() {
 
     const runFlow = async () => {
       try {
+        const allInactive = preferenceSummary.aspects.every((a) => !a.isActive);
+        if (allInactive) {
+          setGuardMessage("Semua jawaban masih berada di titik tengah, sehingga belum ada parameter aktif untuk perhitungan EDAS. Silakan ubah minimal satu jawaban agar sistem dapat mengetahui kecenderungan preferensi kamu.");
+          return;
+        }
+
         setCurrentStep(0);
         setProgress(12);
 
@@ -428,6 +438,26 @@ export default function ProsesPage() {
   }, [router]);
 
   const statusText = nlgStatusText || STATUS_LABELS[currentStep] || "";
+
+  if (guardMessage) {
+    return (
+      <main className={`app-shell ${styles.page}`}>
+        <MusicBackground />
+        <MusicCursorTrail />
+        <section className={`app-container ${styles.card}`}>
+          <h1>Preferensi belum dapat ditentukan</h1>
+          <p className={styles.desc}>{guardMessage}</p>
+          <button
+            type="button"
+            className={styles.guardButton}
+            onClick={() => router.push("/kuesioner")}
+          >
+            Kembali ke kuesioner
+          </button>
+        </section>
+      </main>
+    );
+  }
 
   return (
     <main className={`app-shell ${styles.page}`}>

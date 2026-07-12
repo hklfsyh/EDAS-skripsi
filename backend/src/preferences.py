@@ -76,12 +76,12 @@ def _normalize_answer(answer: int, positive_toward_higher_value: bool) -> float:
 
 
 def _classify_criterion(parameter_score: float) -> str:
-    # klasifikasi benefit / cost / neutral
+    # klasifikasi benefit / cost
     if parameter_score > 3.0:
         return "benefit"
     if parameter_score < 3.0:
         return "cost"
-    return "neutral"
+    return "inactive"
 
 
 def build_preferences_from_questionnaire(answers: dict[int, int]) -> PreferenceResult:

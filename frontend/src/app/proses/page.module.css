@@ -80,6 +80,24 @@
   color: var(--muted-foreground) !important;
 }
 
+/* guardButton — tombol di card guard message */
+.guardButton {
+  margin-top: 18px;
+  padding: 10px 24px;
+  border: none;
+  border-radius: 999px;
+  background: var(--accent-primary);
+  color: var(--button-text);
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.guardButton:hover {
+  background: var(--accent-secondary);
+}
+
 /* responsif — margin/padding dikecilin kalo layar sempit */
 @media (max-width: 640px) {
   .card {

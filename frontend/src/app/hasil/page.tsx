@@ -12,6 +12,7 @@ import {
   isPlaylistFlowFinished,
   markPlaylistFlowFinished,
 } from "@/lib/playlistFlow";
+import { humanizeSlug } from "@/lib/contextLabels";
 import { buildPreferenceAspectMeaning, type PreferenceInterpretation } from "@/server/utils/preferenceSummary";
 import styles from "./page.module.css";
 
@@ -22,7 +23,8 @@ const EXT_PREFIX = "ext-url-v2";
 // data konteks aktivitas dari localstorage
 type ContextData = {
   activity: string;
-  timeOfDay: string;
+  time_category: string;
+  timeOfDay?: string;
   mood: string;
   durationMinutes: number;
 };
@@ -103,7 +105,10 @@ function formatDuration(sec: number): string {
 
 // bikin nama playlist dari konteks aktivitas
 function generatePlaylistName(ctx: ContextData): string {
-  return `${ctx.activity} \u2022 ${ctx.mood} \u2022 ${ctx.timeOfDay}`;
+  const act = humanizeSlug(ctx.activity || "aktivitas");
+  const tc = humanizeSlug(ctx.time_category || ctx.timeOfDay || "waktu");
+  const md = humanizeSlug(ctx.mood || "netral");
+  return `${act} \u2022 ${tc} \u2022 ${md}`;
 }
 
 // hash sederhana dari daftar lagu buat cache url export
@@ -538,7 +543,7 @@ export default function HasilPage() {
           <section className={styles.card}>
             <h1>Hasil rekomendasi playlist</h1>
             <p className={styles.contextLine}>
-              {result.context.activity} &middot; {result.context.timeOfDay} &middot; suasana saat ini {result.context.mood}
+              {humanizeSlug(result.context.activity)} &middot; {humanizeSlug(result.context.time_category)} &middot; suasana saat ini {humanizeSlug(result.context.mood)}
             </p>
 
             <div className={styles.metrics}>
@@ -864,7 +869,7 @@ export default function HasilPage() {
               </header>
               <div className={styles.historyModalBody}>
                 <p className={styles.historyContext}>
-                  <strong>{selectedSession.activity}</strong> &middot; {selectedSession.time_category} &middot; suasana saat ini {selectedSession.mood}
+                  <strong>{humanizeSlug(selectedSession.activity)}</strong> &middot; {humanizeSlug(selectedSession.time_category)} &middot; suasana saat ini {humanizeSlug(selectedSession.mood)}
                 </p>
                 <div className={styles.historyModalMeta}>
                   <span>Target {formatDuration(selectedSession.duration_target * 60)}</span>

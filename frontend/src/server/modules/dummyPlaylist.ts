@@ -94,6 +94,13 @@ function buildEdasPlaylist(
   debug = false,
 ) {
   const preferences = mapQuestionnaireToPreferences(answers);
+
+  if (preferences.activeParameters.length === 0) {
+    const err = new Error("Semua jawaban masih berada di titik tengah, sehingga belum ada parameter aktif untuk perhitungan EDAS. Silakan ubah minimal satu jawaban agar sistem dapat mengetahui kecenderungan preferensi kamu.");
+    (err as unknown as Record<string, unknown>).statusCode = 400;
+    throw err;
+  }
+
   const ranked = runEdasRanking(tracks, preferences, { debug });
   const playlist = buildPlaylistFromRanking(ranked, targetMinutes);
 
@@ -134,11 +141,13 @@ export async function handleDummyPlaylistGet(request: Request) {
     let table48: unknown[] | undefined;
     let table49: unknown[] | undefined;
     if (debugPayload) {
+      const activeSet = new Set(preferences.activeParameters);
       table48 = Object.entries(preferences.parameters).map(([parameter, data]) => ({
         parameter,
         score: Number(data.score.toFixed(4)),
         weight: Number(data.weight.toFixed(4)),
         meanLikert: Number(data.meanLikert.toFixed(4)),
+        isActive: data.isActive,
         criterion: data.criterion,
       }));
       table49 = ranked.slice(0, 5).map((row, index) => ({
@@ -153,6 +162,17 @@ export async function handleDummyPlaylistGet(request: Request) {
       }));
     }
 
+    // dedup debug: hitung apakah playlist final benar-benar unique
+    const allIds = playlist.map((s) => String(s.id_song ?? ""));
+    const uniqueIds = new Set(allIds.filter(Boolean));
+    const playlistDedupDebug = debugPayload
+      ? {
+          uniquePlaylist: uniqueIds.size === allIds.filter(Boolean).length,
+          duplicateRemoved: allIds.filter(Boolean).length - uniqueIds.size,
+          playlistIds: allIds.filter(Boolean),
+        }
+      : undefined;
+
     return NextResponse.json({
       source,
       totalTracks: tracks.length,
@@ -160,11 +180,13 @@ export async function handleDummyPlaylistGet(request: Request) {
       ...(debugPayload ? { debug: debugPayload } : {}),
       ...(table48 ? { table48 } : {}),
       ...(table49 ? { table49 } : {}),
+      ...(playlistDedupDebug ? { playlistDedupDebug } : {}),
     });
-  } catch {
+  } catch (error) {
+    const isGuard = error instanceof Error && (error as unknown as Record<string, unknown>).statusCode === 400;
     return NextResponse.json(
-      { error: "Gagal memuat playlist dari database" },
-      { status: 500 },
+      { error: isGuard ? error.message : "Gagal memuat playlist dari database" },
+      { status: isGuard ? 400 : 500 },
     );
   }
 }
@@ -194,11 +216,13 @@ export async function handleDummyPlaylistPost(request: Request) {
     let table48: unknown[] | undefined;
     let table49: unknown[] | undefined;
     if (debugPayload) {
+      const activeSet = new Set(preferences.activeParameters);
       table48 = Object.entries(preferences.parameters).map(([parameter, data]) => ({
         parameter,
         score: Number(data.score.toFixed(4)),
         weight: Number(data.weight.toFixed(4)),
         meanLikert: Number(data.meanLikert.toFixed(4)),
+        isActive: data.isActive,
         criterion: data.criterion,
       }));
       table49 = ranked.slice(0, 5).map((row, index) => ({
@@ -213,6 +237,17 @@ export async function handleDummyPlaylistPost(request: Request) {
       }));
     }
 
+    // dedup debug
+    const allIds = playlist.map((s) => String(s.id_song ?? ""));
+    const uniqueIds = new Set(allIds.filter(Boolean));
+    const playlistDedupDebug = debugPayload
+      ? {
+          uniquePlaylist: uniqueIds.size === allIds.filter(Boolean).length,
+          duplicateRemoved: allIds.filter(Boolean).length - uniqueIds.size,
+          playlistIds: allIds.filter(Boolean),
+        }
+      : undefined;
+
     return NextResponse.json({
       source,
       totalTracks: tracks.length,
@@ -220,11 +255,13 @@ export async function handleDummyPlaylistPost(request: Request) {
       ...(debugPayload ? { debug: debugPayload } : {}),
       ...(table48 ? { table48 } : {}),
       ...(table49 ? { table49 } : {}),
+      ...(playlistDedupDebug ? { playlistDedupDebug } : {}),
     });
-  } catch {
+  } catch (error) {
+    const isGuard = error instanceof Error && (error as unknown as Record<string, unknown>).statusCode === 400;
     return NextResponse.json(
-      { error: "Gagal memuat playlist dari database" },
-      { status: 500 },
+      { error: isGuard ? error.message : "Gagal memuat playlist dari database" },
+      { status: isGuard ? 400 : 500 },
     );
   }
 }

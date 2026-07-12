@@ -8,20 +8,22 @@ export type PreferenceParameter =
   | "instrumentalness"
   | "speechiness";
 
-export type CriterionType = "benefit" | "cost" | "neutral";
+export type CriterionType = "benefit" | "cost";
 
 export type ParameterPreference = {
   score: number;
   weight: number;
   meanLikert: number;
-  criterion: CriterionType;
+  isActive: boolean;
+  criterion: CriterionType | null;
 };
 
 export type PreferenceResult = {
   parameters: Record<PreferenceParameter, ParameterPreference>;
   weights: Record<PreferenceParameter, number>;
   scores: Record<PreferenceParameter, number>;
-  criteria: Record<PreferenceParameter, CriterionType>;
+  criteria: Record<PreferenceParameter, CriterionType | null>;
+  activeParameters: PreferenceParameter[];
 };
 
 type QuestionMapping = {
@@ -29,7 +31,6 @@ type QuestionMapping = {
   questions: Array<{ index: number; reverse: boolean }>;
 };
 
-// Mapping pertanyaan kuesioner ke parameter audio
 const QUESTION_MAPPINGS: QuestionMapping[] = [
   {
     parameter: "tempo",
@@ -81,7 +82,6 @@ const QUESTION_MAPPINGS: QuestionMapping[] = [
   },
 ];
 
-// Normalisasi jawaban kuesioner dari berbagai format biar mapping preferensinya konsisten
 export function normalizeQuestionnaireAnswers(
   answers?: Record<number, number> | number[] | null,
 ): number[] {
@@ -115,7 +115,6 @@ export function normalizeQuestionnaireAnswers(
   return values;
 }
 
-// Validasi jawaban kuesioner (nilai 1-5)
 function validateAnswers(values: number[]): void {
   if (values.length < 14) {
     throw new Error("Jawaban kuesioner harus berisi 14 butir.");
@@ -128,7 +127,6 @@ function validateAnswers(values: number[]): void {
   });
 }
 
-// Reverse scoring buat pertanyaan yang dibalik
 function adjustLikert(value: number, reverse: boolean): number {
   return reverse ? 6 - value : value;
 }
@@ -138,26 +136,22 @@ function likertToScore(value: number): number {
   return Number((normalized * 100).toFixed(2));
 }
 
-// Ngeklasifikasi jadi benefit / cost / neutral
-function classifyCriterion(meanLikert: number): CriterionType {
+function classifyCriterion(meanLikert: number): CriterionType | null {
   if (meanLikert > 3) return "benefit";
   if (meanLikert < 3) return "cost";
-  return "neutral";
+  return null;
 }
 
 export function mapQuestionnaireToPreferences(
   answers: Record<number, number> | number[],
 ): PreferenceResult {
-  // Ubah jawaban kuesioner jadi skor parameter, bobot kriteria,
-  // sama jenis kriteria yang dipake di perhitungan EDAS.
   const values = normalizeQuestionnaireAnswers(answers);
   validateAnswers(values);
 
   const parameters = {} as Record<PreferenceParameter, ParameterPreference>;
-  let scoreSum = 0;
+  const activeParams: PreferenceParameter[] = [];
 
   for (const mapping of QUESTION_MAPPINGS) {
-    // Gabungin nilai Likert tiap parameter
     const adjustedValues = mapping.questions.map(({ index, reverse }) => {
       const raw = values[index - 1];
       return adjustLikert(raw, reverse);
@@ -167,32 +161,50 @@ export function mapQuestionnaireToPreferences(
       adjustedValues.reduce((sum, value) => sum + value, 0) / adjustedValues.length;
     const score = likertToScore(meanLikert);
     const criterion = classifyCriterion(meanLikert);
+    const isActive = criterion !== null;
 
     parameters[mapping.parameter] = {
       score,
       weight: 0,
       meanLikert: Number(meanLikert.toFixed(2)),
+      isActive,
       criterion,
     };
 
-    scoreSum += score;
+    if (isActive) {
+      activeParams.push(mapping.parameter);
+    }
   }
 
   const weights = {} as Record<PreferenceParameter, number>;
   const scores = {} as Record<PreferenceParameter, number>;
-  const criteria = {} as Record<PreferenceParameter, CriterionType>;
+  const criteria = {} as Record<PreferenceParameter, CriterionType | null>;
 
-  const fallbackWeight = Number((1 / QUESTION_MAPPINGS.length).toFixed(6));
+  const activeScoreSum = activeParams.reduce(
+    (sum, param) => sum + parameters[param].score,
+    0,
+  );
 
-  // Normalisasi bobot tiap parameter
+  const fallbackWeight = activeParams.length > 0 ? Number((1 / activeParams.length).toFixed(6)) : 0;
+
   for (const mapping of QUESTION_MAPPINGS) {
     const parameter = mapping.parameter;
-    const score = parameters[parameter].score;
-    const weight = scoreSum > 0 ? Number((score / scoreSum).toFixed(6)) : fallbackWeight;
 
-    parameters[parameter].weight = weight;
-    weights[parameter] = weight;
-    scores[parameter] = score;
+    if (parameters[parameter].isActive) {
+      const score = parameters[parameter].score;
+      const weight =
+        activeScoreSum > 0
+          ? Number((score / activeScoreSum).toFixed(6))
+          : fallbackWeight;
+
+      parameters[parameter].weight = weight;
+      weights[parameter] = weight;
+    } else {
+      parameters[parameter].weight = 0;
+      weights[parameter] = 0;
+    }
+
+    scores[parameter] = parameters[parameter].score;
     criteria[parameter] = parameters[parameter].criterion;
   }
 
@@ -201,5 +213,6 @@ export function mapQuestionnaireToPreferences(
     weights,
     scores,
     criteria,
+    activeParameters: activeParams,
   };
 }
